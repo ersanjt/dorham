@@ -1,0 +1,42 @@
+export const ERROR_CODES = [
+  "VALIDATION_FAILED",
+  "AUTH_INVALID_CREDENTIALS",
+  "AUTH_EMAIL_TAKEN",
+  "AUTH_LOCKED",
+  "AUTH_UNAUTHORIZED",
+  "AUTH_FORBIDDEN",
+  "AUTH_EMAIL_TOKEN_INVALID",
+  "AUTH_ACCOUNT_PAUSED",
+  "AUTH_ACCOUNT_SUSPENDED",
+  "EVENT_NOT_FOUND",
+  "EVENT_FULL",
+  "EVENT_CHECKIN_INVALID",
+  "EVENT_NOT_GOING",
+  "VENUE_NOT_FOUND",
+  "POST_NOT_FOUND",
+  "FEED_FORBIDDEN",
+  "MEDIA_NOT_FOUND",
+  "MEDIA_INVALID",
+  "MEDIA_FORBIDDEN",
+  "VERIFICATION_INVALID",
+  "VERIFICATION_NOT_FOUND",
+  "USER_NOT_FOUND",
+  "USER_SELF_ACTION",
+  "VENUE_MAPS_INVALID",
+  "REVIEW_DUPLICATE",
+  "ALREADY_BLOCKED",
+  "REPORT_INVALID",
+  "RATE_LIMITED",
+  "INTERNAL",
+] as const;
+
+export type ErrorCode = (typeof ERROR_CODES)[number];
+
+export type ApiErrorBody = {
+  error: {
+    code: ErrorCode;
+    message: string;
+    details: unknown;
+    requestId: string;
+  };
+};

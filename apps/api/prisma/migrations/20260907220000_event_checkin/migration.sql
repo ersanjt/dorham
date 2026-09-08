@@ -1,0 +1,2 @@
+ALTER TABLE "Event" ADD COLUMN "checkInSecret" TEXT;
+ALTER TABLE "EventRsvp" ADD COLUMN "checkedInAt" TIMESTAMP(3);

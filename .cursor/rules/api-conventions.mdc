@@ -1,0 +1,16 @@
+---
+description: Dorham API conventions for NestJS and shared contracts
+globs: apps/api/**/*.{ts,prisma},packages/shared/**/*.ts
+alwaysApply: false
+---
+
+# API conventions
+
+- Every public endpoint is `/v1/...`.
+- Change request/response types in `packages/shared` first.
+- Controllers stay thin. Validation is Zod. Business rules live in services.
+- Errors use the envelope `{ error: { code, message, details?, requestId } }`.
+- Auth: Bearer access JWT. Refresh tokens are hashed (SHA-256) in `Session` and rotated.
+- Passwords: Argon2id only. Never log tokens, passwords, or raw verification photos.
+- New tables need Prisma migrations. Do not use `prisma db push` in shared branches.
+- Sensitive profile fields are never returned to other users unless a later privacy spec says so.

@@ -1,0 +1,14 @@
+---
+description: Dorham product north star — never drift into a swipe clone
+alwaysApply: true
+---
+
+# Dorham north star
+
+Dorham is a **community product for Iranians in Turkey**. The homepage is the city and its events. Dating is an optional later tab.
+
+Never implement: infinite swipe decks, Boost, Super Like, paywalled likes, fake nearby profiles, or a Turkey-hosted LGBTQ grid as v1.
+
+Launch city is Istanbul. Iran is not a v1 market. TypeScript only. Public API lives under `/v1`. Shared Zod contracts in `@dorham/shared` are the source of truth for request/response bodies.
+
+Read `docs/00-north-star.md` and `AGENTS.md` before adding features.

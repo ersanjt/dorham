@@ -1,0 +1,207 @@
+import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+import { LoginBody, RegisterBody } from "@dorham/shared";
+import { PrismaService } from "../../prisma/prisma.service";
+import { addDuration, accessTtlSeconds, hashPassword, hashToken, newOpaqueToken, newRefreshToken, verifyPassword } from "../../common/crypto";
+import { loadEnv } from "../../config/env";
+
+const LOCK_AFTER = 8;
+const LOCK_MINUTES = 20;
+const EMAIL_TOKEN_HOURS = 24;
+
+@Injectable()
+export class AuthService {
+  private readonly env = loadEnv();
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
+  ) {}
+
+  async register(body: RegisterBody, meta: { ip?: string; userAgent?: string }) {
+    const exists = await this.prisma.user.findUnique({ where: { email: body.email } });
+    if (exists) {
+      throw new ConflictException({
+        code: "AUTH_EMAIL_TAKEN",
+        message: "An account with this email already exists.",
+      });
+    }
+
+    const passwordHash = await hashPassword(body.password);
+    const user = await this.prisma.user.create({
+      data: {
+        email: body.email,
+        passwordHash,
+        locale: body.locale,
+        profile: {
+          create: {
+            displayName: body.displayName,
+            city: "istanbul",
+            country: "TR",
+          },
+        },
+        verification: { create: { status: "NONE" } },
+      },
+    });
+
+    const verifyEmailToken = await this.issueEmailToken(user.id);
+
+    await this.prisma.auditLog.create({
+      data: { userId: user.id, action: "auth.register", entity: "User", entityId: user.id, ip: meta.ip },
+    });
+
+    const tokens = await this.issueTokens(user.id, user.role, meta);
+    return this.env.NODE_ENV === "production" ? tokens : { ...tokens, verifyEmailToken };
+  }
+
+  async login(body: LoginBody, meta: { ip?: string; userAgent?: string }) {
+    const user = await this.prisma.user.findUnique({ where: { email: body.email } });
+    if (!user || user.status === "DELETED") {
+      throw new UnauthorizedException({
+        code: "AUTH_INVALID_CREDENTIALS",
+        message: "Email or password is wrong.",
+      });
+    }
+    if (user.status === "SUSPENDED") {
+      throw new UnauthorizedException({
+        code: "AUTH_ACCOUNT_SUSPENDED",
+        message: "This account is suspended.",
+      });
+    }
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      throw new UnauthorizedException({
+        code: "AUTH_LOCKED",
+        message: "This account is temporarily locked. Try later.",
+      });
+    }
+
+    const ok = await verifyPassword(user.passwordHash, body.password);
+    if (!ok) {
+      const failed = user.failedLogins + 1;
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLogins: failed,
+          lockedUntil: failed >= LOCK_AFTER ? new Date(Date.now() + LOCK_MINUTES * 60_000) : null,
+        },
+      });
+      throw new UnauthorizedException({
+        code: "AUTH_INVALID_CREDENTIALS",
+        message: "Email or password is wrong.",
+      });
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { failedLogins: 0, lockedUntil: null, lastLoginAt: new Date() },
+    });
+
+    return this.issueTokens(user.id, user.role, meta);
+  }
+
+  async refresh(refreshToken: string, meta: { ip?: string; userAgent?: string }) {
+    const refreshTokenHash = hashToken(refreshToken);
+    const session = await this.prisma.session.findFirst({
+      where: { refreshTokenHash, revokedAt: null },
+      include: { user: true },
+    });
+    if (
+      !session ||
+      session.expiresAt < new Date() ||
+      session.user.status === "DELETED" ||
+      session.user.status === "SUSPENDED"
+    ) {
+      throw new UnauthorizedException({ code: "AUTH_UNAUTHORIZED", message: "Session expired." });
+    }
+
+    await this.prisma.session.update({
+      where: { id: session.id },
+      data: { revokedAt: new Date() },
+    });
+
+    return this.issueTokens(session.userId, session.user.role, meta);
+  }
+
+  async logout(sessionId: string) {
+    await this.prisma.session.updateMany({
+      where: { id: sessionId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  async verifyEmail(token: string) {
+    const tokenHash = hashToken(token);
+    const row = await this.prisma.emailToken.findFirst({
+      where: { tokenHash, purpose: "EMAIL_VERIFY", usedAt: null },
+    });
+    if (!row || row.expiresAt < new Date()) {
+      throw new UnauthorizedException({
+        code: "AUTH_EMAIL_TOKEN_INVALID",
+        message: "This verification link is invalid or expired.",
+      });
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.emailToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
+      this.prisma.user.update({
+        where: { id: row.userId },
+        data: { emailVerifiedAt: new Date() },
+      }),
+    ]);
+
+    return { ok: true as const };
+  }
+
+  async resendVerification(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.emailVerifiedAt) {
+      return this.env.NODE_ENV === "production"
+        ? { ok: true as const }
+        : { ok: true as const, verifyEmailToken: undefined };
+    }
+    const verifyEmailToken = await this.issueEmailToken(userId);
+    return this.env.NODE_ENV === "production" ? { ok: true as const } : { ok: true as const, verifyEmailToken };
+  }
+
+  private async issueEmailToken(userId: string) {
+    await this.prisma.emailToken.updateMany({
+      where: { userId, purpose: "EMAIL_VERIFY", usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    const token = newOpaqueToken();
+    await this.prisma.emailToken.create({
+      data: {
+        userId,
+        purpose: "EMAIL_VERIFY",
+        tokenHash: hashToken(token),
+        expiresAt: new Date(Date.now() + EMAIL_TOKEN_HOURS * 3600_000),
+      },
+    });
+    return token;
+  }
+
+  private async issueTokens(
+    userId: string,
+    role: "MEMBER" | "HOST" | "MODERATOR" | "ADMIN",
+    meta: { ip?: string; userAgent?: string },
+  ) {
+    const refreshToken = newRefreshToken();
+    const session = await this.prisma.session.create({
+      data: {
+        userId,
+        refreshTokenHash: hashToken(refreshToken),
+        userAgent: meta.userAgent?.slice(0, 180),
+        ip: meta.ip,
+        expiresAt: addDuration(this.env.JWT_REFRESH_TTL),
+      },
+    });
+
+    const accessToken = await this.jwt.signAsync({ sub: userId, sid: session.id, role });
+    return {
+      accessToken,
+      refreshToken,
+      expiresIn: accessTtlSeconds(this.env.JWT_ACCESS_TTL),
+      tokenType: "Bearer" as const,
+    };
+  }
+}

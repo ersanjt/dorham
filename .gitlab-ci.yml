@@ -1,0 +1,41 @@
+stages: [verify, build]
+
+variables:
+  DATABASE_URL: postgresql://dorham:dorham@postgres:5432/dorham?schema=public
+  JWT_ACCESS_SECRET: ci-access-secret-change-me-32chars
+  JWT_REFRESH_SECRET: ci-refresh-secret-change-me-32ch
+  NODE_ENV: test
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+
+default:
+  image: node:22-bookworm
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - .npm
+      - node_modules
+
+verify:
+  stage: verify
+  services:
+    - name: postgres:16-alpine
+      alias: postgres
+  variables:
+    POSTGRES_USER: dorham
+    POSTGRES_PASSWORD: dorham
+    POSTGRES_DB: dorham
+  script:
+    - npm ci
+    - npm run db:generate
+    - npm run typecheck
+    - npm run test
+
+build:
+  stage: build
+  script:
+    - npm ci
+    - npm run db:generate
+    - npm run build -w @dorham/shared
+    - npm run build -w @dorham/api
+    - npm run build -w @dorham/web
+  needs: [verify]

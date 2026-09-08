@@ -1,0 +1,39 @@
+{
+  "name": "dorham",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Dorham — Iranian community in Turkey. Events first, dating later.",
+  "packageManager": "npm@11.9.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "apps/api",
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:api": "npm run dev -w @dorham/api",
+    "dev:web": "npm run dev -w @dorham/web",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "db:up": "node scripts/local-postgres.mjs",
+    "db:generate": "npm run prisma:generate -w @dorham/api",
+    "db:migrate": "npm run prisma:migrate -w @dorham/api",
+    "db:migrate:dev": "npm run prisma:migrate:dev -w @dorham/api",
+    "db:seed": "npm run prisma:seed -w @dorham/api",
+    "db:studio": "npm run prisma:studio -w @dorham/api",
+    "dev:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1"
+  },
+  "devDependencies": {
+    "embedded-postgres": "^17.6.0-beta.15",
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.2"
+  },
+  "optionalDependencies": {
+    "@embedded-postgres/windows-x64": "^18.4.0-beta.17"
+  }
+}

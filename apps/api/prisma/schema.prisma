@@ -1,0 +1,353 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  PAUSED
+  SUSPENDED
+  DELETED
+}
+
+enum UserRole {
+  MEMBER
+  HOST
+  MODERATOR
+  ADMIN
+}
+
+enum Locale {
+  FA
+  EN
+  TR
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  ENDED
+}
+
+enum RsvpStatus {
+  GOING
+  INTERESTED
+  CANCELLED
+}
+
+enum VerificationStatus {
+  NONE
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum EmailTokenPurpose {
+  EMAIL_VERIFY
+}
+
+enum MediaKind {
+  PROFILE
+  VERIFICATION
+}
+
+enum VenueKind {
+  RESTAURANT
+  CAFE
+  MARKET
+  CULTURAL
+}
+
+enum TicketStatus {
+  NONE
+  DUE
+  PAID_DOOR
+}
+
+enum PostStatus {
+  PUBLISHED
+  HIDDEN
+}
+
+enum FeedTarget {
+  POST
+  COMMENT
+}
+
+model User {
+  id              String     @id @default(cuid())
+  email           String     @unique
+  phone           String?    @unique
+  passwordHash    String
+  status          UserStatus @default(ACTIVE)
+  locale          Locale     @default(FA)
+  role            UserRole   @default(MEMBER)
+  emailVerifiedAt DateTime?
+  failedLogins    Int        @default(0)
+  lockedUntil     DateTime?
+  lastLoginAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  profile       Profile?
+  sessions      Session[]
+  eventsHosted  Event[]      @relation("EventHost")
+  rsvps         EventRsvp[]
+  verification   Verification?
+  reportsMade    Report[]     @relation("Reporter")
+  reportsAgainst Report[]     @relation("Reported")
+  blocksMade     Block[]      @relation("Blocker")
+  blocksAgainst  Block[]      @relation("Blocked")
+  auditLogs      AuditLog[]
+  emailTokens    EmailToken[]
+  media          MediaAsset[]
+  posts          Post[]
+  comments       PostComment[]
+  feedReports    FeedReport[]
+  venueReviews   VenueReview[]
+  venuesSubmitted Venue[]
+}
+
+model Profile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName   String
+  bio           String?
+  city          String   @default("istanbul")
+  country       String   @default("TR")
+  birthDate     DateTime?
+  photos        Json     @default("[]")
+  photoId       String?
+  datingEnabled Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String
+  userAgent        String?
+  ip               String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([userId])
+  @@index([refreshTokenHash])
+}
+
+model Post {
+  id        String     @id @default(cuid())
+  authorId  String
+  author    User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  city      String     @default("istanbul")
+  body      String
+  eventId   String?
+  venueSlug String?
+  status    PostStatus @default(PUBLISHED)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  comments  PostComment[]
+  reports   FeedReport[]
+
+  @@index([city, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model PostComment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([postId, createdAt])
+}
+
+model FeedReport {
+  id         String     @id @default(cuid())
+  reporterId String
+  reporter   User       @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  targetType FeedTarget
+  targetId   String
+  postId     String?
+  post       Post?      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reason     String
+  details    String?
+  status     String     @default("open")
+  createdAt  DateTime   @default(now())
+
+  @@index([targetType, targetId])
+}
+
+model Venue {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  kind        VenueKind
+  city        String    @default("istanbul")
+  area        String
+  address     String
+  mapsQuery   String
+  lat         Float?
+  lng         Float?
+  phone       String?
+  website     String?
+  hours       String?
+  priceRange  String?
+  menuNotes   String?
+  description String
+  published   Boolean   @default(true)
+  submitterId String?
+  submitter   User?     @relation(fields: [submitterId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  reviews     VenueReview[]
+
+  @@index([city, kind])
+  @@index([area])
+}
+
+model VenueReview {
+  id        String   @id @default(cuid())
+  venueId   String
+  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+
+  @@unique([venueId, authorId])
+  @@index([venueId, createdAt])
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  hostId      String
+  host        User        @relation("EventHost", fields: [hostId], references: [id])
+  title       String
+  description String
+  city        String
+  venue       String?
+  address     String?
+  lat         Float?
+  lng         Float?
+  startsAt    DateTime
+  endsAt      DateTime?
+  capacity    Int?
+  coverUrl    String?
+  priceTry    Int         @default(0)
+  status        EventStatus @default(DRAFT)
+  locale        Locale      @default(FA)
+  checkInSecret String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  rsvps       EventRsvp[]
+
+  @@index([city, startsAt])
+  @@index([status, startsAt])
+}
+
+model EventRsvp {
+  id        String     @id @default(cuid())
+  eventId   String
+  userId    String
+  status      RsvpStatus @default(GOING)
+  ticketStatus TicketStatus @default(NONE)
+  checkedInAt DateTime?
+  createdAt   DateTime   @default(now())
+  event     Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+model Verification {
+  id         String             @id @default(cuid())
+  userId     String             @unique
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status     VerificationStatus @default(NONE)
+  method     String             @default("photo_handwritten")
+  assetKey   String?
+  notes      String?
+  reviewedAt DateTime?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  reporterId String
+  targetId   String
+  reason     String
+  details    String?
+  status     String   @default("open")
+  createdAt  DateTime @default(now())
+  reporter   User     @relation("Reporter", fields: [reporterId], references: [id])
+  target     User     @relation("Reported", fields: [targetId], references: [id])
+
+  @@index([targetId, status])
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id])
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id])
+
+  @@unique([blockerId, blockedId])
+}
+
+model EmailToken {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   EmailTokenPurpose
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime          @default(now())
+
+  @@index([userId, purpose])
+  @@index([tokenHash])
+}
+
+model MediaAsset {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind       MediaKind
+  mime       String
+  bytes      Int
+  storageKey String
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, kind])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  ip        String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId, createdAt])
+}

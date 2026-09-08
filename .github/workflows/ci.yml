@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api-and-web:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dorham
+          POSTGRES_PASSWORD: dorham
+          POSTGRES_DB: dorham
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dorham"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://dorham:dorham@localhost:5432/dorham?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret-change-me-32chars
+      JWT_REFRESH_SECRET: ci-refresh-secret-change-me-32ch
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build -w @dorham/shared
+      - run: npm run build -w @dorham/api
+      - run: npm run build -w @dorham/web
