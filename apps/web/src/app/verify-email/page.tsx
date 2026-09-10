@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { SiteHeader } from "../../components/site-header";
@@ -33,7 +34,26 @@ function VerifyInner() {
   }, [token]);
 
   return (
-    <div className={`banner ${state === "ok" ? "ok" : state === "err" ? "err" : ""}`}>{message}</div>
+    <>
+      <div className={`banner ${state === "ok" ? "ok" : state === "err" ? "err" : ""}`}>{message}</div>
+      {state === "ok" ? (
+        <div className="row" style={{ marginTop: 16 }}>
+          <Link className="btn" href="/account">
+            حساب من
+          </Link>
+          <Link className="btn ghost" href="/events">
+            رویدادهای شهر
+          </Link>
+        </div>
+      ) : null}
+      {state === "err" ? (
+        <div className="row" style={{ marginTop: 16 }}>
+          <Link className="btn ghost" href="/account">
+            حساب من
+          </Link>
+        </div>
+      ) : null}
+    </>
   );
 }
 

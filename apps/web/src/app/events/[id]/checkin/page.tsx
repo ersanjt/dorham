@@ -33,11 +33,17 @@ function CheckInInner() {
     })
       .then((data) => {
         setState("ok");
-        setMessage(data.already ? `${data.displayName} قبلاً وارد شده.` : `خوش آمدی ${data.displayName}. ورود ثبت شد.`);
+        if (data.already) {
+          setMessage(`${data.displayName} قبلاً وارد شده.`);
+        } else if (data.ticketStatus === "PAID_DOOR") {
+          setMessage(`خوش آمدی ${data.displayName}. بلیت دم در گرفته شد.`);
+        } else {
+          setMessage(`خوش آمدی ${data.displayName}. ورود ثبت شد.`);
+        }
       })
       .catch((err: unknown) => {
         setState("err");
-        setMessage(err instanceof ApiError ? err.message : "ورود ثبت نشد. اول RSVP کن.");
+        setMessage(err instanceof ApiError ? err.message : "ورود ثبت نشد. اول ثبت حضور کن.");
       });
   }, [params.id, router, secret]);
 

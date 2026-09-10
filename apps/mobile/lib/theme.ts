@@ -1,20 +1,22 @@
 /**
- * One visual language for iOS and Android. No Platform.select on color,
- * type, radius, or chrome — those are what make the two apps look different.
- *
- * Copper / pomegranate lock: tea-stained paper, cream cards, clay action,
- * Type: Markazi Text for titles, Vazirmatn for body/UI. Same copper lock as web.
+ * One visual language for iOS and Android.
+ * Copper / pomegranate: tea paper, cream panels, clay action.
+ * Cafe in Karaköy — calligraphy + quiet geometry, not neon dating chrome.
  */
 export const color = {
   ink: "#120C09",
-  paper: "#EFE3CF",
-  cream: "#FFF8F0",
+  paper: "#E8D9C0",
+  paperDeep: "#DFC9A8",
+  cream: "#FFF6EC",
   clay: "#B12E28",
   clayPressed: "#8F241F",
+  claySoft: "rgba(177, 46, 40, 0.10)",
+  copper: "#8B4A32",
   saffron: "#8A6A12",
   saffronSoft: "#F3E4B3",
   muted: "#6A564C",
-  line: "#D4C0A8",
+  line: "#CDB89A",
+  lineStrong: "#B89A78",
   ok: "#2A6B4A",
   okSoft: "#D5EEE3",
   danger: "#8F1F24",
@@ -26,13 +28,14 @@ export const space = {
   sm: 10,
   md: 16,
   lg: 24,
-  xl: 32,
-  screen: 20,
+  xl: 36,
+  screen: 22,
 } as const;
 
 export const radius = {
-  sm: 12,
-  md: 18,
+  sm: 8,
+  md: 14,
+  lg: 18,
   pill: 999,
 } as const;
 
@@ -47,6 +50,6 @@ export const type = {
 export const fontSize = {
   caption: 13,
   body: 17,
-  title: 23,
-  display: 36,
+  title: 26,
+  display: 40,
 } as const;

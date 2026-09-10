@@ -68,8 +68,9 @@ Refresh is a body token, not a JS-readable cookie on mobile. Web may later use h
 | GET | `/v1/users/me` | yes | self |
 | PATCH | `/v1/users/me` | yes | profile |
 | POST | `/v1/users/me/photo` | yes | attach profile photo |
-| POST | `/v1/users/me/pause` | yes | pause |
+| POST | `/v1/users/me/pause` | yes | pause (login stays open so user can resume) |
 | POST | `/v1/users/me/resume` | yes | resume |
+
 | DELETE | `/v1/users/me` | yes | anonymize + revoke |
 | GET | `/v1/users/me/verification` | yes | own verify status |
 | POST | `/v1/users/me/verification` | yes | submit handwritten photo |
@@ -104,7 +105,10 @@ Refresh is a body token, not a JS-readable cookie on mobile. Web may later use h
 
 `VALIDATION_FAILED` `AUTH_INVALID_CREDENTIALS` `AUTH_EMAIL_TAKEN` `AUTH_LOCKED` `AUTH_UNAUTHORIZED` `AUTH_FORBIDDEN` `AUTH_EMAIL_TOKEN_INVALID` `AUTH_ACCOUNT_PAUSED` `AUTH_ACCOUNT_SUSPENDED` `EVENT_NOT_FOUND` `EVENT_FULL` `EVENT_CHECKIN_INVALID` `EVENT_NOT_GOING` `VENUE_NOT_FOUND` `POST_NOT_FOUND` `FEED_FORBIDDEN` `MEDIA_NOT_FOUND` `MEDIA_INVALID` `MEDIA_FORBIDDEN` `VERIFICATION_INVALID` `VERIFICATION_NOT_FOUND` `USER_NOT_FOUND` `USER_SELF_ACTION` `ALREADY_BLOCKED` `REPORT_INVALID` `RATE_LIMITED` `INTERNAL`
 
-Clients must switch on `error.code`, not on English `message`.
+Clients must switch on `error.code`, not on English `message`. Persian copy for UI lives in `@dorham/shared` as `ERROR_FA`.
+
+Paused accounts may still sign in, read `/users/me`, cancel RSVP, and resume. Writes (profile, RSVP, feed, block/report, media, verification) return `AUTH_ACCOUNT_PAUSED`.
+
 
 ## Versioning
 

@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { CheckInBody, CreateEventBody, ListEventsQuery } from "@dorham/shared";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
-import { assertActive } from "../../common/account-status";
+import { assertActive, assertNotDeleted, assertNotSuspended } from "../../common/account-status";
 import { newOpaqueToken, secretsEqual } from "../../common/crypto";
 import { loadEnv } from "../../config/env";
 import { MediaService } from "../media/media.service";
@@ -25,6 +25,9 @@ export class EventsService {
     };
     if (query.hostId) {
       where.hostId = query.hostId;
+    }
+    if (query.venueSlug) {
+      where.venueSlug = query.venueSlug;
     }
     if (query.cursor) {
       where.id = { lt: query.cursor };
@@ -99,14 +102,38 @@ export class EventsService {
   async create(hostId: string, body: CreateEventBody) {
     const host = await this.prisma.user.findUnique({ where: { id: hostId }, select: { status: true } });
     assertActive(host?.status ?? "DELETED");
+
+    let venue = body.venue ?? null;
+    let address = body.address ?? null;
+    let venueSlug = body.venueSlug ?? null;
+    let lat: number | null = null;
+    let lng: number | null = null;
+
+    if (venueSlug) {
+      const place = await this.prisma.venue.findFirst({
+        where: { slug: venueSlug, published: true, city: body.city },
+      });
+      if (!place) {
+        throw new BadRequestException({ code: "VENUE_NOT_FOUND", message: "Venue not found." });
+      }
+      venue = place.name;
+      address = place.address;
+      lat = place.lat;
+      lng = place.lng;
+      venueSlug = place.slug;
+    }
+
     const row = await this.prisma.event.create({
       data: {
         hostId,
         title: body.title,
         description: body.description,
         city: body.city,
-        venue: body.venue,
-        address: body.address,
+        venue,
+        venueSlug,
+        address,
+        lat,
+        lng,
         startsAt: new Date(body.startsAt),
         endsAt: body.endsAt ? new Date(body.endsAt) : null,
         capacity: body.capacity,
@@ -172,6 +199,10 @@ export class EventsService {
   }
 
   async cancelRsvp(eventId: string, userId: string) {
+    // PAUSED may still cancel so a seat frees for the waitlist.
+    const account = await this.prisma.user.findUnique({ where: { id: userId }, select: { status: true } });
+    assertNotDeleted(account?.status ?? "DELETED");
+    assertNotSuspended(account?.status ?? "DELETED");
     const current = await this.prisma.eventRsvp.findUnique({
       where: { eventId_userId: { eventId, userId } },
     });
@@ -399,6 +430,7 @@ export class EventsService {
       description: string;
       city: string;
       venue: string | null;
+      venueSlug: string | null;
       address: string | null;
       startsAt: Date;
       endsAt: Date | null;
@@ -421,6 +453,7 @@ export class EventsService {
       description: row.description,
       city: row.city as "istanbul" | "ankara" | "izmir",
       venue: row.venue,
+      venueSlug: row.venueSlug,
       address: row.address,
       startsAt: row.startsAt.toISOString(),
       endsAt: row.endsAt?.toISOString() ?? null,

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { VenueDto, VenueReview } from "@dorham/shared";
+import type { EventDto, VenueDto, VenueReview } from "@dorham/shared";
+import { EventCard } from "../../../components/event-card";
 import { PageIntro } from "../../../components/page-intro";
 import { SiteFooter } from "../../../components/site-footer";
 import { SiteHeader } from "../../../components/site-header";
@@ -31,9 +32,22 @@ async function loadReviews(slug: string): Promise<VenueReview[]> {
   }
 }
 
+async function loadEvents(slug: string): Promise<EventDto[]> {
+  try {
+    const res = await fetch(`${API}/v1/events?city=istanbul&venueSlug=${encodeURIComponent(slug)}&limit=10`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { data: EventDto[] };
+    return json.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function VenuePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [venue, reviews] = await Promise.all([loadVenue(slug), loadReviews(slug)]);
+  const [venue, reviews, events] = await Promise.all([loadVenue(slug), loadReviews(slug), loadEvents(slug)]);
   if (!venue) notFound();
 
   return (
@@ -85,6 +99,13 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
             همه مکان‌ها
           </Link>
         </div>
+      </section>
+      <section className="stack" style={{ marginTop: 28 }}>
+        <h2>رویدادها در این مکان</h2>
+        {events.length === 0 ? <p className="muted">هنوز رویدادی برای اینجا اعلام نشده.</p> : null}
+        {events.map((event) => (
+          <EventCard key={event.id} event={{ ...event, hostName: event.host.displayName }} />
+        ))}
       </section>
       <VenueReviews slug={venue.slug} initial={reviews} />
       <SiteFooter />

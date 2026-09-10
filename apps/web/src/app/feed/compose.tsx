@@ -41,6 +41,14 @@ export function FeedCompose() {
     );
   }
 
+  if (me?.status === "PAUSED") {
+    return (
+      <p className="muted">
+        حساب متوقف است. برای نوشتن در فید، از <a className="card-cta" href="/account">حساب</a> از سر بگیر.
+      </p>
+    );
+  }
+
   if (me && !canPost(me)) {
     return (
       <p className="muted">

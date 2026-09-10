@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Linking } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import type { VenueDto, VenueReview } from "@dorham/shared";
+import type { EventDto, VenueDto, VenueReview } from "@dorham/shared";
+import { EventCard } from "../../../components/event-card";
 import { AppText, Banner, Button, Card, Field, Loading, Screen } from "../../../components/ui";
 import { api, ApiError } from "../../../lib/api";
 import { venueKindFa } from "../../../lib/format";
@@ -12,6 +13,7 @@ export default function VenueDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const [venue, setVenue] = useState<VenueDto | null>(null);
   const [reviews, setReviews] = useState<VenueReview[]>([]);
+  const [events, setEvents] = useState<EventDto[]>([]);
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -24,6 +26,9 @@ export default function VenueDetailScreen() {
     api<VenueReview[]>(`/venues/${slug}/reviews`, { auth: false })
       .then(setReviews)
       .catch(() => setReviews([]));
+    api<EventDto[]>(`/events?city=istanbul&venueSlug=${encodeURIComponent(slug)}&limit=10`, { auth: false })
+      .then(setEvents)
+      .catch(() => setEvents([]));
   }, [slug]);
 
   async function publish() {
@@ -79,29 +84,35 @@ export default function VenueDetailScreen() {
         />
       ) : null}
       <AppText bold size="title">
-        تجربهٔ این مکان
+        رویدادها در این مکان
       </AppText>
-      {isSignedIn() ? (
-        <>
-          <Field label="تجربه‌ات" value={body} onChangeText={setBody} multiline />
-          <Button label="ثبت نظر" onPress={publish} disabled={body.trim().length < 10} />
-        </>
-      ) : (
-        <Button
-          label="برای نظر وارد شو"
-          variant="ghost"
-          onPress={() => router.push(loginHref(`/venues/${slug}`))}
+      {events.length === 0 ? <AppText muted>هنوز رویدادی برای اینجا اعلام نشده.</AppText> : null}
+      {events.map((event) => (
+        <EventCard
+          key={event.id}
+          event={{ ...event, hostName: event.host.displayName }}
+          onPress={() => router.push(`/events/${event.id}`)}
         />
-      )}
+      ))}
+      <AppText bold size="title">
+        تجربه‌ها
+      </AppText>
       {reviews.map((row) => (
         <Card key={row.id}>
           <AppText muted size="caption">
             {row.author.displayName}
-            {row.author.verificationStatus === "VERIFIED" ? " · تأییدشده" : ""}
           </AppText>
           <AppText>{row.body}</AppText>
         </Card>
       ))}
+      {isSignedIn() ? (
+        <>
+          <Field label="تجربه‌ات از این مکان" value={body} onChangeText={setBody} multiline />
+          <Button label="ثبت تجربه" onPress={publish} disabled={body.trim().length < 10} />
+        </>
+      ) : (
+        <Button label="برای نظر وارد شو" variant="ghost" onPress={() => router.push(loginHref(`/venues/${slug}`))} />
+      )}
     </Screen>
   );
 }

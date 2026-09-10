@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { Pressable, View } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import type { EventDto, FeedPost, Me } from "@dorham/shared";
-import { AppText, AuthorMeta, Banner, Button, Card, Chip, Empty, Field, Screen } from "../../../components/ui";
+import { AppText, AuthorMeta, Banner, Button, Card, Chip, Empty, Field, Loading, Screen } from "../../../components/ui";
 import { api, ApiError } from "../../../lib/api";
 import { canPost } from "../../../lib/can-post";
 import { formatWhen } from "../../../lib/format";
@@ -33,14 +33,21 @@ export default function FeedScreen() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [pending, setPending] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
-    api<FeedPost[]>("/feed?city=istanbul&limit=20", { auth: false })
-      .then(setPosts)
-      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "API روشن است؟"));
-    api<EventDto[]>("/events?city=istanbul&limit=5", { auth: false })
-      .then(setEvents)
-      .catch(() => undefined);
+    setError("");
+    setLoading(true);
+    Promise.all([
+      api<FeedPost[]>("/feed?city=istanbul&limit=20", { auth: false }),
+      api<EventDto[]>("/events?city=istanbul&limit=5", { auth: false }).catch(() => [] as EventDto[]),
+    ])
+      .then(([nextPosts, nextEvents]) => {
+        setPosts(nextPosts);
+        setEvents(nextEvents);
+      })
+      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "API روشن است؟"))
+      .finally(() => setLoading(false));
     if (isSignedIn()) {
       api<Me>("/users/me")
         .then(setMe)
@@ -91,11 +98,16 @@ export default function FeedScreen() {
           <AppText muted>برای نوشتن وارد شو. فقط میزبان و عضو تأییدشده پست می‌گذارند.</AppText>
           <Button label="ورود" variant="ghost" onPress={() => router.push(loginHref("/feed"))} />
         </Card>
+      ) : me?.status === "PAUSED" ? (
+        <Card>
+          <AppText muted>حساب متوقف است. برای نوشتن در فید، از حساب از سر بگیر.</AppText>
+          <Button label="حساب من" variant="ghost" onPress={() => router.push("/account")} />
+        </Card>
       ) : canPost(me) ? (
         <>
           <Field label="برای استانبول بنویس" value={body} onChangeText={setBody} multiline />
           {events.length > 0 ? (
-            <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: space.sm }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
               {events.map((event) => (
                 <Chip
                   key={event.id}
@@ -116,7 +128,8 @@ export default function FeedScreen() {
       ) : (
         <AppText muted>نوشتن پست برای میزبان و اعضای تأییدشده است. نظر برای همه آزاد است.</AppText>
       )}
-      {posts.length === 0 && !error ? <Empty text="هنوز پستی نیست." /> : null}
+      {loading && !error ? <Loading /> : null}
+      {!loading && posts.length === 0 && !error ? <Empty text="هنوز پستی نیست." /> : null}
       {posts.map((post) => (
         <Pressable key={post.id} onPress={() => router.push(`/feed/${post.id}`)}>
           <Card>

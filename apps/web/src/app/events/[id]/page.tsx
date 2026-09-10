@@ -5,7 +5,7 @@ import { PageIntro } from "../../../components/page-intro";
 import { SiteFooter } from "../../../components/site-footer";
 import { SiteHeader } from "../../../components/site-header";
 import { ShareEvent } from "../../../components/share-event";
-import { capacityWidth, eventInviteText, eventStatusFa, formatDayChip, formatPriceTry } from "../../../lib/format";
+import { capacityWidth, eventInviteText, eventPageUrl, eventStatusFa, formatDayChip, formatPriceTry } from "../../../lib/format";
 import { EventActions } from "./event-actions";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -52,7 +52,14 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         </p>
       ) : null}
       <p className="prose">{event.description}</p>
-      {event.address ? <p className="meta">{event.address}</p> : null}
+      {event.venueSlug ? (
+        <p className="meta">
+          مکان: <Link href={`/venues/${event.venueSlug}`}>{event.venue ?? "صفحهٔ مکان"}</Link>
+          {event.address ? ` · ${event.address}` : ""}
+        </p>
+      ) : event.address ? (
+        <p className="meta">{event.address}</p>
+      ) : null}
       <article className="card">
         <p className="strong">{formatPriceTry(event.priceTry)}</p>
         <p className="muted">
@@ -77,7 +84,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         ) : null}
       </article>
       <div className="row">
-        <ShareEvent title={event.title} text={eventInviteText(event)} />
+        <ShareEvent title={event.title} text={eventInviteText(event)} url={eventPageUrl(event.id)} />
       </div>
       <EventActions eventId={event.id} hostId={event.host.id} priceTry={event.priceTry} initialGuests={guests} />
       <SiteFooter />

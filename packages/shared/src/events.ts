@@ -22,6 +22,7 @@ export const eventSchema = z.object({
   description: z.string(),
   city: z.enum(CITIES),
   venue: z.string().nullable(),
+  venueSlug: z.string().nullable(),
   address: z.string().nullable(),
   startsAt: z.string().datetime(),
   endsAt: z.string().datetime().nullable(),
@@ -42,6 +43,7 @@ export type EventDto = z.infer<typeof eventSchema>;
 export const listEventsQuerySchema = z.object({
   city: z.enum(CITIES).default("istanbul"),
   hostId: z.string().min(8).max(64).optional(),
+  venueSlug: z.string().trim().min(2).max(80).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   cursor: z.string().optional(),
 });
@@ -52,6 +54,7 @@ export const createEventBodySchema = z.object({
   title: z.string().trim().min(4).max(80),
   description: z.string().trim().min(10).max(4000),
   city: z.enum(CITIES).default("istanbul"),
+  venueSlug: z.string().trim().min(2).max(80).optional(),
   venue: z.string().trim().max(120).optional(),
   address: z.string().trim().max(200).optional(),
   startsAt: z.string().datetime(),

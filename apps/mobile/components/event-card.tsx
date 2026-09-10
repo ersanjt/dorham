@@ -27,23 +27,25 @@ export function EventCard({
 
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={event.title}>
-      <Card>
-        <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", gap: space.sm }}>
+      <Card accent>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space.sm }}>
           <View
             style={{
-              borderWidth: 1,
-              borderColor: color.line,
-              backgroundColor: color.paper,
-              borderRadius: radius.pill,
-              paddingHorizontal: 8,
-              paddingVertical: 3,
+              borderWidth: 1.5,
+              borderColor: color.clay,
+              backgroundColor: color.claySoft,
+              borderRadius: radius.sm,
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              minWidth: 72,
+              alignItems: "center",
             }}
           >
             <AppText size="caption" bold style={{ color: color.clay, lineHeight: 18 }}>
               {formatDayChip(event.startsAt)}
             </AppText>
           </View>
-          <AppText muted size="caption">
+          <AppText muted size="caption" style={{ flex: 1 }}>
             {event.venue ?? "استانبول"}
           </AppText>
         </View>
@@ -61,14 +63,25 @@ export function EventCard({
         {filled != null ? (
           <View
             style={{
-              height: 6,
-              borderRadius: radius.pill,
-              backgroundColor: color.paper,
+              height: 5,
+              borderRadius: 2,
+              backgroundColor: color.paperDeep,
               overflow: "hidden",
               marginTop: 4,
+              position: "relative",
             }}
           >
-            <View style={{ width: `${Math.max(filled, 8)}%`, minWidth: 12, height: "100%", backgroundColor: color.clay, borderRadius: radius.pill }} />
+            <View
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                right: 0,
+                width: `${Math.max(filled, 8)}%`,
+                minWidth: 12,
+                backgroundColor: color.clay,
+              }}
+            />
           </View>
         ) : null}
       </Card>

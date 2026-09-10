@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 
-export function ShareEvent({ title, text }: { title: string; text: string }) {
+export function ShareEvent({ title, text, url }: { title: string; text: string; url?: string }) {
   const [notice, setNotice] = useState("");
 
   async function share() {
     setNotice("");
     if (navigator.share) {
       try {
-        await navigator.share({ title, text });
+        await navigator.share(url ? { title, text, url } : { title, text });
         return;
       } catch {
         /* dismissed */

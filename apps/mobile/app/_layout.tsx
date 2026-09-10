@@ -35,7 +35,8 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
 
 export default function RootLayout() {
   const [sessionReady, setSessionReady] = useState(false);
-  const [fontsLoaded] = useFonts({
+  const [fontWaitOver, setFontWaitOver] = useState(false);
+  const [fontsLoaded, fontError] = useFonts({
     Vazirmatn: Vazirmatn_400Regular,
     VazirmatnMedium: Vazirmatn_500Medium,
     VazirmatnSemiBold: Vazirmatn_600SemiBold,
@@ -48,10 +49,17 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (fontsLoaded && sessionReady) SplashScreen.hideAsync().catch(() => undefined);
-  }, [fontsLoaded, sessionReady]);
+    const timer = setTimeout(() => setFontWaitOver(true), 4000);
+    return () => clearTimeout(timer);
+  }, []);
 
-  if (!fontsLoaded || !sessionReady) {
+  const fontsReady = fontsLoaded || Boolean(fontError) || fontWaitOver;
+
+  useEffect(() => {
+    if (fontsReady && sessionReady) SplashScreen.hideAsync().catch(() => undefined);
+  }, [fontsReady, sessionReady]);
+
+  if (!fontsReady || !sessionReady) {
     return <View style={{ flex: 1, backgroundColor: color.paper }} />;
   }
 

@@ -23,4 +23,5 @@ export const AREA_LABEL: Record<string, string> = {
   esenyurt: "اسنیورت",
   avcilar: "آوجیلار",
   beylikduzu: "بیلیکدوزو",
+  basaksehir: "باشاک‌شهر",
 };

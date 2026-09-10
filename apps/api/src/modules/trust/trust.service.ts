@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { ReportBody } from "@dorham/shared";
+import { assertActive } from "../../common/account-status";
 import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
@@ -10,6 +11,8 @@ export class TrustService {
     if (blockerId === blockedId) {
       throw new ConflictException({ code: "USER_SELF_ACTION", message: "You cannot block yourself." });
     }
+    const actor = await this.prisma.user.findUnique({ where: { id: blockerId }, select: { status: true } });
+    assertActive(actor?.status ?? "DELETED");
     const target = await this.prisma.user.findUnique({ where: { id: blockedId }, select: { id: true, status: true } });
     if (!target || target.status === "DELETED") {
       throw new NotFoundException({ code: "USER_NOT_FOUND", message: "User not found." });
@@ -50,6 +53,8 @@ export class TrustService {
     if (reporterId === body.targetId) {
       throw new ConflictException({ code: "USER_SELF_ACTION", message: "You cannot report yourself." });
     }
+    const actor = await this.prisma.user.findUnique({ where: { id: reporterId }, select: { status: true } });
+    assertActive(actor?.status ?? "DELETED");
     const target = await this.prisma.user.findUnique({ where: { id: body.targetId }, select: { id: true, status: true } });
     if (!target || target.status === "DELETED") {
       throw new NotFoundException({ code: "USER_NOT_FOUND", message: "User not found." });

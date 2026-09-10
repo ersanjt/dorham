@@ -27,9 +27,21 @@
 - **Yar / Azizam-likes** — dating clone branding
 - **Istanbul-only names** — we will add Ankara / Izmir later
 
+## Domains (do not rename for `.com`)
+
+`dorham.com` is a **premium aftermarket** listing — not a reason to change the product name.
+
+| Priority | Domain | Role |
+| --- | --- | --- |
+| 1 | **dorham.app** | Canonical public site + deep links (already used in seed / docs) |
+| 2 | dorham.co | Short redirect / marketing backup |
+| 3 | dorham.org | Community / nonprofit-looking backup |
+
+Register **dorham.app** when ready. Keep App IDs and packages as `@dorham/*` and `app.dorham.mobile`.
+
 ## Handles to register
 
 - App IDs: `app.dorham.mobile`, `app.dorham.web`
 - Package: `@dorham/*`
-- Domains (register when ready): `dorham.app`, `dorham.co`
 - Store name: **Dorham** with subtitle “Iranian community in Turkey”
+- Email (dev seed): `host@dorham.app`

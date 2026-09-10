@@ -1,5 +1,6 @@
 export * from "./cities";
 export * from "./errors";
+export * from "./error-fa";
 export * from "./auth";
 export * from "./users";
 export * from "./events";

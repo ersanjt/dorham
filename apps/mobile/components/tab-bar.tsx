@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "./ui";
-import { color, space, type } from "../lib/theme";
+import { color, radius, space, type } from "../lib/theme";
 
 type TabBarProps = {
   state: { routes: { name: string }[]; index: number };
@@ -29,6 +29,7 @@ export function TabBar({ state, navigation }: TabBarProps) {
       accessibilityRole="tablist"
       style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}
     >
+      <View style={styles.topRule} />
       {TABS.map((tab) => {
         const route = state.routes.find((item) => item.name === tab.name);
         if (!route) return null;
@@ -43,11 +44,13 @@ export function TabBar({ state, navigation }: TabBarProps) {
             android_ripple={{ color: "rgba(177,46,40,0.08)", borderless: true }}
             style={styles.item}
           >
-            <Ionicons
-              name={active ? tab.activeIcon : tab.icon}
-              size={22}
-              color={active ? color.clay : color.muted}
-            />
+            <View style={[styles.iconWrap, active && styles.iconActive]}>
+              <Ionicons
+                name={active ? tab.activeIcon : tab.icon}
+                size={20}
+                color={active ? color.cream : color.muted}
+              />
+            </View>
             <AppText
               size="caption"
               bold={active}
@@ -69,12 +72,32 @@ export function TabBar({ state, navigation }: TabBarProps) {
 
 const styles = StyleSheet.create({
   bar: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     backgroundColor: color.cream,
-    borderTopWidth: 1,
-    borderTopColor: color.line,
+    borderTopWidth: 1.5,
+    borderTopColor: color.lineStrong,
     paddingTop: space.sm,
     paddingHorizontal: space.xs,
   },
-  item: { flex: 1, alignItems: "center", gap: 2, minHeight: 48, justifyContent: "center" },
+  topRule: {
+    position: "absolute",
+    top: 0,
+    left: "35%",
+    right: "35%",
+    height: 3,
+    backgroundColor: color.clay,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
+  },
+  item: { flex: 1, alignItems: "center", gap: 4, minHeight: 52, justifyContent: "center" },
+  iconWrap: {
+    width: 36,
+    height: 28,
+    borderRadius: radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconActive: {
+    backgroundColor: color.clay,
+  },
 });

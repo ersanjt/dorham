@@ -97,7 +97,7 @@ export default function AccountPage() {
       {notice ? <div className="banner ok">{notice}</div> : null}
       {error ? <div className="banner err">{error}</div> : null}
       {me.status === "PAUSED" ? (
-        <div className="banner err">حساب متوقف است. از سر بگیر تا پروفایل، RSVP و فید دوباره باز شوند.</div>
+        <div className="banner err">حساب متوقف است. از سر بگیر تا پروفایل، ثبت حضور و فید دوباره باز شوند.</div>
       ) : null}
 
       <section className="card" style={{ marginTop: 24 }}>

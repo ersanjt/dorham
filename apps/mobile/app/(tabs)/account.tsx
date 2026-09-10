@@ -90,9 +90,12 @@ export default function AccountScreen() {
 
   if (!signedIn) {
     return (
-      <Screen kicker="پروفایل" title="حساب من" subtitle="ورود برای RSVP، نظر، و نوشتن در فید.">
-        <Card>
-          <AppText>هنوز وارد نشده‌ای. حساب یکی است؛ وب و موبایل همان API را می‌زنند.</AppText>
+      <Screen kicker="پروفایل" title="حساب من" subtitle="ورود برای ثبت حضور، نظر، و نوشتن در فید.">
+        <Card accent>
+          <AppText bold size="title">
+            یک حساب برای شهر
+          </AppText>
+          <AppText muted>وب و موبایل همان API را می‌زنند. اول وارد شو، بعد جمعه را باز کن.</AppText>
         </Card>
         <Button label="ورود" onPress={() => router.push("/login")} />
         <Button label="ساخت حساب" variant="ghost" onPress={() => router.push("/register")} />
@@ -116,7 +119,7 @@ export default function AccountScreen() {
     <Screen kicker="پروفایل" title="حساب من">
       <Banner text={error} />
       <Banner text={notice} tone="ok" />
-      <Card>
+      <Card accent>
         <AppText bold size="title">
           {me.displayName}
         </AppText>
@@ -131,33 +134,55 @@ export default function AccountScreen() {
           تأیید دست‌نویس روی وب کامل می‌شود. هدف ۲۵۰ لیر در سال؛ جمعه‌های اول رایگان.
         </AppText>
       </Card>
-      {me.status === "PAUSED" ? (
-        <Banner text="حساب متوقف است. از سر بگیر تا پروفایل، RSVP و فید دوباره باز شوند." />
+      {!me.emailVerified || me.verificationStatus === "NONE" || me.verificationStatus === "REJECTED" ? (
+        <Card accent>
+          <AppText bold size="title">
+            قدم بعدی در دورهم
+          </AppText>
+          <AppText muted>
+            بعد از ساخت حساب: ایمیل را تأیید کن، یک جمعه را باز کن، یا مکان ایرانی نزدیکت را پیدا کن.
+          </AppText>
+          {!me.emailVerified ? (
+            <Button
+              label="تأیید ایمیل"
+              onPress={() => {
+                api<{ verifyEmailToken?: string }>("/auth/resend-verification", { method: "POST" })
+                  .then((data) => {
+                    if (data.verifyEmailToken) {
+                      router.push(`/verify-email?token=${encodeURIComponent(data.verifyEmailToken)}`);
+                    } else {
+                      setNotice("اگر ایمیل تأیید نشده باشد، لینک جدید ساخته شد.");
+                    }
+                  })
+                  .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "ارسال نشد."));
+              }}
+            />
+          ) : null}
+          <Button label="رویدادهای این هفته" variant="ghost" onPress={() => router.push("/events")} />
+          <Button label="مکان‌های ایرانی" variant="ghost" onPress={() => router.push("/venues")} />
+        </Card>
       ) : null}
-      <Field label="نام نمایشی" value={displayName} onChangeText={setDisplayName} />
-      <Field label="معرفی کوتاه" value={bio} onChangeText={setBio} multiline />
+      {me.status === "PAUSED" ? (
+        <Banner text="حساب متوقف است. از سر بگیر تا پروفایل، ثبت حضور و فید دوباره باز شوند." />
+      ) : null}
+      <Field
+        label="نام نمایشی"
+        value={displayName}
+        onChangeText={setDisplayName}
+        editable={me.status !== "PAUSED"}
+      />
+      <Field
+        label="معرفی کوتاه"
+        value={bio}
+        onChangeText={setBio}
+        multiline
+        editable={me.status !== "PAUSED"}
+      />
       <Button
         label={saving ? "…" : "ذخیره پروفایل"}
         onPress={saveProfile}
         disabled={saving || me.status === "PAUSED"}
       />
-      {!me.emailVerified ? (
-        <Button
-          label="ارسال دوبارهٔ تأیید ایمیل"
-          variant="ghost"
-          onPress={() => {
-            api<{ verifyEmailToken?: string }>("/auth/resend-verification", { method: "POST" })
-              .then((data) => {
-                if (data.verifyEmailToken) {
-                  router.push(`/verify-email?token=${encodeURIComponent(data.verifyEmailToken)}`);
-                } else {
-                  setNotice("اگر ایمیل تأیید نشده باشد، لینک جدید ساخته شد.");
-                }
-              })
-              .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "ارسال نشد."));
-          }}
-        />
-      ) : null}
       <Button label="پروفایل عمومی" variant="ghost" onPress={() => router.push(`/people/${me.id}`)} />
       <Button label="ثبت مکان" variant="ghost" onPress={() => router.push("/venues/new")} />
       {canHost ? <Button label="رویداد تازه" onPress={() => router.push("/events/new")} /> : null}

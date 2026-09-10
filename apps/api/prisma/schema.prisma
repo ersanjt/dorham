@@ -213,6 +213,7 @@ model Venue {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   reviews     VenueReview[]
+  events      Event[]
 
   @@index([city, kind])
   @@index([area])
@@ -239,6 +240,8 @@ model Event {
   description String
   city        String
   venue       String?
+  venueSlug   String?
+  place       Venue?      @relation(fields: [venueSlug], references: [slug], onDelete: SetNull, onUpdate: Cascade)
   address     String?
   lat         Float?
   lng         Float?
@@ -256,6 +259,7 @@ model Event {
 
   @@index([city, startsAt])
   @@index([status, startsAt])
+  @@index([venueSlug])
 }
 
 model EventRsvp {

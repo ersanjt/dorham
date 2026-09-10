@@ -4,10 +4,14 @@ import { ISTANBUL_VENUES } from "./venues-data";
 
 const prisma = new PrismaClient();
 
+/**
+ * Seed = real venue directory + local admin only.
+ * No fabricated events or feed posts (see docs/08-data-policy.md).
+ */
 async function main() {
   const email = "host@dorham.app";
   const passwordHash = await hashPassword("DorhamHost1");
-  const host = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email },
     update: { role: "ADMIN", emailVerifiedAt: new Date() },
     create: {
@@ -18,8 +22,8 @@ async function main() {
       emailVerifiedAt: new Date(),
       profile: {
         create: {
-          displayName: "دورهم استانبول",
-          bio: "جمعه‌ها دور هم.",
+          displayName: "میزبان محلی (توسعه)",
+          bio: "حساب فنی برای تست ورود — رویداد واقعی را از اپ بساز.",
           city: "istanbul",
           country: "TR",
         },
@@ -27,82 +31,6 @@ async function main() {
       verification: { create: { status: "VERIFIED" } },
     },
   });
-
-  const startsAt = new Date();
-  startsAt.setDate(startsAt.getDate() + ((5 - startsAt.getDay() + 7) % 7 || 7));
-  startsAt.setHours(19, 0, 0, 0);
-
-  const existing = await prisma.event.findFirst({
-    where: { hostId: host.id, title: "جمعه دورهم — کافه در کادیکوی" },
-  });
-  if (!existing) {
-    await prisma.event.create({
-      data: {
-        hostId: host.id,
-        title: "جمعه دورهم — کافه در کادیکوی",
-        description:
-          "اولین دورهم رسمی. چای، معرفی کوتاه، بدون سوایپ. فقط آدم‌های واقعی.",
-        city: "istanbul",
-        venue: "Kadıköy",
-        address: "Kadıköy, Istanbul",
-        startsAt,
-        capacity: 24,
-        priceTry: 200,
-        status: "PUBLISHED",
-        locale: "FA",
-        checkInSecret: crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", ""),
-      },
-    });
-  } else {
-    await prisma.event.update({
-      where: { id: existing.id },
-      data: {
-        priceTry: 200,
-        checkInSecret: existing.checkInSecret
-          ? undefined
-          : crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", ""),
-      },
-    });
-  }
-
-  const friday = await prisma.event.findFirst({
-    where: { hostId: host.id, title: "جمعه دورهم — کافه در کادیکوی" },
-    select: { id: true },
-  });
-
-  const seedPosts = [
-    {
-      startsWith: "جمعه کادیکوی",
-      body: "جمعه کادیکوی دور هم می‌شویم. چای، معرفی کوتاه، بدون سوایپ. اگر تازه‌وارد استانبولی، بیا — کارت لایک لازم نیست.",
-      venueSlug: "shiraz-kadikoy",
-      eventId: friday?.id,
-    },
-    {
-      startsWith: "وسط هفته اکسره",
-      body: "وسط هفته اکسره هنوز خیابان ایرانی این شهر است. اگر دلت هوای غذای خودمان را کرده، سفیر و اسومان همین دور و برند.",
-      venueSlug: "safir-aksaray",
-      eventId: undefined,
-    },
-  ];
-
-  for (const post of seedPosts) {
-    const existing = await prisma.post.findFirst({
-      where: { authorId: host.id, body: { startsWith: post.startsWith } },
-    });
-    if (!existing) {
-      await prisma.post.create({
-        data: {
-          authorId: host.id,
-          city: "istanbul",
-          body: post.body,
-          eventId: post.eventId,
-          venueSlug: post.venueSlug,
-        },
-      });
-    } else if (existing.body !== post.body) {
-      await prisma.post.update({ where: { id: existing.id }, data: { body: post.body } });
-    }
-  }
 
   for (const venue of ISTANBUL_VENUES) {
     await prisma.venue.upsert({
@@ -142,6 +70,28 @@ async function main() {
       },
     });
   }
+
+  // Drop any older demo gatherings / posts from previous seed versions.
+  await prisma.post.deleteMany({
+    where: {
+      OR: [
+        { body: { startsWith: "جمعه کادیکوی" } },
+        { body: { startsWith: "وسط هفته اکسره" } },
+      ],
+    },
+  });
+  await prisma.event.deleteMany({
+    where: {
+      title: {
+        in: [
+          "جمعه دورهم — کافه در کادیکوی",
+          "وسط‌هفته آکسارای — شام کوتاه",
+          "جمعهٔ بعد — تکسیم دامو",
+          "کافه کتاب چشمه — کادیکوی",
+        ],
+      },
+    },
+  });
 }
 
 main()

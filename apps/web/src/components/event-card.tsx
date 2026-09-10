@@ -17,7 +17,7 @@ export type EventCardData = {
 export function EventCard({
   event,
   href,
-  cta = "جزئیات و RSVP",
+  cta = "جزئیات و ثبت حضور",
 }: {
   event: EventCardData;
   href?: string;

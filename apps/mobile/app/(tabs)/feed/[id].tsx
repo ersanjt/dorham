@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import type { FeedComment, FeedPost } from "@dorham/shared";
+import type { FeedComment, FeedPost, Me } from "@dorham/shared";
 import { AppText, AuthorMeta, Banner, Button, Card, Field, Loading, Screen } from "../../../components/ui";
 import { api, ApiError } from "../../../lib/api";
 import { formatWhen } from "../../../lib/format";
@@ -11,6 +12,7 @@ export default function FeedPostScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [post, setPost] = useState<FeedPost | null>(null);
   const [comments, setComments] = useState<FeedComment[]>([]);
+  const [me, setMe] = useState<Me | null>(null);
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -26,6 +28,11 @@ export default function FeedPostScreen() {
         setComments(rows);
       })
       .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "پست خوانده نشد."));
+    if (isSignedIn()) {
+      api<Me>("/users/me")
+        .then(setMe)
+        .catch(() => setMe(null));
+    }
   }, [id]);
 
   async function comment() {
@@ -46,6 +53,40 @@ export default function FeedPostScreen() {
     }
   }
 
+  function reportPost() {
+    if (!isSignedIn()) {
+      router.push(loginHref(`/feed/${id}`));
+      return;
+    }
+    Alert.alert("گزارش پست", "این پست گزارش شود؟", [
+      { text: "نه", style: "cancel" },
+      {
+        text: "گزارش",
+        style: "destructive",
+        onPress: () => {
+          api(`/feed/${id}/report`, { method: "POST", body: JSON.stringify({ reason: "other" }) })
+            .then(() => setNotice("گزارش ثبت شد."))
+            .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "گزارش نشد."));
+        },
+      },
+    ]);
+  }
+
+  function hidePost() {
+    Alert.alert("برداشتن پست", "این پست از فید برداشته شود؟", [
+      { text: "نه", style: "cancel" },
+      {
+        text: "بردار",
+        style: "destructive",
+        onPress: () => {
+          api(`/feed/${id}`, { method: "DELETE" })
+            .then(() => router.replace("/feed"))
+            .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "حذف نشد."));
+        },
+      },
+    ]);
+  }
+
   if (!post && !error) {
     return (
       <Screen back title="فید">
@@ -53,6 +94,9 @@ export default function FeedPostScreen() {
       </Screen>
     );
   }
+
+  const canHide = me && post && (me.id === post.author.id || me.role === "MODERATOR" || me.role === "ADMIN");
+  const canReport = me && post && me.id !== post.author.id;
 
   return (
     <Screen back kicker="خبر شهر" title="فید استانبول">
@@ -100,6 +144,8 @@ export default function FeedPostScreen() {
       ) : (
         <Button label="برای نظر وارد شو" variant="ghost" onPress={() => router.push(loginHref(`/feed/${id}`))} />
       )}
+      {canReport ? <Button label="گزارش پست" variant="ghost" onPress={reportPost} /> : null}
+      {canHide ? <Button label="برداشتن پست" variant="danger" onPress={hidePost} /> : null}
     </Screen>
   );
 }

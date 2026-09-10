@@ -2,8 +2,10 @@ import Link from "next/link";
 import type { EventDto, FeedPost } from "@dorham/shared";
 import { EventCard } from "../components/event-card";
 import { FeedPostCard } from "../components/feed-post";
+import { ShareEvent } from "../components/share-event";
 import { SiteFooter } from "../components/site-footer";
 import { SiteHeader } from "../components/site-header";
+import { eventInviteText, eventPageUrl, formatDayChip, formatPriceTry } from "../lib/format";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -101,8 +103,30 @@ export default async function HomePage() {
           <p className="kicker">صفحهٔ اول دورهم</p>
           <h2>این هفته در استانبول</h2>
         </div>
+        {next ? (
+          <article className="card" style={{ marginBottom: 24 }}>
+            <p className="kicker">رویداد بعدی</p>
+            <h3 style={{ marginTop: 0 }}>{next.title}</h3>
+            <p className="muted">
+              {formatDayChip(next.startsAt)}
+              {next.venue ? ` · ${next.venue}` : ""}
+              {" · "}
+              {formatPriceTry(next.priceTry)}
+            </p>
+            <p className="muted">
+              {next.goingCount}
+              {next.capacity ? ` از ${next.capacity}` : ""} نفر می‌آیند
+            </p>
+            <div className="row">
+              <Link className="btn" href={`/events/${next.id}`}>
+                جزئیات و ثبت حضور
+              </Link>
+              <ShareEvent title={next.title} text={eventInviteText(next)} url={eventPageUrl(next.id)} />
+            </div>
+          </article>
+        ) : null}
         {events.length === 0 ? (
-          <p className="muted">هنوز رویدادی از API نرسیده. API را روشن کن یا جمعهٔ اول را بساز.</p>
+          <p className="muted">هنوز رویدادی نیست. جمعهٔ اول را بساز یا صبر کن تا میزبان اعلام کند.</p>
         ) : (
           <div className="grid">
             {events.map((event) => (

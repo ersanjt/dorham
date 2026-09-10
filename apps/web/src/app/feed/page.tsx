@@ -33,7 +33,7 @@ export default async function FeedPage() {
         </Suspense>
       </div>
       {posts.length === 0 ? (
-        <p className="muted">هنوز پستی نیست. API را روشن کن یا اولین یادداشت را بنویس.</p>
+        <p className="muted">هنوز پستی نیست. اولین یادداشت شهر را بنویس.</p>
       ) : (
         <div className="stack">
           {posts.map((post) => (

@@ -1,3 +1,4 @@
+import { ERROR_FA } from "@dorham/shared";
 import { resolveApiBase } from "./api-base";
 import { clearSession, getAccessToken, getRefreshToken, setSession } from "./session";
 
@@ -13,30 +14,6 @@ export class ApiError extends Error {
     super(message);
   }
 }
-
-const FA: Record<string, string> = {
-  VALIDATION_FAILED: "ورودی ناقص است.",
-  AUTH_INVALID_CREDENTIALS: "ایمیل یا رمز اشتباه است.",
-  AUTH_EMAIL_TAKEN: "این ایمیل قبلاً ثبت شده.",
-  AUTH_LOCKED: "حساب موقتاً قفل است.",
-  AUTH_UNAUTHORIZED: "وارد شو.",
-  AUTH_FORBIDDEN: "اجازه نداری.",
-  AUTH_EMAIL_TOKEN_INVALID: "لینک تأیید منقضی یا نادرست است.",
-  AUTH_ACCOUNT_PAUSED: "حساب متوقف است. از سر بگیر تا دوباره بنویسی.",
-  AUTH_ACCOUNT_SUSPENDED: "حساب تعلیق شده.",
-  RATE_LIMITED: "چند لحظه صبر کن و دوباره تلاش کن.",
-  MEDIA_NOT_FOUND: "عکس پیدا نشد.",
-  MEDIA_INVALID: "عکس پذیرفته نشد.",
-  EVENT_NOT_FOUND: "رویداد پیدا نشد.",
-  EVENT_FULL: "ظرفیت پر است؛ در لیست انتظار هستی.",
-  VENUE_NOT_FOUND: "مکان پیدا نشد.",
-  VENUE_MAPS_INVALID: "لینک گوگل‌مپ لازم است.",
-  REVIEW_DUPLICATE: "برای این مکان قبلاً نظر داده‌ای.",
-  POST_NOT_FOUND: "پست پیدا نشد.",
-  FEED_FORBIDDEN: "فقط میزبان و عضو تأییدشده می‌نویسند.",
-  USER_SELF_ACTION: "این کار روی خودت ممکن نیست.",
-  NETWORK: "اتصال برقرار نشد. اینترنت را چک کن.",
-};
 
 type Init = RequestInit & { auth?: boolean };
 
@@ -76,7 +53,7 @@ export async function api<T>(path: string, init: Init = {}): Promise<T> {
   try {
     res = await fetch(`${apiBase()}/v1${path}`, { ...init, headers, signal: timeoutSignal(20000) });
   } catch {
-    throw new ApiError("NETWORK", FA.NETWORK);
+    throw new ApiError("NETWORK", `${ERROR_FA.NETWORK} (${apiBase()})`);
   }
   if (res.status === 401 && init.auth !== false && getRefreshToken()) {
     const ok = await refreshAccess();
@@ -87,7 +64,7 @@ export async function api<T>(path: string, init: Init = {}): Promise<T> {
       try {
         res = await fetch(`${apiBase()}/v1${path}`, { ...init, headers: retry, signal: timeoutSignal(20000) });
       } catch {
-        throw new ApiError("NETWORK", FA.NETWORK);
+        throw new ApiError("NETWORK", `${ERROR_FA.NETWORK} (${apiBase()})`);
       }
     }
   }
@@ -98,7 +75,7 @@ export async function api<T>(path: string, init: Init = {}): Promise<T> {
   };
   if (!res.ok) {
     const code = json.error?.code ?? "INTERNAL";
-    throw new ApiError(code, FA[code] ?? json.error?.message ?? "درخواست انجام نشد.");
+    throw new ApiError(code, ERROR_FA[code] ?? json.error?.message ?? ERROR_FA.INTERNAL);
   }
   return (json.data ?? json) as T;
 }

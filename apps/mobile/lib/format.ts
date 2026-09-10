@@ -1,3 +1,5 @@
+import { publicWebBase } from "./api-base";
+
 /** Persian copy, Gregorian calendar, Istanbul clock — never Jalali. */
 const DATE_LOCALE = "fa-IR-u-ca-gregory";
 const TIME_ZONE = "Europe/Istanbul";
@@ -64,8 +66,7 @@ export const verifyFa: Record<string, string> = {
 };
 
 export function eventPageUrl(id: string) {
-  const origin = process.env.EXPO_PUBLIC_WEB_URL ?? "http://localhost:3000";
-  return `${origin}/events/${id}`;
+  return `${publicWebBase()}/events/${id}`;
 }
 
 export function eventInviteText(event: {

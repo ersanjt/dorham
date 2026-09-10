@@ -1,20 +1,33 @@
 import { useEffect, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, Share, View } from "react-native";
 import { router } from "expo-router";
 import type { EventDto, FeedPost } from "@dorham/shared";
 import { EventCard } from "../../components/event-card";
-import { AppText, AuthorMeta, BrandMark, Button, Card, Chip, Empty, ErrorState, Screen } from "../../components/ui";
-import { api } from "../../lib/api";
-import { formatWhen } from "../../lib/format";
-import { space, type } from "../../lib/theme";
+import {
+  AppText,
+  AuthorMeta,
+  Button,
+  Card,
+  Chip,
+  Empty,
+  ErrorState,
+  Loading,
+  Screen,
+  SectionTitle,
+} from "../../components/ui";
+import { api, ApiError } from "../../lib/api";
+import { eventInviteText, formatDayChip, formatPriceTry, formatWhen } from "../../lib/format";
+import { color, radius, space } from "../../lib/theme";
 
 export default function CityScreen() {
   const [events, setEvents] = useState<EventDto[]>([]);
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   function load() {
     setError("");
+    setLoading(true);
     Promise.all([
       api<EventDto[]>("/events?city=istanbul&limit=3", { auth: false }),
       api<FeedPost[]>("/feed?city=istanbul&limit=2", { auth: false }),
@@ -23,7 +36,10 @@ export default function CityScreen() {
         setEvents(nextEvents);
         setPosts(nextPosts);
       })
-      .catch(() => setError("شهر خوانده نشد. API یا اینترنت را چک کن."));
+      .catch((err: unknown) =>
+        setError(err instanceof ApiError ? err.message : "شهر خوانده نشد. API یا اینترنت را چک کن."),
+      )
+      .finally(() => setLoading(false));
   }
 
   useEffect(() => {
@@ -34,40 +50,77 @@ export default function CityScreen() {
 
   return (
     <Screen
+      brand
       kicker="استانبول · این هفته"
       title="دورهم، توی همین شهر"
       subtitle="ایرانی‌های استانبول. جمعه دور هم — نه سوایپ."
     >
-      <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: space.sm }}>
-        <BrandMark />
-        <AppText style={{ fontFamily: type.display, fontSize: 28, lineHeight: 34 }}>Dorham</AppText>
-      </View>
       {error ? <ErrorState text={error} onRetry={load} /> : null}
-      {next ? (
-        <Card>
-          <AppText muted size="caption">
-            رویداد بعدی
-          </AppText>
-          <AppText bold size="title">
-            {next.title}
-          </AppText>
-          <AppText muted>
-            {next.venue ?? "استانبول"} · {next.goingCount} نفر می‌آیند
-          </AppText>
-          <Button label="جزئیات و RSVP" onPress={() => router.push(`/events/${next.id}`)} />
+      {loading && !error ? <Loading /> : null}
+      {!loading && !error && next ? (
+        <Card accent>
+          <View style={{ flexDirection: "row", gap: space.md, alignItems: "stretch" }}>
+            <View
+              style={{
+                width: 74,
+                borderRadius: radius.sm,
+                backgroundColor: color.clay,
+                paddingVertical: space.sm,
+                paddingHorizontal: 8,
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
+              }}
+            >
+              <AppText bold size="caption" align="center" style={{ color: "rgba(255,246,236,0.85)", lineHeight: 16 }}>
+                رویداد
+              </AppText>
+              <AppText bold align="center" style={{ color: color.cream, fontSize: 15, lineHeight: 20 }}>
+                {formatDayChip(next.startsAt)}
+              </AppText>
+              <View
+                style={{
+                  width: 8,
+                  height: 8,
+                  backgroundColor: color.cream,
+                  transform: [{ rotate: "45deg" }],
+                  marginTop: 4,
+                }}
+              />
+            </View>
+            <View style={{ flex: 1, gap: space.xs }}>
+              <AppText bold size="caption" style={{ color: color.clay }}>
+                بعدی در شهر
+              </AppText>
+              <AppText bold size="title">
+                {next.title}
+              </AppText>
+              <AppText muted>
+                {next.venue ? next.venue : "استانبول"}
+              </AppText>
+              <AppText muted size="caption">
+                {formatPriceTry(next.priceTry)} · {next.goingCount}
+                {next.capacity ? ` از ${next.capacity}` : ""} نفر
+              </AppText>
+            </View>
+          </View>
+          <Button label="جزئیات و ثبت حضور" onPress={() => router.push(`/events/${next.id}`)} />
+          <Button
+            label="فرستادن دعوت"
+            variant="ghost"
+            onPress={() => Share.share({ message: eventInviteText(next) }).catch(() => undefined)}
+          />
         </Card>
       ) : null}
 
-      <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: space.sm }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
         <Chip label="رویدادها" selected onPress={() => router.push("/events")} />
         <Chip label="فید شهر" onPress={() => router.push("/feed")} />
         <Chip label="مکان‌ها" onPress={() => router.push("/venues")} />
       </View>
 
-      <AppText bold size="title">
-        این هفته در استانبول
-      </AppText>
-      {events.length === 0 ? <Empty text="هنوز رویدادی منتشر نشده." /> : null}
+      <SectionTitle>این هفته در استانبول</SectionTitle>
+      {!loading && events.length === 0 && !error ? <Empty text="هنوز رویدادی منتشر نشده." /> : null}
       {events.map((event) => (
         <EventCard
           key={event.id}
@@ -76,10 +129,8 @@ export default function CityScreen() {
         />
       ))}
 
-      <AppText bold size="title">
-        حرف‌های این هفته
-      </AppText>
-      {posts.length === 0 ? <Empty text="هنوز پستی نرسیده." /> : null}
+      <SectionTitle>حرف‌های این هفته</SectionTitle>
+      {!loading && posts.length === 0 && !error ? <Empty text="هنوز پستی نرسیده." /> : null}
       {posts.map((post) => (
         <Pressable key={post.id} onPress={() => router.push(`/feed/${post.id}`)}>
           <Card>

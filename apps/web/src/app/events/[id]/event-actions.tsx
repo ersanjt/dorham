@@ -25,6 +25,7 @@ export function EventActions({
 
   const isHost = Boolean(me && (me.id === hostId || me.role === "ADMIN" || me.role === "MODERATOR"));
   const mine = guests.find((guest) => guest.id === me?.id);
+  const paused = me?.status === "PAUSED";
 
   async function reloadGuests() {
     try {
@@ -55,7 +56,7 @@ export function EventActions({
       <section style={{ marginTop: 28 }}>
         <div className="row">
           <Link className="btn" href={`/login?next=/events/${eventId}`}>
-            برای RSVP وارد شو
+            برای ثبت حضور وارد شو
           </Link>
           <Link className="btn ghost" href={`/feed?event=${eventId}`}>
             نوشتن در فید شهر
@@ -92,12 +93,19 @@ export function EventActions({
       ) : null}
       {mine?.ticketStatus === "PAID_DOOR" ? <div className="banner ok">بلیت‌ات دم در گرفته شد.</div> : null}
       {mine?.status === "INTERESTED" ? <div className="banner">در لیست انتظاری. اگر جا باز شود خبر می‌دهیم.</div> : null}
+      {paused ? (
+        <div className="banner err">
+          حساب متوقف است. ثبت حضور تازه بسته است؛ می‌توانی لغو کنی.{" "}
+          <Link href="/account">از سر گرفتن</Link>
+        </div>
+      ) : null}
       {message ? <div className="banner ok">{message}</div> : null}
       {error ? <div className="banner err">{error}</div> : null}
       <div className="row">
         <button
           className="btn"
           type="button"
+          disabled={paused}
           onClick={async () => {
             try {
               const data = await api<RsvpResult>(`/events/${eventId}/rsvp`, {
@@ -113,7 +121,7 @@ export function EventActions({
               );
               await reloadGuests();
             } catch (err) {
-              setError(err instanceof ApiError ? err.message : "RSVP نشد.");
+              setError(err instanceof ApiError ? err.message : "ثبت حضور نشد.");
             }
           }}
         >
@@ -128,7 +136,7 @@ export function EventActions({
             await reloadGuests();
           }}
         >
-          لغو RSVP
+          لغو حضور
         </button>
         {isHost ? (
           <Link className="btn" href={`/events/${eventId}/door`}>
@@ -138,37 +146,41 @@ export function EventActions({
         <Link className="btn ghost" href={`/feed?event=${eventId}`}>
           نوشتن در فید شهر
         </Link>
-        <button
-          className="btn ghost"
-          type="button"
-          onClick={async () => {
-            try {
-              await api(`/users/${hostId}/block`, { method: "POST" });
-              setMessage("میزبان بلاک شد.");
-            } catch (err) {
-              setError(err instanceof ApiError ? err.message : "بلاک نشد.");
-            }
-          }}
-        >
-          بلاک میزبان
-        </button>
-        <button
-          className="btn ghost"
-          type="button"
-          onClick={async () => {
-            try {
-              await api("/reports", {
-                method: "POST",
-                body: JSON.stringify({ targetId: hostId, reason: "other", details: "event host" }),
-              });
-              setMessage("گزارش ثبت شد.");
-            } catch (err) {
-              setError(err instanceof ApiError ? err.message : "گزارش نشد.");
-            }
-          }}
-        >
-          گزارش
-        </button>
+        {!paused ? (
+          <>
+            <button
+              className="btn ghost"
+              type="button"
+              onClick={async () => {
+                try {
+                  await api(`/users/${hostId}/block`, { method: "POST" });
+                  setMessage("میزبان بلاک شد.");
+                } catch (err) {
+                  setError(err instanceof ApiError ? err.message : "بلاک نشد.");
+                }
+              }}
+            >
+              بلاک میزبان
+            </button>
+            <button
+              className="btn ghost"
+              type="button"
+              onClick={async () => {
+                try {
+                  await api("/reports", {
+                    method: "POST",
+                    body: JSON.stringify({ targetId: hostId, reason: "other", details: "event host" }),
+                  });
+                  setMessage("گزارش ثبت شد.");
+                } catch (err) {
+                  setError(err instanceof ApiError ? err.message : "گزارش نشد.");
+                }
+              }}
+            >
+              گزارش
+            </button>
+          </>
+        ) : null}
       </div>
 
       <h3>مهمان‌ها</h3>

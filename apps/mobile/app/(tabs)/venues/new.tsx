@@ -64,7 +64,7 @@ export default function SubmitVenueScreen() {
   return (
     <Screen back kicker="صاحب‌کار" title="ثبت مکان" subtitle="لینک گوگل‌مپ اجباری است. دیسکو دوستیابی نیست.">
       <Banner text={error} />
-      <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: space.sm }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
         {KINDS.map((item) => (
           <Pressable
             key={item.id}
