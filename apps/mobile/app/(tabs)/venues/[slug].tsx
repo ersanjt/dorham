@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Linking } from "react-native";
+import { Image, Linking } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import type { EventDto, VenueDto, VenueReview } from "@dorham/shared";
 import { EventCard } from "../../../components/event-card";
@@ -8,6 +8,7 @@ import { api, ApiError } from "../../../lib/api";
 import { venueKindFa } from "../../../lib/format";
 import { loginHref } from "../../../lib/paths";
 import { isSignedIn } from "../../../lib/session";
+import { color } from "../../../lib/theme";
 
 export default function VenueDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -65,10 +66,25 @@ export default function VenueDetailScreen() {
     >
       <Banner text={error} />
       <Banner text={notice} tone="ok" />
+      {venue?.mapImageUrl ? (
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          <Image
+            source={{ uri: venue.mapImageUrl }}
+            accessibilityLabel={`نقشه ${venue.name}`}
+            style={{ width: "100%", height: 180, backgroundColor: color.paperDeep }}
+            resizeMode="cover"
+          />
+        </Card>
+      ) : null}
       {venue ? (
         <Card>
           <AppText>{venue.description}</AppText>
           <AppText muted>{venue.address}</AppText>
+          {venue.lat != null && venue.lng != null ? (
+            <AppText muted size="caption">
+              مختصات: {venue.lat.toFixed(5)}, {venue.lng.toFixed(5)}
+            </AppText>
+          ) : null}
           {venue.hours ? <AppText muted>ساعت: {venue.hours}</AppText> : null}
           {venue.priceRange ? <AppText muted>قیمت: {venue.priceRange}</AppText> : null}
           {venue.menuNotes ? <AppText muted>منو: {venue.menuNotes}</AppText> : null}

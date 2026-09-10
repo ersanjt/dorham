@@ -55,7 +55,9 @@ Emulator API base: `http://10.0.2.2:4000` (set `EXPO_PUBLIC_API_URL`). Phone on 
 
 ## Data policy
 
-Seed loads a **real Istanbul Iranian venue directory**. It does **not** invent Friday events or feed posts. See [`docs/08-data-policy.md`](docs/08-data-policy.md).
+Seed loads a **real Istanbul Iranian venue directory** with lat/lng + OpenStreetMap previews. It does **not** invent Friday events or feed posts. See [`docs/08-data-policy.md`](docs/08-data-policy.md).
+
+Brand illustrations live under `apps/mobile/assets` and `apps/web/public/brand` (icon / hero / empty). Venue cards show **maps of real coordinates**, not fake restaurant photos.
 
 ## Docs
 
@@ -68,6 +70,7 @@ Seed loads a **real Istanbul Iranian venue directory**. It does **not** invent F
 - [Naming & domains](docs/06-naming.md)
 - [Apps and website](docs/07-apps-and-web.md)
 - [Real data policy](docs/08-data-policy.md)
+- [Deploy dorham.app (Cloudflare)](docs/09-deploy-cloudflare.md)
 - [Agent contract](AGENTS.md)
 
 ## Do not drift

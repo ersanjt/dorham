@@ -193,6 +193,52 @@ a { color: inherit; text-underline-offset: 0.18em; }
   border-radius: 14px;
   position: relative;
 }
+.venue-card { padding: 0; overflow: hidden; }
+.venue-card .card-top,
+.venue-card h3,
+.venue-card .muted,
+.venue-card .meta,
+.venue-card .row { padding-inline: 20px; }
+.venue-card .card-top { padding-top: 16px; }
+.venue-card .row { padding-bottom: 18px; }
+.venue-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: var(--paper-deep);
+  border: 0;
+}
+.venue-hero-map { padding: 0; overflow: hidden; margin-bottom: 18px; }
+.venue-hero-map .meta { padding: 12px 20px 16px; margin: 0; }
+.hero-visual {
+  margin: 20px 0 0;
+  border: 1.5px solid var(--clay);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--cream);
+}
+.hero-visual img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+.empty-art {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 20px;
+  text-align: center;
+}
+.empty-art img {
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+}
+
 .card::before,
 .card::after {
   content: "";

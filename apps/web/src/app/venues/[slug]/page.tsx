@@ -56,6 +56,17 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
       <PageIntro kicker={`${KIND_LABEL[venue.kind]} · ${AREA_LABEL[venue.area] ?? venue.area}`} title={venue.name}>
         <p className="lead">{venue.description}</p>
       </PageIntro>
+      {venue.mapImageUrl ? (
+        <section className="card venue-hero-map">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="venue-map" src={venue.mapImageUrl} alt={`نقشه ${venue.name}`} />
+          {venue.lat != null && venue.lng != null ? (
+            <p className="meta">
+              مختصات واقعی: {venue.lat.toFixed(5)}, {venue.lng.toFixed(5)} · منبع پیش‌نمایش: OpenStreetMap
+            </p>
+          ) : null}
+        </section>
+      ) : null}
       <section className="card">
         <p>
           <strong>آدرس:</strong> {venue.address}

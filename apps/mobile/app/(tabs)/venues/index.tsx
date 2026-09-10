@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { router } from "expo-router";
 import type { VenueDto, VenueKind } from "@dorham/shared";
-import { AppText, Button, Card, Chip, Empty, ErrorState, Loading, Screen } from "../../../components/ui";
+import { VenueCard } from "../../../components/venue-card";
+import { AppText, Button, Chip, Empty, ErrorState, Loading, Screen } from "../../../components/ui";
 import { api, ApiError } from "../../../lib/api";
-import { venueKindFa } from "../../../lib/format";
 import { space } from "../../../lib/theme";
 
 const KINDS: { id: VenueKind | ""; label: string }[] = [
@@ -37,7 +37,11 @@ export default function VenuesScreen() {
   }, [kind]);
 
   return (
-    <Screen kicker="سفرهٔ شهر" title="مکان‌های ایرانی" subtitle="رستوران، کافه، مارکت. آدرس واقعی، لینک گوگل‌مپ.">
+    <Screen
+      kicker="سفرهٔ شهر"
+      title="مکان‌های ایرانی"
+      subtitle="آدرس و مختصات واقعی. نقشهٔ OSM، لینک گوگل‌مپ — نه عکس استوک جعلی."
+    >
       {error ? <ErrorState text={error} onRetry={() => load()} /> : null}
       <Button label="ثبت مکان من" onPress={() => router.push("/venues/new")} />
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
@@ -47,24 +51,13 @@ export default function VenuesScreen() {
       </View>
       {loading && !error ? <Loading /> : null}
       {!loading && venues.length === 0 && !error ? <Empty text="فهرست مکان‌ها نرسید." /> : null}
+      {!loading ? (
+        <AppText muted size="caption">
+          {venues.length} مکان منتشرشده
+        </AppText>
+      ) : null}
       {venues.map((venue) => (
-        <Pressable
-          key={venue.id}
-          onPress={() => router.push(`/venues/${venue.slug}`)}
-          accessibilityRole="button"
-          accessibilityLabel={venue.name}
-        >
-          <Card accent>
-            <AppText muted size="caption">
-              {venueKindFa[venue.kind] ?? venue.kind} · {venue.area}
-            </AppText>
-            <AppText bold size="title">
-              {venue.name}
-            </AppText>
-            <AppText muted>{venue.address}</AppText>
-            {venue.priceRange ? <AppText muted size="caption">{venue.priceRange}</AppText> : null}
-          </Card>
-        </Pressable>
+        <VenueCard key={venue.id} venue={venue} onPress={() => router.push(`/venues/${venue.slug}`)} />
       ))}
     </Screen>
   );

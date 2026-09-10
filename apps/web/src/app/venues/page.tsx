@@ -35,7 +35,9 @@ export default async function VenuesPage({
     <main className="wrap">
       <SiteHeader />
       <PageIntro kicker="نقشهٔ خوردنی" title="مکان‌های ایرانی استانبول">
-        <p className="lead">رستوران، کافه، مارکت و جای جمع‌شدن — از نقشه و آدرس عمومی. کلاب دوستیابی نیست.</p>
+        <p className="lead">
+          رستوران، کافه، مارکت با آدرس و مختصات واقعی. پیش‌نمایش نقشه از OpenStreetMap است — نه عکس جعلی رستوران.
+        </p>
       </PageIntro>
       <div className="row">
         <Link className="btn" href="/venues/new">
@@ -55,7 +57,11 @@ export default async function VenuesPage({
       <p className="meta">{venues.length} مکان</p>
       <div className="grid">
         {venues.map((venue) => (
-          <article className="card" key={venue.id}>
+          <article className="card venue-card" key={venue.id}>
+            {venue.mapImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="venue-map" src={venue.mapImageUrl} alt={`نقشه ${venue.name}`} loading="lazy" />
+            ) : null}
             <div className="card-top">
               <span className="date-chip">{KIND_LABEL[venue.kind]}</span>
               <span className="muted">{AREA_LABEL[venue.area] ?? venue.area}</span>

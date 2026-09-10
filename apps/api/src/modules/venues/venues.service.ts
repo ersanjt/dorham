@@ -175,6 +175,10 @@ export class VenuesService {
     const mapsUrl = row.mapsQuery.startsWith("http")
       ? row.mapsQuery
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(row.mapsQuery)}`;
+    const mapImageUrl =
+      row.lat != null && row.lng != null
+        ? `https://staticmap.openstreetmap.de/staticmap.php?center=${row.lat},${row.lng}&zoom=16&size=640x360&maptype=mapnik&markers=${row.lat},${row.lng},red-pushpin`
+        : null;
     return {
       id: row.id,
       slug: row.slug,
@@ -184,6 +188,7 @@ export class VenuesService {
       area: row.area,
       address: row.address,
       mapsUrl,
+      mapImageUrl,
       lat: row.lat,
       lng: row.lng,
       phone: row.phone,

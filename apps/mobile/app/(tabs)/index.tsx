@@ -3,13 +3,13 @@ import { Pressable, Share, View } from "react-native";
 import { router } from "expo-router";
 import type { EventDto, FeedPost } from "@dorham/shared";
 import { EventCard } from "../../components/event-card";
+import { EmptyArt, HeroBanner } from "../../components/hero-art";
 import {
   AppText,
   AuthorMeta,
   Button,
   Card,
   Chip,
-  Empty,
   ErrorState,
   Loading,
   Screen,
@@ -55,6 +55,7 @@ export default function CityScreen() {
       title="دورهم، توی همین شهر"
       subtitle="ایرانی‌های استانبول. جمعه دور هم — نه سوایپ."
     >
+      <HeroBanner />
       {error ? <ErrorState text={error} onRetry={load} /> : null}
       {loading && !error ? <Loading /> : null}
       {!loading && !error && next ? (
@@ -95,9 +96,7 @@ export default function CityScreen() {
               <AppText bold size="title">
                 {next.title}
               </AppText>
-              <AppText muted>
-                {next.venue ? next.venue : "استانبول"}
-              </AppText>
+              <AppText muted>{next.venue ? next.venue : "استانبول"}</AppText>
               <AppText muted size="caption">
                 {formatPriceTry(next.priceTry)} · {next.goingCount}
                 {next.capacity ? ` از ${next.capacity}` : ""} نفر
@@ -120,7 +119,9 @@ export default function CityScreen() {
       </View>
 
       <SectionTitle>این هفته در استانبول</SectionTitle>
-      {!loading && events.length === 0 && !error ? <Empty text="هنوز رویدادی منتشر نشده." /> : null}
+      {!loading && events.length === 0 && !error ? (
+        <EmptyArt text="هنوز رویدادی منتشر نشده. اولین جمع واقعی را از تب رویداد بساز." />
+      ) : null}
       {events.map((event) => (
         <EventCard
           key={event.id}
@@ -130,7 +131,9 @@ export default function CityScreen() {
       ))}
 
       <SectionTitle>حرف‌های این هفته</SectionTitle>
-      {!loading && posts.length === 0 && !error ? <Empty text="هنوز پستی نرسیده." /> : null}
+      {!loading && posts.length === 0 && !error ? (
+        <EmptyArt text="هنوز پستی نرسیده. حرف شهر را از فید بنویس." />
+      ) : null}
       {posts.map((post) => (
         <Pressable key={post.id} onPress={() => router.push(`/feed/${post.id}`)}>
           <Card>

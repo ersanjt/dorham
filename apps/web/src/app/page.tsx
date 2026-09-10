@@ -45,6 +45,10 @@ export default async function HomePage() {
         <p className="lead">
           برای ایرانی‌های ترکیه. اول استانبول. جمعه دور هم جمع می‌شویم — نه اینکه بی‌نهایت کارت سوایپ کنیم.
         </p>
+        <div className="hero-visual">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/hero.png" alt="" />
+        </div>
         <div className="row">
           <Link className="btn" href={next ? `/events/${next.id}` : "/events"}>
             {next ? "رویداد بعدی" : "رویدادها"}
@@ -126,7 +130,11 @@ export default async function HomePage() {
           </article>
         ) : null}
         {events.length === 0 ? (
-          <p className="muted">هنوز رویدادی نیست. جمعهٔ اول را بساز یا صبر کن تا میزبان اعلام کند.</p>
+          <div className="empty-art card">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/empty-events.png" alt="" />
+            <p className="muted">هنوز رویدادی نیست. جمعهٔ اول واقعی را بساز — دادهٔ نمایشی نمی‌سازیم.</p>
+          </div>
         ) : (
           <div className="grid">
             {events.map((event) => (
