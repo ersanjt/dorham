@@ -26,7 +26,7 @@ git pull --ff-only origin main
 echo "==> System packages (postgres + build tools)"
 sudo apt-get update -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  postgresql postgresql-contrib build-essential git curl
+  postgresql postgresql-contrib redis-server build-essential git curl
 
 echo "==> Ensure Postgres role + database"
 sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='dorham'" | grep -q 1 \
@@ -59,7 +59,7 @@ API_PUBLIC_URL=https://api.dorham.app
 API_PORT=${API_PORT}
 CORS_ORIGINS=https://dorham.app,https://www.dorham.app
 DATABASE_URL=postgresql://dorham:dorham_change_me@127.0.0.1:5432/dorham?schema=public
-REDIS_URL=
+REDIS_URL=redis://127.0.0.1:6379
 JWT_ACCESS_SECRET=${JWT_ACCESS}
 JWT_REFRESH_SECRET=${JWT_REFRESH}
 JWT_ACCESS_TTL=15m
@@ -119,7 +119,7 @@ WantedBy=multi-user.target
 EOF
 
 sudo systemctl daemon-reload
-sudo systemctl enable --now postgresql
+sudo systemctl enable --now postgresql redis-server
 sudo systemctl enable --now dorham-api
 sudo systemctl enable --now dorham-web
 
