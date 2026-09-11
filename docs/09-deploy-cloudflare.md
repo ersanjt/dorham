@@ -38,9 +38,32 @@ EXPO_PUBLIC_API_URL=https://api.dorham.app
 EXPO_PUBLIC_WEB_URL=https://dorham.app
 ```
 
-## Origin IP note
+## Same VPS as Vira VPN (important)
 
-If Cloudflare A records point at a VPS (e.g. `92.205.182.99`), that machine must serve HTTP(S) for the Host `dorham.app` / `api.dorham.app`. Empty VPS = orange cloud shows CF IPs in public DNS but the site will fail until nginx/Caddy + app processes are running.
+On `92.205.182.99`, **port 443 is owned by Xray** (`vira.service`). Proxied Cloudflare `A` records to that IP send HTTPS to Xray → `Invalid URL` / AkamaiGHost.
+
+| Service | Bind | Notes |
+| --- | --- | --- |
+| Xray | `:443`, `:8444`, … | Do not replace |
+| Vira panel | `:8787` | Keep |
+| Dorham API | `127.0.0.1:4000` | systemd `dorham-api` |
+| Dorham web | `127.0.0.1:3000` | systemd `dorham-web` |
+| Public HTTPS | Cloudflare Tunnel | No conflict with Xray |
+
+Bootstrap script (run as `virapanel` with `GITHUB_TOKEN` set):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ersanjt/dorham/main/scripts/deploy-on-vira-host.sh -o /tmp/dorham-deploy.sh
+# or copy from the repo after clone
+bash scripts/deploy-on-vira-host.sh
+```
+
+Then install `cloudflared` and map:
+
+- `dorham.app` → `http://127.0.0.1:3000`
+- `api.dorham.app` → `http://127.0.0.1:4000`
+
+Remove or grey-cloud the old proxied `A` records that send web traffic to `:443`.
 
 ## Mobile production
 
