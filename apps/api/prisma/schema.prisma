@@ -49,6 +49,7 @@ enum VerificationStatus {
 
 enum EmailTokenPurpose {
   EMAIL_VERIFY
+  PASSWORD_RESET
 }
 
 enum MediaKind {

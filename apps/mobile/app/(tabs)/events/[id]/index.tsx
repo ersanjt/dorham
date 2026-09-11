@@ -109,7 +109,7 @@ export default function EventDetailScreen() {
       {paused ? (
         <Banner text="حساب متوقف است. ثبت حضور تازه بسته است؛ لغو هنوز ممکن است." />
       ) : null}
-      {waitlisted ? <Banner text="در لیست انتظاری. اگر جا باز شود خبر می‌دهیم." /> : null}
+      {waitlisted ? <Banner text="در لیست انتظاری. اگر جا باز شود، وضعیتت در همین صفحه عوض می‌شود." /> : null}
       {alreadyGoing && ticketStatus === "DUE" && event?.priceTry ? (
         <Banner text={`بلیت تو: ${event.priceTry.toLocaleString("fa-IR")} لیر نقد دم در.`} />
       ) : null}

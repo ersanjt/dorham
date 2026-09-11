@@ -65,6 +65,13 @@ export const createEventBodySchema = z.object({
 
 export type CreateEventBody = z.infer<typeof createEventBodySchema>;
 
+export const updateEventBodySchema = createEventBodySchema.partial().refine(
+  (v) => Object.keys(v).length > 0,
+  { message: "At least one field is required" },
+);
+
+export type UpdateEventBody = z.infer<typeof updateEventBodySchema>;
+
 export const eventGuestSchema = z.object({
   id: z.string(),
   displayName: z.string(),

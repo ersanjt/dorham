@@ -1,7 +1,14 @@
 import { Body, Controller, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { SkipThrottle, Throttle } from "@nestjs/throttler";
-import { loginBodySchema, refreshBodySchema, registerBodySchema, verifyEmailBodySchema } from "@dorham/shared";
+import {
+  forgotPasswordBodySchema,
+  loginBodySchema,
+  refreshBodySchema,
+  registerBodySchema,
+  resetPasswordBodySchema,
+  verifyEmailBodySchema,
+} from "@dorham/shared";
 import { ZodPipe } from "../../common/zod-pipe";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
 import { CurrentUser } from "../../common/current-user";
@@ -59,6 +66,20 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async resend(@CurrentUser() user: { id: string }) {
     return { data: await this.auth.resendVerification(user.id) };
+  }
+
+  @Post("forgot-password")
+  async forgotPassword(
+    @Body(new ZodPipe(forgotPasswordBodySchema)) body: ReturnType<typeof forgotPasswordBodySchema.parse>,
+  ) {
+    return { data: await this.auth.forgotPassword(body) };
+  }
+
+  @Post("reset-password")
+  async resetPassword(
+    @Body(new ZodPipe(resetPasswordBodySchema)) body: ReturnType<typeof resetPasswordBodySchema.parse>,
+  ) {
+    return { data: await this.auth.resetPassword(body) };
   }
 
   private meta(req: ReqMeta) {

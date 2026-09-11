@@ -43,3 +43,22 @@ export const verifyEmailBodySchema = z.object({
 });
 
 export type VerifyEmailBody = z.infer<typeof verifyEmailBodySchema>;
+
+export const forgotPasswordBodySchema = z.object({
+  email: z.string().trim().email().max(254).transform((v) => v.toLowerCase()),
+});
+
+export type ForgotPasswordBody = z.infer<typeof forgotPasswordBodySchema>;
+
+export const resetPasswordBodySchema = z.object({
+  token: z.string().min(20).max(2000),
+  password: z
+    .string()
+    .min(10, "Password must be at least 10 characters")
+    .max(128)
+    .refine((v) => /[A-Za-z]/.test(v) && /\d/.test(v), {
+      message: "Password must include a letter and a number",
+    }),
+});
+
+export type ResetPasswordBody = z.infer<typeof resetPasswordBodySchema>;

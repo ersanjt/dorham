@@ -5,9 +5,10 @@ import { EventCard } from "../../../components/event-card";
 import { PageIntro } from "../../../components/page-intro";
 import { SiteFooter } from "../../../components/site-footer";
 import { SiteHeader } from "../../../components/site-header";
+import { resolveApiBase } from "../../../lib/api-base";
 import { verifyFa } from "../../../lib/format";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API = resolveApiBase();
 
 async function loadPerson(id: string): Promise<PublicUser | null> {
   try {

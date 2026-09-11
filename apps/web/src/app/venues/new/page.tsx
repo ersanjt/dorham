@@ -42,11 +42,15 @@ export default function SubmitVenuePage() {
     setPending(true);
     setError("");
     try {
-      const venue = await api<{ slug: string }>("/venues", {
+      const venue = await api<{ slug: string; pendingReview?: boolean }>("/venues", {
         method: "POST",
         body: JSON.stringify(parsed.data),
       });
-      router.push(`/venues/${venue.slug}`);
+      if (venue.pendingReview) {
+        router.push("/venues?submitted=1");
+      } else {
+        router.push(`/venues/${venue.slug}`);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "ثبت نشد. وارد شو.");
     } finally {

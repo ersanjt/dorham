@@ -6,9 +6,10 @@ import { PageIntro } from "../../../components/page-intro";
 import { SiteFooter } from "../../../components/site-footer";
 import { SiteHeader } from "../../../components/site-header";
 import { VenueReviews } from "./reviews";
+import { resolveApiBase } from "../../../lib/api-base";
 import { AREA_LABEL, KIND_LABEL } from "../../../lib/venues";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API = resolveApiBase();
 
 async function loadVenue(slug: string): Promise<VenueDto | null> {
   try {

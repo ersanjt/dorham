@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
-import { checkInBodySchema, createEventBodySchema, listEventsQuerySchema } from "@dorham/shared";
+import { checkInBodySchema, createEventBodySchema, listEventsQuerySchema, updateEventBodySchema } from "@dorham/shared";
 import { JwtAuthGuard, OptionalJwtAuthGuard } from "../../common/jwt-auth.guard";
 import { CurrentUser, OptionalUser } from "../../common/current-user";
 import { Roles, RolesGuard } from "../../common/roles";
@@ -39,6 +39,24 @@ export class EventsController {
     @Body(new ZodPipe(createEventBodySchema)) body: ReturnType<typeof createEventBodySchema.parse>,
   ) {
     return this.events.create(user.id, body);
+  }
+
+  @Patch(":id")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  update(
+    @Param("id") id: string,
+    @CurrentUser() user: { id: string; role: string },
+    @Body(new ZodPipe(updateEventBodySchema)) body: ReturnType<typeof updateEventBodySchema.parse>,
+  ) {
+    return this.events.update(id, user, body);
+  }
+
+  @Post(":id/cancel")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  cancelEvent(@Param("id") id: string, @CurrentUser() user: { id: string; role: string }) {
+    return this.events.cancelEvent(id, user);
   }
 
   @Post(":id/rsvp")

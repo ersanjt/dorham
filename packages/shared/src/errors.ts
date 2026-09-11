@@ -28,6 +28,8 @@ export const ERROR_CODES = [
   "REPORT_INVALID",
   "RATE_LIMITED",
   "INTERNAL",
+  "EVENT_CANCELLED",
+  "VENUE_PENDING",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

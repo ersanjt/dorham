@@ -1,7 +1,13 @@
 import { ERROR_FA } from "@dorham/shared";
+import { resolveApiBase } from "./api-base";
 import { clearSession, getAccessToken, getRefreshToken, setSession } from "./session";
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+export function apiBase() {
+  return resolveApiBase();
+}
+
+/** @deprecated use apiBase() — kept for rare static reads */
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
 
 export class ApiError extends Error {
   constructor(
@@ -27,7 +33,7 @@ async function refreshAccess() {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
   try {
-    const res = await fetch(`${API_BASE}/v1/auth/refresh`, {
+    const res = await fetch(`${resolveApiBase()}/v1/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),
@@ -56,9 +62,10 @@ export async function api<T>(path: string, init: ApiInit = {}): Promise<T> {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
+  const base = resolveApiBase();
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}/v1${path}`, { ...init, headers, signal: timeoutSignal(20000) });
+    res = await fetch(`${base}/v1${path}`, { ...init, headers, signal: timeoutSignal(20000) });
   } catch {
     throw new ApiError("NETWORK", ERROR_FA.NETWORK);
   }
@@ -72,7 +79,7 @@ export async function api<T>(path: string, init: ApiInit = {}): Promise<T> {
       }
       retry.set("Authorization", `Bearer ${getAccessToken()}`);
       try {
-        res = await fetch(`${API_BASE}/v1${path}`, { ...init, headers: retry, signal: timeoutSignal(20000) });
+        res = await fetch(`${base}/v1${path}`, { ...init, headers: retry, signal: timeoutSignal(20000) });
       } catch {
         throw new ApiError("NETWORK", ERROR_FA.NETWORK);
       }

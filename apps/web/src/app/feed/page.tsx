@@ -4,9 +4,10 @@ import { SiteHeader } from "../../components/site-header";
 import { PageIntro } from "../../components/page-intro";
 import { FeedPostCard } from "../../components/feed-post";
 import type { FeedPost } from "@dorham/shared";
+import { resolveApiBase } from "../../lib/api-base";
 import { FeedCompose } from "./compose";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API = resolveApiBase();
 
 async function loadFeed(): Promise<FeedPost[]> {
   try {

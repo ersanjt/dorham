@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { CheckInBody, CreateEventBody, ListEventsQuery } from "@dorham/shared";
+import { CheckInBody, CreateEventBody, ListEventsQuery, UpdateEventBody } from "@dorham/shared";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { assertActive, assertNotDeleted, assertNotSuspended } from "../../common/account-status";
@@ -147,6 +147,86 @@ export class EventsService {
       data: { userId: hostId, action: "event.create", entity: "Event", entityId: row.id },
     });
     return { data: this.toDto(row, 0) };
+  }
+
+  async update(eventId: string, actor: { id: string; role: string }, body: UpdateEventBody) {
+    const event = await this.prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) {
+      throw new NotFoundException({ code: "EVENT_NOT_FOUND", message: "Event not found." });
+    }
+    if (event.status === "CANCELLED" || event.status === "ENDED") {
+      throw new BadRequestException({ code: "EVENT_CANCELLED", message: "Event cannot be edited." });
+    }
+    this.assertHostOrStaff(event.hostId, actor);
+
+    let venue = body.venue;
+    let address = body.address;
+    let venueSlug = body.venueSlug;
+    let lat: number | null | undefined;
+    let lng: number | null | undefined;
+    const city = body.city ?? event.city;
+
+    if (body.venueSlug) {
+      const place = await this.prisma.venue.findFirst({
+        where: { slug: body.venueSlug, published: true, city },
+      });
+      if (!place) {
+        throw new BadRequestException({ code: "VENUE_NOT_FOUND", message: "Venue not found." });
+      }
+      venue = place.name;
+      address = place.address;
+      lat = place.lat;
+      lng = place.lng;
+      venueSlug = place.slug;
+    }
+
+    const row = await this.prisma.event.update({
+      where: { id: eventId },
+      data: {
+        ...(body.title !== undefined ? { title: body.title } : {}),
+        ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(body.city !== undefined ? { city: body.city } : {}),
+        ...(venue !== undefined ? { venue } : {}),
+        ...(address !== undefined ? { address } : {}),
+        ...(venueSlug !== undefined ? { venueSlug } : {}),
+        ...(lat !== undefined ? { lat } : {}),
+        ...(lng !== undefined ? { lng } : {}),
+        ...(body.startsAt !== undefined ? { startsAt: new Date(body.startsAt) } : {}),
+        ...(body.endsAt !== undefined ? { endsAt: body.endsAt ? new Date(body.endsAt) : null } : {}),
+        ...(body.capacity !== undefined ? { capacity: body.capacity } : {}),
+        ...(body.priceTry !== undefined ? { priceTry: body.priceTry } : {}),
+      },
+      include: this.eventInclude(),
+    });
+    await this.prisma.auditLog.create({
+      data: { userId: actor.id, action: "event.update", entity: "Event", entityId: row.id },
+    });
+    const waitlists = await this.waitlistCounts([row.id]);
+    return { data: this.toDto(row, waitlists.get(row.id) ?? 0) };
+  }
+
+  async cancelEvent(eventId: string, actor: { id: string; role: string }) {
+    const event = await this.prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) {
+      throw new NotFoundException({ code: "EVENT_NOT_FOUND", message: "Event not found." });
+    }
+    if (event.status === "CANCELLED") {
+      return { data: { ok: true as const } };
+    }
+    this.assertHostOrStaff(event.hostId, actor);
+    await this.prisma.event.update({
+      where: { id: eventId },
+      data: { status: "CANCELLED" },
+    });
+    await this.prisma.auditLog.create({
+      data: { userId: actor.id, action: "event.cancel", entity: "Event", entityId: eventId },
+    });
+    return { data: { ok: true as const } };
+  }
+
+  private assertHostOrStaff(hostId: string, actor: { id: string; role: string }) {
+    if (actor.id === hostId || actor.role === "ADMIN" || actor.role === "MODERATOR") return;
+    throw new ForbiddenException({ code: "AUTH_FORBIDDEN", message: "Only the host can do this." });
   }
 
   async rsvp(eventId: string, userId: string) {

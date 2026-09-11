@@ -5,9 +5,11 @@ import { accessTtlSeconds } from "../../common/crypto";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtAuthGuard, OptionalJwtAuthGuard } from "../../common/jwt-auth.guard";
+import { MailModule } from "../mail/mail.module";
 
 @Module({
   imports: [
+    MailModule,
     JwtModule.registerAsync({
       useFactory: () => {
         const env = loadEnv();

@@ -68,6 +68,8 @@ function LoginForm() {
         </button>
         <p className="muted">
           حساب نداری؟ <Link href={`/register?next=${encodeURIComponent(next)}`}>ثبت‌نام</Link>
+          {" · "}
+          <Link href="/forgot-password">رمز را فراموش کردم</Link>
         </p>
       </form>
       </div>

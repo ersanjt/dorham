@@ -12,6 +12,8 @@ import { TrustModule } from "./modules/trust/trust.module";
 import { VerificationModule } from "./modules/verification/verification.module";
 import { VenuesModule } from "./modules/venues/venues.module";
 import { FeedModule } from "./modules/feed/feed.module";
+import { MailModule } from "./modules/mail/mail.module";
+import { AdminModule } from "./modules/admin/admin.module";
 
 @Module({
   imports: [
@@ -23,7 +25,9 @@ import { FeedModule } from "./modules/feed/feed.module";
     }),
     PrismaModule,
     RedisModule,
+    MailModule,
     AuthModule,
+    AdminModule,
     UsersModule,
     EventsModule,
     HealthModule,

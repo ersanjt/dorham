@@ -42,7 +42,7 @@ if [[ ! -f apps/api/.env ]]; then
   cat > apps/api/.env <<EOF
 NODE_ENV=production
 APP_NAME=Dorham
-APP_URL=https://dorham.app
+APP_URL=https://www.dorham.app
 API_PUBLIC_URL=https://api.dorham.app
 API_PORT=${API_PORT}
 CORS_ORIGINS=https://dorham.app,https://www.dorham.app
@@ -55,14 +55,20 @@ JWT_REFRESH_TTL=30d
 DEFAULT_CITY=istanbul
 DEFAULT_COUNTRY=TR
 MEDIA_DIR=/home/virapanel/dorham-media
+API_HOST=127.0.0.1
+# Set RESEND_API_KEY on the server for production email
+# RESEND_API_KEY=
+MAIL_FROM=Dorham <noreply@dorham.app>
 EOF
 else
   echo "==> Keeping existing apps/api/.env"
 fi
 
+# Same-origin API via Next rewrite → 127.0.0.1:4000 (avoids broken api.* when tunnel is mis-routed).
+# Mobile / external clients still use https://api.dorham.app once that hostname is on the tunnel.
 cat > apps/web/.env.production.local <<EOF
-NEXT_PUBLIC_API_URL=https://api.dorham.app
-NEXT_PUBLIC_APP_URL=https://dorham.app
+API_INTERNAL_URL=http://127.0.0.1:4000
+NEXT_PUBLIC_APP_URL=https://www.dorham.app
 EOF
 
 # shellcheck disable=SC1091
@@ -127,8 +133,8 @@ WorkingDirectory=${DORHAM_DIR}
 Environment=NODE_ENV=production
 Environment=PORT=${WEB_PORT}
 Environment=HOSTNAME=127.0.0.1
-Environment=NEXT_PUBLIC_API_URL=https://api.dorham.app
-Environment=NEXT_PUBLIC_APP_URL=https://dorham.app
+Environment=API_INTERNAL_URL=http://127.0.0.1:${API_PORT}
+Environment=NEXT_PUBLIC_APP_URL=https://www.dorham.app
 ExecStart=/usr/bin/npm run start -w @dorham/web -- -H 127.0.0.1 -p ${WEB_PORT}
 Restart=on-failure
 RestartSec=5

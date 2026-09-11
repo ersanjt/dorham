@@ -13,6 +13,11 @@ const envSchema = z.object({
   JWT_REFRESH_TTL: z.string().default("30d"),
   API_PUBLIC_URL: z.string().default("http://localhost:4000"),
   MEDIA_DIR: z.string().default(".media"),
+  /** Resend API key — required for production email verify / password reset. */
+  RESEND_API_KEY: z.string().optional(),
+  MAIL_FROM: z.string().default("Dorham <noreply@dorham.app>"),
+  /** Bind address. Production behind Cloudflare Tunnel should use 127.0.0.1. */
+  API_HOST: z.string().default("0.0.0.0"),
 });
 
 export type Env = z.infer<typeof envSchema>;

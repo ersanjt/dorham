@@ -48,7 +48,7 @@
       "package": "app.dorham.mobile",
       "versionCode": 1,
       "softwareKeyboardLayoutMode": "resize",
-      "usesCleartextTraffic": true,
+      "usesCleartextTraffic": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#EFE3CF"
@@ -90,8 +90,8 @@
     "extra": {
       "supportsRTL": true,
       "forcesRTL": true,
-      "apiUrl": "http://192.168.1.111:4000",
-      "webUrl": "http://192.168.1.111:3000"
+      "apiUrl": "https://api.dorham.app",
+      "webUrl": "https://www.dorham.app"
     },
     "locales": {
       "fa": "./locales/fa.json"

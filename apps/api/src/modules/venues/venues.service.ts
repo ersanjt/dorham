@@ -61,7 +61,7 @@ export class VenuesService {
         website: body.website || null,
         priceRange: body.priceRange || null,
         menuNotes: body.menuNotes || null,
-        published: true,
+        published: false,
         submitterId: userId,
       },
       include: { _count: { select: { reviews: true } } },
@@ -69,7 +69,39 @@ export class VenuesService {
     await this.prisma.auditLog.create({
       data: { userId, action: "venue.submit", entity: "Venue", entityId: row.id },
     });
-    return { data: this.toDto(row) };
+    return {
+      data: {
+        ...this.toDto(row),
+        published: false as const,
+        pendingReview: true as const,
+      },
+    };
+  }
+
+  async listPending() {
+    const rows = await this.prisma.venue.findMany({
+      where: { published: false },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: { _count: { select: { reviews: true } } },
+    });
+    return { data: rows.map((row) => this.toDto(row)) };
+  }
+
+  async publish(venueId: string, actorId: string) {
+    const row = await this.prisma.venue.findUnique({ where: { id: venueId } });
+    if (!row) {
+      throw new NotFoundException({ code: "VENUE_NOT_FOUND", message: "Venue not found." });
+    }
+    const updated = await this.prisma.venue.update({
+      where: { id: venueId },
+      data: { published: true },
+      include: { _count: { select: { reviews: true } } },
+    });
+    await this.prisma.auditLog.create({
+      data: { userId: actorId, action: "venue.publish", entity: "Venue", entityId: venueId },
+    });
+    return { data: this.toDto(updated) };
   }
 
   async reviews(idOrSlug: string) {

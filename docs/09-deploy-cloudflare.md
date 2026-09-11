@@ -61,9 +61,12 @@ bash scripts/deploy-on-vira-host.sh
 Then install `cloudflared` and map:
 
 - `dorham.app` → `http://127.0.0.1:3000`
+- `www.dorham.app` → `http://127.0.0.1:3000`
 - `api.dorham.app` → `http://127.0.0.1:4000`
 
-Remove or grey-cloud the old proxied `A` records that send web traffic to `:443`.
+Remove or grey-cloud the old proxied `A` records that send web/api traffic to `:443`.
+
+Set `RESEND_API_KEY` on the API for email verify + password reset. See `docs/10-launch-checklist.md`.
 
 ## Mobile production
 

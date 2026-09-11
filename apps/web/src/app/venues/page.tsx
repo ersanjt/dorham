@@ -3,9 +3,10 @@ import type { VenueDto, VenueKind } from "@dorham/shared";
 import { PageIntro } from "../../components/page-intro";
 import { SiteFooter } from "../../components/site-footer";
 import { SiteHeader } from "../../components/site-header";
+import { resolveApiBase } from "../../lib/api-base";
 import { AREA_LABEL, KIND_LABEL } from "../../lib/venues";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API = resolveApiBase();
 
 async function loadVenues(kind?: string): Promise<VenueDto[]> {
   const query = new URLSearchParams({ city: "istanbul", limit: "80" });
@@ -23,9 +24,9 @@ async function loadVenues(kind?: string): Promise<VenueDto[]> {
 export default async function VenuesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ kind?: string }>;
+  searchParams: Promise<{ kind?: string; submitted?: string }>;
 }) {
-  const { kind } = await searchParams;
+  const { kind, submitted } = await searchParams;
   const selected = (["RESTAURANT", "CAFE", "MARKET", "CULTURAL"] as VenueKind[]).includes(kind as VenueKind)
     ? (kind as VenueKind)
     : undefined;
@@ -39,6 +40,9 @@ export default async function VenuesPage({
           رستوران، کافه، مارکت با آدرس و مختصات واقعی. پیش‌نمایش نقشه از OpenStreetMap است — نه عکس جعلی رستوران.
         </p>
       </PageIntro>
+      {submitted === "1" ? (
+        <div className="banner ok">مکان ثبت شد و بعد از بررسی تیم منتشر می‌شود.</div>
+      ) : null}
       <div className="row">
         <Link className="btn" href="/venues/new">
           ثبت مکان من

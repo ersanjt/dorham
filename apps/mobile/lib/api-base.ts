@@ -23,7 +23,7 @@ export function resolveApiBase() {
     return configured;
   }
   if (host) return `http://${host}:4000`;
-  return "http://192.168.1.111:4000";
+  return "https://api.dorham.app";
 }
 
 export function publicMediaUrl(url: string | null | undefined) {
@@ -36,5 +36,5 @@ export function publicMediaUrl(url: string | null | undefined) {
 
 export function publicWebBase() {
   const extra = Constants.expoConfig?.extra as { webUrl?: string } | undefined;
-  return (process.env.EXPO_PUBLIC_WEB_URL ?? extra?.webUrl ?? "http://192.168.1.111:3000").replace(/\/$/, "");
+  return (process.env.EXPO_PUBLIC_WEB_URL ?? extra?.webUrl ?? "https://www.dorham.app").replace(/\/$/, "");
 }

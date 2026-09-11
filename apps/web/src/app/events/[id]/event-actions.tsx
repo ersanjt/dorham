@@ -92,7 +92,9 @@ export function EventActions({
         </div>
       ) : null}
       {mine?.ticketStatus === "PAID_DOOR" ? <div className="banner ok">بلیت‌ات دم در گرفته شد.</div> : null}
-      {mine?.status === "INTERESTED" ? <div className="banner">در لیست انتظاری. اگر جا باز شود خبر می‌دهیم.</div> : null}
+      {mine?.status === "INTERESTED" ? (
+        <div className="banner">در لیست انتظاری. اگر جا باز شود، در همین صفحه وضعیتت عوض می‌شود.</div>
+      ) : null}
       {paused ? (
         <div className="banner err">
           حساب متوقف است. ثبت حضور تازه بسته است؛ می‌توانی لغو کنی.{" "}
@@ -139,9 +141,27 @@ export function EventActions({
           لغو حضور
         </button>
         {isHost ? (
-          <Link className="btn" href={`/events/${eventId}/door`}>
-            QR ورودی
-          </Link>
+          <>
+            <Link className="btn" href={`/events/${eventId}/door`}>
+              QR ورودی
+            </Link>
+            <button
+              className="btn ghost"
+              type="button"
+              onClick={async () => {
+                if (!confirm("رویداد لغو شود؟ مهمان‌ها دیگر آن را به‌عنوان فعال نمی‌بینند.")) return;
+                try {
+                  await api(`/events/${eventId}/cancel`, { method: "POST", body: "{}" });
+                  setMessage("رویداد لغو شد.");
+                  window.location.reload();
+                } catch (err) {
+                  setError(err instanceof ApiError ? err.message : "لغو نشد.");
+                }
+              }}
+            >
+              لغو رویداد
+            </button>
+          </>
         ) : null}
         <Link className="btn ghost" href={`/feed?event=${eventId}`}>
           نوشتن در فید شهر

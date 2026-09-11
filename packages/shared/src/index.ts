@@ -9,3 +9,4 @@ export * from "./trust";
 export * from "./verification";
 export * from "./venues";
 export * from "./feed";
+export * from "./admin";

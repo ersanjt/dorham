@@ -1,13 +1,15 @@
 import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { LoginBody, RegisterBody } from "@dorham/shared";
+import { ForgotPasswordBody, LoginBody, RegisterBody, ResetPasswordBody } from "@dorham/shared";
 import { PrismaService } from "../../prisma/prisma.service";
 import { addDuration, accessTtlSeconds, hashPassword, hashToken, newOpaqueToken, newRefreshToken, verifyPassword } from "../../common/crypto";
 import { loadEnv } from "../../config/env";
+import { MailService } from "../mail/mail.service";
 
 const LOCK_AFTER = 8;
 const LOCK_MINUTES = 20;
 const EMAIL_TOKEN_HOURS = 24;
+const RESET_TOKEN_HOURS = 2;
 
 @Injectable()
 export class AuthService {
@@ -16,6 +18,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly mail: MailService,
   ) {}
 
   async register(body: RegisterBody, meta: { ip?: string; userAgent?: string }) {
@@ -44,7 +47,8 @@ export class AuthService {
       },
     });
 
-    const verifyEmailToken = await this.issueEmailToken(user.id);
+    const verifyEmailToken = await this.issueEmailToken(user.id, "EMAIL_VERIFY", EMAIL_TOKEN_HOURS);
+    await this.mail.sendVerifyEmail(user.email, verifyEmailToken);
 
     await this.prisma.auditLog.create({
       data: { userId: user.id, action: "auth.register", entity: "User", entityId: user.id, ip: meta.ip },
@@ -159,22 +163,68 @@ export class AuthService {
         ? { ok: true as const }
         : { ok: true as const, verifyEmailToken: undefined };
     }
-    const verifyEmailToken = await this.issueEmailToken(userId);
+    const verifyEmailToken = await this.issueEmailToken(userId, "EMAIL_VERIFY", EMAIL_TOKEN_HOURS);
+    await this.mail.sendVerifyEmail(user.email, verifyEmailToken);
     return this.env.NODE_ENV === "production" ? { ok: true as const } : { ok: true as const, verifyEmailToken };
   }
 
-  private async issueEmailToken(userId: string) {
+  /** Always returns ok to avoid email enumeration. */
+  async forgotPassword(body: ForgotPasswordBody) {
+    const user = await this.prisma.user.findUnique({ where: { email: body.email } });
+    if (user && user.status !== "DELETED") {
+      const token = await this.issueEmailToken(user.id, "PASSWORD_RESET", RESET_TOKEN_HOURS);
+      await this.mail.sendPasswordReset(user.email, token);
+      if (this.env.NODE_ENV !== "production") {
+        return { ok: true as const, resetToken: token };
+      }
+    }
+    return { ok: true as const };
+  }
+
+  async resetPassword(body: ResetPasswordBody) {
+    const tokenHash = hashToken(body.token);
+    const row = await this.prisma.emailToken.findFirst({
+      where: { tokenHash, purpose: "PASSWORD_RESET", usedAt: null },
+    });
+    if (!row || row.expiresAt < new Date()) {
+      throw new UnauthorizedException({
+        code: "AUTH_EMAIL_TOKEN_INVALID",
+        message: "This reset link is invalid or expired.",
+      });
+    }
+
+    const passwordHash = await hashPassword(body.password);
+    await this.prisma.$transaction([
+      this.prisma.emailToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
+      this.prisma.user.update({
+        where: { id: row.userId },
+        data: { passwordHash, failedLogins: 0, lockedUntil: null },
+      }),
+      this.prisma.session.updateMany({
+        where: { userId: row.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    return { ok: true as const };
+  }
+
+  private async issueEmailToken(
+    userId: string,
+    purpose: "EMAIL_VERIFY" | "PASSWORD_RESET",
+    hours: number,
+  ) {
     await this.prisma.emailToken.updateMany({
-      where: { userId, purpose: "EMAIL_VERIFY", usedAt: null },
+      where: { userId, purpose, usedAt: null },
       data: { usedAt: new Date() },
     });
     const token = newOpaqueToken();
     await this.prisma.emailToken.create({
       data: {
         userId,
-        purpose: "EMAIL_VERIFY",
+        purpose,
         tokenHash: hashToken(token),
-        expiresAt: new Date(Date.now() + EMAIL_TOKEN_HOURS * 3600_000),
+        expiresAt: new Date(Date.now() + hours * 3600_000),
       },
     });
     return token;

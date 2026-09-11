@@ -6,8 +6,9 @@ import { ShareEvent } from "../components/share-event";
 import { SiteFooter } from "../components/site-footer";
 import { SiteHeader } from "../components/site-header";
 import { eventInviteText, eventPageUrl, formatDayChip, formatPriceTry } from "../lib/format";
+import { resolveApiBase } from "../lib/api-base";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API = resolveApiBase();
 
 async function loadFeed(): Promise<FeedPost[]> {
   try {
@@ -133,7 +134,18 @@ export default async function HomePage() {
           <div className="empty-art card">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/empty-events.png" alt="" />
-            <p className="muted">هنوز رویدادی نیست. جمعهٔ اول واقعی را بساز — دادهٔ نمایشی نمی‌سازیم.</p>
+            <p className="muted">
+              هنوز رویدادی برای این هفته ثبت نشده. دورهم رویداد جعلی نمی‌سازد — اولین جمعه را میزبان واقعی اعلام
+              می‌کند.
+            </p>
+            <div className="row" style={{ marginTop: 12 }}>
+              <Link className="btn" href="/events/new">
+                ساخت رویداد (میزبان)
+              </Link>
+              <Link className="btn ghost" href="/venues">
+                مکان‌های ایرانی
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="grid">

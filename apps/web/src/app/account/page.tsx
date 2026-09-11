@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import type { EventDto, Me, MyVerification } from "@dorham/shared";
 import { EventCard } from "../../components/event-card";
 import { SiteHeader } from "../../components/site-header";
@@ -11,13 +11,14 @@ import { api, ApiError } from "../../lib/api";
 import { verifyFa } from "../../lib/format";
 import { clearSession, isSignedIn } from "../../lib/session";
 
-export default function AccountPage() {
+function AccountBody() {
   const router = useRouter();
+  const search = useSearchParams();
   const [me, setMe] = useState<Me | null>(null);
   const [verification, setVerification] = useState<MyVerification | null>(null);
   const [mine, setMine] = useState<EventDto[]>([]);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState(search.get("verify") === "1" ? "لینک تأیید به ایمیلت فرستاده شد." : "");
 
   async function reload() {
     const [profile, verify, events] = await Promise.all([
@@ -268,5 +269,13 @@ export default function AccountPage() {
         </button>
       </div>
     </main>
+  );
+}
+
+export default function AccountPage() {
+  return (
+    <Suspense fallback={<main className="wrap">در حال بارگذاری...</main>}>
+      <AccountBody />
+    </Suspense>
   );
 }

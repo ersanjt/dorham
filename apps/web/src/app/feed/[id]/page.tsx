@@ -5,9 +5,10 @@ import { PageIntro } from "../../../components/page-intro";
 import { SiteFooter } from "../../../components/site-footer";
 import { SiteHeader } from "../../../components/site-header";
 import { formatWhen } from "../../../lib/format";
+import { resolveApiBase } from "../../../lib/api-base";
 import { PostActions } from "./actions";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API = resolveApiBase();
 
 async function loadPost(id: string): Promise<{ post: FeedPost; comments: FeedComment[] } | null> {
   try {

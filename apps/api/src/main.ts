@@ -58,7 +58,8 @@ async function bootstrap() {
     SwaggerModule.setup("v1/docs", app, docs);
   }
 
-  await app.listen(env.API_PORT, "0.0.0.0");
+  const host = env.NODE_ENV === "production" ? env.API_HOST || "127.0.0.1" : env.API_HOST;
+  await app.listen(env.API_PORT, host);
 }
 
 bootstrap();

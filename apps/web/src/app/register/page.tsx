@@ -38,7 +38,7 @@ export default function RegisterPage() {
       if (data.verifyEmailToken) {
         router.push(`/verify-email?token=${encodeURIComponent(data.verifyEmailToken)}`);
       } else {
-        router.push("/account");
+        router.push("/account?verify=1");
       }
       router.refresh();
     } catch (err) {
