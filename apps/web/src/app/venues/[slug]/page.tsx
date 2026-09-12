@@ -6,6 +6,8 @@ import { PageIntro } from "../../../components/page-intro";
 import { SiteFooter } from "../../../components/site-footer";
 import { SiteHeader } from "../../../components/site-header";
 import { VenueReviews } from "./reviews";
+import { VenueGallery } from "./gallery";
+import { VenueVisitActions } from "./visit-actions";
 import { resolveApiBase } from "../../../lib/api-base";
 import { AREA_LABEL, KIND_LABEL } from "../../../lib/venues";
 
@@ -51,70 +53,71 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
   const [venue, reviews, events] = await Promise.all([loadVenue(slug), loadReviews(slug), loadEvents(slug)]);
   if (!venue) notFound();
 
+  const gallery =
+    venue.gallery?.length > 0
+      ? venue.gallery
+      : venue.mapImageUrl
+        ? [{ kind: "map" as const, src: venue.mapsEmbedUrl ?? venue.mapImageUrl, label: "نقشه" }]
+        : [];
+
   return (
     <main className="wrap">
       <SiteHeader />
       <PageIntro kicker={`${KIND_LABEL[venue.kind]} · ${AREA_LABEL[venue.area] ?? venue.area}`} title={venue.name}>
         <p className="lead">{venue.description}</p>
       </PageIntro>
-      {venue.mapsEmbedUrl || venue.mapImageUrl ? (
-        <section className="card venue-hero-map">
-          {venue.mapsEmbedUrl ? (
-            <iframe
-              className="venue-map-embed"
-              title={`نقشه گوگل ${venue.name}`}
-              src={venue.mapsEmbedUrl}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              allowFullScreen
-            />
-          ) : venue.mapImageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img className="venue-map" src={venue.mapImageUrl} alt={`نقشه ${venue.name}`} />
+
+      <VenueGallery items={gallery} name={venue.name} />
+
+      <section className="venue-panel" aria-label="اطلاعات مکان">
+        <h2 className="venue-panel-title">جزئیات</h2>
+        <dl className="venue-facts">
+          <div className="venue-fact">
+            <dt>آدرس</dt>
+            <dd>{venue.address}</dd>
+          </div>
+          {venue.hours ? (
+            <div className="venue-fact">
+              <dt>ساعت کار</dt>
+              <dd>{venue.hours}</dd>
+            </div>
           ) : null}
-          <p className="meta" style={{ padding: "12px 20px 16px" }}>
-            {venue.lat != null && venue.lng != null
-              ? `${venue.lat.toFixed(5)}, ${venue.lng.toFixed(5)} · `
-              : null}
-            <a href={venue.mapsUrl} target="_blank" rel="noreferrer">
-              باز کردن در گوگل‌مپ
-            </a>
-          </p>
-        </section>
-      ) : null}
-      <section className="card">
-        <p>
-          <strong>آدرس:</strong> {venue.address}
-        </p>
-        {venue.hours ? (
-          <p>
-            <strong>ساعت:</strong> {venue.hours}
-          </p>
-        ) : null}
-        {venue.priceRange ? (
-          <p>
-            <strong>حدود قیمت:</strong> {venue.priceRange}
-          </p>
-        ) : null}
-        {venue.menuNotes ? (
-          <p>
-            <strong>منو:</strong> {venue.menuNotes}
-          </p>
-        ) : null}
-        {venue.phone ? (
-          <p>
-            <strong>تلفن:</strong> <a href={`tel:${venue.phone}`}>{venue.phone}</a>
-          </p>
-        ) : null}
-        {venue.website ? (
-          <p>
-            <a href={venue.website} target="_blank" rel="noreferrer">
-              وب‌سایت
-            </a>
-          </p>
-        ) : null}
-        <p className="muted">{venue.reviewCount} نظر</p>
-        <div className="row">
+          {venue.priceRange ? (
+            <div className="venue-fact">
+              <dt>حدود قیمت</dt>
+              <dd>{venue.priceRange}</dd>
+            </div>
+          ) : null}
+          {venue.menuNotes ? (
+            <div className="venue-fact">
+              <dt>منو</dt>
+              <dd>{venue.menuNotes}</dd>
+            </div>
+          ) : null}
+          {venue.phone ? (
+            <div className="venue-fact">
+              <dt>تلفن</dt>
+              <dd>
+                <a href={`tel:${venue.phone}`}>{venue.phone}</a>
+              </dd>
+            </div>
+          ) : null}
+          {venue.website ? (
+            <div className="venue-fact">
+              <dt>وب‌سایت</dt>
+              <dd>
+                <a href={venue.website} target="_blank" rel="noreferrer">
+                  {venue.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                </a>
+              </dd>
+            </div>
+          ) : null}
+          <div className="venue-fact">
+            <dt>نظرها</dt>
+            <dd>{venue.reviewCount.toLocaleString("fa-IR")} نظر ثبت‌شده</dd>
+          </div>
+        </dl>
+        <div className="row venue-panel-actions">
           <a className="btn" href={venue.mapsUrl} target="_blank" rel="noreferrer">
             باز کردن در گوگل‌مپ
           </a>
@@ -126,6 +129,9 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
           </Link>
         </div>
       </section>
+
+      <VenueVisitActions slug={venue.slug} venueId={venue.id} />
+
       <section className="stack" style={{ marginTop: 28 }}>
         <h2>رویدادها در این مکان</h2>
         {events.length === 0 ? <p className="muted">هنوز رویدادی برای اینجا اعلام نشده.</p> : null}

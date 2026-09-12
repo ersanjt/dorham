@@ -30,6 +30,9 @@ export const ERROR_CODES = [
   "INTERNAL",
   "EVENT_CANCELLED",
   "VENUE_PENDING",
+  "VENUE_VISIT_FORBIDDEN",
+  "VENUE_VISIT_NOT_FOUND",
+  "VENUE_OWNER_REQUIRED",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

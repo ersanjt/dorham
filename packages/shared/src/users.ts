@@ -11,6 +11,25 @@ export const publicUserSchema = z.object({
   datingEnabled: z.boolean(),
   photoUrl: z.string().nullable(),
   createdAt: z.string().datetime(),
+  stats: z
+    .object({
+      venuesVisited: z.number().int().nonnegative(),
+      eventsAttended: z.number().int().nonnegative(),
+      eventsHosted: z.number().int().nonnegative(),
+    })
+    .optional(),
+  venuesVisited: z
+    .array(
+      z.object({
+        venueId: z.string(),
+        venueSlug: z.string(),
+        venueName: z.string(),
+        venueArea: z.string(),
+        visitCount: z.number().int().positive(),
+        lastVisitedAt: z.string().datetime(),
+      }),
+    )
+    .optional(),
 });
 
 export type PublicUser = z.infer<typeof publicUserSchema>;

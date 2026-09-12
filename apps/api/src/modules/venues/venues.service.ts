@@ -1,11 +1,11 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
-import { CreateVenueReviewBody, ListVenuesQuery, SubmitVenueBody } from "@dorham/shared";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { CreateVenueReviewBody, ListVenuesQuery, SubmitVenueBody, VenueCheckInBody } from "@dorham/shared";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { assertActive } from "../../common/account-status";
-
+import { newOpaqueToken, secretsEqual } from "../../common/crypto";
 import { loadEnv } from "../../config/env";
-import { cartoMapPreviewUrl } from "./map-preview";
+import { cartoMapPreviewUrl, streetViewEmbedUrl, streetViewPhotoUrl } from "./map-preview";
 
 @Injectable()
 export class VenuesService {
@@ -68,6 +68,8 @@ export class VenuesService {
         menuNotes: body.menuNotes || null,
         published: false,
         submitterId: userId,
+        ownerId: userId,
+        checkInSecret: newOpaqueToken(),
       },
       include: { _count: { select: { reviews: true } } },
     });
@@ -160,6 +162,206 @@ export class VenuesService {
     }
   }
 
+  /** Guest asks to be checked in — stays PENDING until the venue owner confirms. */
+  async requestVisit(idOrSlug: string, userId: string) {
+    const account = await this.prisma.user.findUnique({ where: { id: userId }, select: { status: true } });
+    assertActive(account?.status ?? "DELETED");
+    const venue = await this.requirePublishedFull(idOrSlug);
+    const existing = await this.prisma.venueVisit.findUnique({
+      where: { venueId_userId: { venueId: venue.id, userId } },
+    });
+    if (existing?.status === "VERIFIED") {
+      return { data: this.visitDto({ ...existing, venue }) };
+    }
+    if (existing) {
+      return { data: this.visitDto({ ...existing, venue }) };
+    }
+    const row = await this.prisma.venueVisit.create({
+      data: { venueId: venue.id, userId, status: "PENDING" },
+      include: { venue: true },
+    });
+    await this.prisma.auditLog.create({
+      data: { userId, action: "venue.visit_request", entity: "VenueVisit", entityId: row.id },
+    });
+    return { data: this.visitDto(row) };
+  }
+
+  /** Owner/staff confirms a guest was at the place (QR secret or manual userId). */
+  async checkInVisit(idOrSlug: string, actor: { id: string; role: string }, body: VenueCheckInBody) {
+    const venue = await this.requirePublishedFull(idOrSlug);
+    const isStaff = actor.role === "ADMIN" || actor.role === "MODERATOR";
+    const isOwner = venue.ownerId === actor.id;
+    let guestId = body.userId;
+
+    if (body.secret) {
+      const secret = await this.ensureVenueSecret(venue);
+      if (!secretsEqual(body.secret, secret)) {
+        throw new ForbiddenException({ code: "EVENT_CHECKIN_INVALID", message: "Invalid door code." });
+      }
+      guestId = actor.id;
+    } else if (!isOwner && !isStaff) {
+      throw new ForbiddenException({ code: "VENUE_VISIT_FORBIDDEN", message: "Only the venue owner can check guests in." });
+    }
+
+    if (!guestId) {
+      throw new BadRequestException({ code: "VALIDATION_FAILED", message: "userId is required." });
+    }
+    if (guestId === actor.id && !body.secret && !isStaff) {
+      throw new ForbiddenException({ code: "USER_SELF_ACTION", message: "Ask the venue to confirm your visit." });
+    }
+
+    const guest = await this.prisma.user.findUnique({ where: { id: guestId }, select: { id: true, status: true } });
+    if (!guest || guest.status === "DELETED") {
+      throw new NotFoundException({ code: "USER_NOT_FOUND", message: "User not found." });
+    }
+
+    const now = new Date();
+    const row = await this.prisma.venueVisit.upsert({
+      where: { venueId_userId: { venueId: venue.id, userId: guestId } },
+      create: {
+        venueId: venue.id,
+        userId: guestId,
+        status: "VERIFIED",
+        verifiedById: actor.id,
+        verifiedAt: now,
+        lastVisitedAt: now,
+        visitCount: 1,
+      },
+      update: {
+        status: "VERIFIED",
+        verifiedById: actor.id,
+        verifiedAt: now,
+        lastVisitedAt: now,
+        visitCount: { increment: 1 },
+      },
+      include: { venue: true },
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        userId: actor.id,
+        action: "venue.visit_verify",
+        entity: "VenueVisit",
+        entityId: row.id,
+        meta: { guestId },
+      },
+    });
+    return { data: this.visitDto(row) };
+  }
+
+  async claimOwner(idOrSlug: string, userId: string) {
+    const account = await this.prisma.user.findUnique({ where: { id: userId }, select: { status: true, role: true } });
+    assertActive(account?.status ?? "DELETED");
+    const venue = await this.requirePublishedFull(idOrSlug);
+    if (venue.ownerId && venue.ownerId !== userId && account?.role !== "ADMIN") {
+      throw new ForbiddenException({ code: "VENUE_VISIT_FORBIDDEN", message: "This venue already has an owner." });
+    }
+    const canClaim =
+      account?.role === "ADMIN" ||
+      account?.role === "MODERATOR" ||
+      account?.role === "HOST" ||
+      venue.submitterId === userId;
+    if (!canClaim) {
+      throw new ForbiddenException({ code: "VENUE_OWNER_REQUIRED", message: "Hosts and submitters can claim a venue." });
+    }
+    const updated = await this.prisma.venue.update({
+      where: { id: venue.id },
+      data: {
+        ownerId: userId,
+        checkInSecret: venue.checkInSecret ?? newOpaqueToken(),
+      },
+      include: { _count: { select: { reviews: true } } },
+    });
+    return { data: this.toDto(updated) };
+  }
+
+  async door(idOrSlug: string, actor: { id: string; role: string }) {
+    const venue = await this.requirePublishedFull(idOrSlug);
+    const isOwner = venue.ownerId === actor.id;
+    const isStaff = actor.role === "ADMIN" || actor.role === "MODERATOR";
+    if (!isOwner && !isStaff) {
+      throw new ForbiddenException({ code: "VENUE_VISIT_FORBIDDEN", message: "Only the venue owner can open the door page." });
+    }
+    const secret = await this.ensureVenueSecret(venue);
+    const [verifiedCount, pendingCount] = await Promise.all([
+      this.prisma.venueVisit.count({ where: { venueId: venue.id, status: "VERIFIED" } }),
+      this.prisma.venueVisit.count({ where: { venueId: venue.id, status: "PENDING" } }),
+    ]);
+    return {
+      data: {
+        venueId: venue.id,
+        slug: venue.slug,
+        name: venue.name,
+        url: `${this.env.APP_URL.replace(/\/$/, "")}/venues/${venue.slug}/checkin?s=${encodeURIComponent(secret)}`,
+        verifiedCount,
+        pendingCount,
+      },
+    };
+  }
+
+  async listVisits(idOrSlug: string, actor: { id: string; role: string }) {
+    const venue = await this.requirePublishedFull(idOrSlug);
+    const isOwner = venue.ownerId === actor.id;
+    const isStaff = actor.role === "ADMIN" || actor.role === "MODERATOR";
+    if (!isOwner && !isStaff) {
+      throw new ForbiddenException({ code: "VENUE_VISIT_FORBIDDEN", message: "Only the venue owner can list visits." });
+    }
+    const rows = await this.prisma.venueVisit.findMany({
+      where: { venueId: venue.id },
+      orderBy: [{ status: "asc" }, { lastVisitedAt: "desc" }],
+      take: 80,
+      include: { venue: true, user: { include: { profile: true } } },
+    });
+    return {
+      data: rows.map((row) => ({
+        ...this.visitDto(row),
+        guestName: row.user.profile?.displayName ?? "عضو",
+        guestId: row.userId,
+      })),
+    };
+  }
+
+  private visitDto(row: {
+    id: string;
+    venueId: string;
+    status: "PENDING" | "VERIFIED" | "REJECTED";
+    visitCount: number;
+    lastVisitedAt: Date;
+    verifiedAt: Date | null;
+    venue: { slug: string; name: string; area: string };
+  }) {
+    return {
+      id: row.id,
+      venueId: row.venueId,
+      venueSlug: row.venue.slug,
+      venueName: row.venue.name,
+      venueArea: row.venue.area,
+      status: row.status,
+      visitCount: row.visitCount,
+      lastVisitedAt: row.lastVisitedAt.toISOString(),
+      verifiedAt: row.verifiedAt?.toISOString() ?? null,
+    };
+  }
+
+  private async requirePublishedFull(idOrSlug: string) {
+    const row = await this.prisma.venue.findFirst({
+      where: {
+        published: true,
+        OR: [{ id: idOrSlug }, { slug: idOrSlug }],
+      },
+    });
+    if (!row) {
+      throw new NotFoundException({ code: "VENUE_NOT_FOUND", message: "Venue not found." });
+    }
+    return row;
+  }
+
+  private async ensureVenueSecret(venue: { id: string; checkInSecret: string | null }) {
+    if (venue.checkInSecret) return venue.checkInSecret;
+    const checkInSecret = newOpaqueToken();
+    await this.prisma.venue.update({ where: { id: venue.id }, data: { checkInSecret } });
+    return checkInSecret;
+  }
+
   private async requirePublished(idOrSlug: string) {
     const row = await this.prisma.venue.findFirst({
       where: {
@@ -207,6 +409,7 @@ export class VenuesService {
     priceRange: string | null;
     menuNotes: string | null;
     description: string;
+    photos?: unknown;
     _count: { reviews: number };
   }) {
     const mapsUrl = row.mapsQuery.startsWith("http")
@@ -215,15 +418,48 @@ export class VenuesService {
 
     let mapImageUrl: string | null = null;
     let mapsEmbedUrl: string | null = null;
+    const gallery: Array<{ kind: "photo" | "street" | "map"; src: string; label: string }> = [];
+    const stored = Array.isArray(row.photos)
+      ? (row.photos as unknown[]).filter((u): u is string => typeof u === "string" && /^https?:\/\//i.test(u))
+      : [];
+
+    for (const url of stored) {
+      gallery.push({ kind: "photo", src: url, label: row.name });
+    }
+
     if (row.lat != null && row.lng != null) {
       const key = this.env.GOOGLE_MAPS_API_KEY?.trim();
       if (key) {
         const marker = `${row.lat},${row.lng}`;
         mapImageUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker}&zoom=16&size=640x360&scale=2&maptype=roadmap&markers=color:0xB12E28%7C${marker}&key=${encodeURIComponent(key)}`;
+        for (const heading of [20, 140, 260]) {
+          gallery.push({
+            kind: "street",
+            src: streetViewPhotoUrl(row.lat, row.lng, heading, key),
+            label: `نمای خیابان · ${heading}°`,
+          });
+        }
       } else {
         mapImageUrl = cartoMapPreviewUrl(row.lat, row.lng, 15);
+        for (const heading of [20, 140, 260]) {
+          gallery.push({
+            kind: "street",
+            src: streetViewEmbedUrl(row.lat, row.lng, heading),
+            label: `نمای خیابان · ${heading}°`,
+          });
+        }
       }
       mapsEmbedUrl = `https://maps.google.com/maps?q=${row.lat},${row.lng}&z=16&hl=tr&output=embed`;
+      if (mapsEmbedUrl) {
+        gallery.push({ kind: "map", src: mapsEmbedUrl, label: "نقشه گوگل" });
+      }
+    }
+
+    const photos: string[] = gallery
+      .filter((g) => g.kind === "photo" || (g.kind === "street" && !g.src.includes("svembed")))
+      .map((g) => g.src);
+    if (photos.length === 0 && mapImageUrl) {
+      photos.push(mapImageUrl);
     }
 
     return {
@@ -237,6 +473,8 @@ export class VenuesService {
       mapsUrl,
       mapImageUrl,
       mapsEmbedUrl,
+      gallery,
+      photos,
       lat: row.lat,
       lng: row.lng,
       phone: row.phone,

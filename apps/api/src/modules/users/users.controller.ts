@@ -18,6 +18,13 @@ export class UsersController {
     return { data: await this.users.me(user.id) };
   }
 
+  @Get("me/activity")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  async activity(@CurrentUser() user: { id: string }) {
+    return { data: await this.users.activity(user.id) };
+  }
+
   @Patch("me")
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

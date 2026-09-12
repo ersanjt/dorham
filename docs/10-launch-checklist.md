@@ -59,6 +59,8 @@ Rotate seed password `DorhamHost1` after first login.
 - API: auth + email verify + password reset, events CRUD cancel, venues pending, admin reports/roles
 - Mobile: points at `https://api.dorham.app` (EAS when ready)
 
-## Explicitly not v1
+## Venue visits (not a live grid)
+
+Guests can request presence at a place; **only the venue owner** (or QR door link) verifies it. Verified visits appear on `/account` and public profiles. This is historical trust — not a live “who is at this cafe” disco map (see north star).
 
 Dating tab, Boost, swipe decks, Iran market, Iyzico, store listing until first real Friday.

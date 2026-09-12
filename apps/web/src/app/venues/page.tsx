@@ -62,10 +62,15 @@ export default async function VenuesPage({
       <div className="grid">
         {venues.map((venue) => (
           <article className="card venue-card" key={venue.id}>
-            {venue.mapImageUrl ? (
+            {venue.photos?.[0] || venue.mapImageUrl ? (
               <a className="venue-map-link" href={venue.mapsUrl} target="_blank" rel="noreferrer" aria-label={`گوگل‌مپ ${venue.name}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className="venue-map" src={venue.mapImageUrl} alt={`نقشه ${venue.name}`} loading="lazy" />
+                <img
+                  className="venue-map"
+                  src={venue.photos?.[0] || venue.mapImageUrl!}
+                  alt={`نقشه ${venue.name}`}
+                  loading="lazy"
+                />
                 <span className="venue-map-pin" aria-hidden />
               </a>
             ) : null}

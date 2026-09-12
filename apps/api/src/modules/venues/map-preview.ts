@@ -17,3 +17,21 @@ export function cartoMapPreviewUrl(lat: number, lng: number, zoom = 15): string 
   const host = ["a", "b", "c", "d"][(Math.abs(x) + Math.abs(y)) % 4];
   return `https://${host}.basemaps.cartocdn.com/rastertiles/voyager/${zoom}/${x}/${y}@2x.png`;
 }
+
+/** Google Street View stills — requires Maps Static / Street View API key. */
+export function streetViewPhotoUrl(lat: number, lng: number, heading: number, key: string): string {
+  const params = new URLSearchParams({
+    size: "800x500",
+    location: `${lat},${lng}`,
+    heading: String(heading),
+    pitch: "8",
+    fov: "80",
+    key,
+  });
+  return `https://maps.googleapis.com/maps/api/streetview?${params}`;
+}
+
+/** Street View embed (no key) — exterior of the pin for gallery. */
+export function streetViewEmbedUrl(lat: number, lng: number, heading: number): string {
+  return `https://www.google.com/maps?layer=c&cbll=${lat},${lng}&cbp=12,${heading},0,0,5&hl=tr&output=svembed`;
+}

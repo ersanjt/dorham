@@ -111,7 +111,10 @@ model User {
   comments       PostComment[]
   feedReports    FeedReport[]
   venueReviews   VenueReview[]
-  venuesSubmitted Venue[]
+  venuesSubmitted Venue[] @relation("VenueSubmitter")
+  venuesOwned     Venue[] @relation("VenueOwner")
+  venueVisits     VenueVisit[] @relation("VenueVisitor")
+  venueVisitsVerified VenueVisit[] @relation("VenueVisitVerifier")
 }
 
 model Profile {
@@ -208,16 +211,50 @@ model Venue {
   priceRange  String?
   menuNotes   String?
   description String
+  /** Public image URLs (https). Never invent stock photos in seed. */
+  photos      Json      @default("[]")
   published   Boolean   @default(true)
   submitterId String?
-  submitter   User?     @relation(fields: [submitterId], references: [id], onDelete: SetNull)
+  submitter   User?     @relation("VenueSubmitter", fields: [submitterId], references: [id], onDelete: SetNull)
+  ownerId     String?
+  owner       User?     @relation("VenueOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  checkInSecret String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   reviews     VenueReview[]
   events      Event[]
+  visits      VenueVisit[]
 
   @@index([city, kind])
   @@index([area])
+  @@index([ownerId])
+}
+
+enum VenueVisitStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+/** Owner-verified presence at a place — historical, not a live “who is here” grid. */
+model VenueVisit {
+  id           String           @id @default(cuid())
+  venueId      String
+  venue        Venue            @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User             @relation("VenueVisitor", fields: [userId], references: [id], onDelete: Cascade)
+  status       VenueVisitStatus @default(PENDING)
+  visitCount   Int              @default(1)
+  verifiedById String?
+  verifiedBy   User?            @relation("VenueVisitVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+  verifiedAt   DateTime?
+  lastVisitedAt DateTime        @default(now())
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([venueId, userId])
+  @@index([userId, status, lastVisitedAt])
+  @@index([venueId, status])
 }
 
 model VenueReview {

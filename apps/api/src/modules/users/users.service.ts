@@ -38,6 +38,59 @@ export class UsersService {
     };
   }
 
+  async activity(userId: string) {
+    const [venuesVisited, eventsAttended, eventsGoing, eventsHosted, pendingVenueVisits, venueRows, eventRows] =
+      await Promise.all([
+        this.prisma.venueVisit.count({ where: { userId, status: "VERIFIED" } }),
+        this.prisma.eventRsvp.count({ where: { userId, checkedInAt: { not: null } } }),
+        this.prisma.eventRsvp.count({
+          where: { userId, status: { in: ["GOING", "INTERESTED"] } },
+        }),
+        this.prisma.event.count({ where: { hostId: userId, status: { in: ["PUBLISHED", "ENDED"] } } }),
+        this.prisma.venueVisit.count({ where: { userId, status: "PENDING" } }),
+        this.prisma.venueVisit.findMany({
+          where: { userId, status: "VERIFIED" },
+          orderBy: { lastVisitedAt: "desc" },
+          take: 40,
+          include: { venue: true },
+        }),
+        this.prisma.eventRsvp.findMany({
+          where: { userId, checkedInAt: { not: null } },
+          orderBy: { checkedInAt: "desc" },
+          take: 40,
+          include: { event: true },
+        }),
+      ]);
+
+    return {
+      stats: {
+        venuesVisited,
+        eventsAttended,
+        eventsGoing,
+        eventsHosted,
+        pendingVenueVisits,
+      },
+      venues: venueRows.map((row) => ({
+        id: row.id,
+        venueId: row.venueId,
+        venueSlug: row.venue.slug,
+        venueName: row.venue.name,
+        venueArea: row.venue.area,
+        status: row.status,
+        visitCount: row.visitCount,
+        lastVisitedAt: row.lastVisitedAt.toISOString(),
+        verifiedAt: row.verifiedAt?.toISOString() ?? null,
+      })),
+      eventsAttended: eventRows.map((row) => ({
+        id: row.event.id,
+        title: row.event.title,
+        venue: row.event.venue,
+        startsAt: row.event.startsAt.toISOString(),
+        checkedInAt: row.checkedInAt?.toISOString() ?? null,
+      })),
+    };
+  }
+
   async publicById(viewerId: string | undefined, userId: string) {
     if (viewerId && (await this.isBlockedEitherWay(viewerId, userId))) {
       throw new NotFoundException({ code: "USER_NOT_FOUND", message: "User not found." });
@@ -55,6 +108,19 @@ export class UsersService {
     ) {
       throw new NotFoundException({ code: "USER_NOT_FOUND", message: "User not found." });
     }
+
+    const [venuesVisited, eventsAttended, eventsHosted, venueRows] = await Promise.all([
+      this.prisma.venueVisit.count({ where: { userId, status: "VERIFIED" } }),
+      this.prisma.eventRsvp.count({ where: { userId, checkedInAt: { not: null } } }),
+      this.prisma.event.count({ where: { hostId: userId, status: { in: ["PUBLISHED", "ENDED"] } } }),
+      this.prisma.venueVisit.findMany({
+        where: { userId, status: "VERIFIED" },
+        orderBy: { lastVisitedAt: "desc" },
+        take: 24,
+        include: { venue: true },
+      }),
+    ]);
+
     return {
       id: user.id,
       displayName: user.profile.displayName,
@@ -65,6 +131,15 @@ export class UsersService {
       datingEnabled: false,
       photoUrl: await this.media.photoUrl(user.profile.photoId),
       createdAt: user.createdAt.toISOString(),
+      stats: { venuesVisited, eventsAttended, eventsHosted },
+      venuesVisited: venueRows.map((row) => ({
+        venueId: row.venueId,
+        venueSlug: row.venue.slug,
+        venueName: row.venue.name,
+        venueArea: row.venue.area,
+        visitCount: row.visitCount,
+        lastVisitedAt: row.lastVisitedAt.toISOString(),
+      })),
     };
   }
 
@@ -72,17 +147,21 @@ export class UsersService {
     const account = await this.prisma.user.findUnique({ where: { id: userId }, select: { status: true } });
     assertActive(account?.status ?? "DELETED");
     await this.prisma.$transaction([
-      this.prisma.user.update({
-        where: { id: userId },
-        data: { locale: body.locale },
-      }),
+      ...(body.locale
+        ? [
+            this.prisma.user.update({
+              where: { id: userId },
+              data: { locale: body.locale },
+            }),
+          ]
+        : []),
       this.prisma.profile.update({
         where: { userId },
         data: {
-          displayName: body.displayName,
-          bio: body.bio === undefined ? undefined : body.bio,
-          city: body.city,
-          datingEnabled: body.datingEnabled,
+          ...(body.displayName !== undefined ? { displayName: body.displayName } : {}),
+          ...(body.bio !== undefined ? { bio: body.bio } : {}),
+          ...(body.city !== undefined ? { city: body.city } : {}),
+          ...(body.datingEnabled !== undefined ? { datingEnabled: body.datingEnabled } : {}),
         },
       }),
     ]);

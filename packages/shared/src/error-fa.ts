@@ -32,4 +32,7 @@ export const ERROR_FA: Record<string, string> = {
   NETWORK: "ارتباط با سرور برقرار نشد. اتصال اینترنت را چک کن و دوباره تلاش کن.",
   EVENT_CANCELLED: "این رویداد لغو شده.",
   VENUE_PENDING: "مکان ثبت شد و بعد از بررسی منتشر می‌شود.",
+  VENUE_VISIT_FORBIDDEN: "فقط صاحب مکان می‌تواند حضور را تأیید کند.",
+  VENUE_VISIT_NOT_FOUND: "بازدید پیدا نشد.",
+  VENUE_OWNER_REQUIRED: "اول مالکیت مکان را بگیر.",
 };

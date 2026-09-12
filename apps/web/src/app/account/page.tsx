@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
-import type { EventDto, Me, MyVerification } from "@dorham/shared";
+import type { EventDto, Me, MyVerification, UserActivity } from "@dorham/shared";
 import { EventCard } from "../../components/event-card";
 import { SiteHeader } from "../../components/site-header";
 import { PageIntro } from "../../components/page-intro";
@@ -17,18 +17,21 @@ function AccountBody() {
   const [me, setMe] = useState<Me | null>(null);
   const [verification, setVerification] = useState<MyVerification | null>(null);
   const [mine, setMine] = useState<EventDto[]>([]);
+  const [activity, setActivity] = useState<UserActivity | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState(search.get("verify") === "1" ? "لینک تأیید به ایمیلت فرستاده شد." : "");
 
   async function reload() {
-    const [profile, verify, events] = await Promise.all([
+    const [profile, verify, events, act] = await Promise.all([
       api<Me>("/users/me"),
       api<MyVerification>("/users/me/verification"),
       api<EventDto[]>("/events/mine"),
+      api<UserActivity>("/users/me/activity"),
     ]);
     setMe(profile);
     setVerification(verify);
     setMine(events);
+    setActivity(act);
   }
 
   useEffect(() => {
@@ -138,6 +141,73 @@ function AccountBody() {
           </Link>
         </div>
       </section>
+
+      {activity ? (
+        <section className="venue-panel" style={{ marginTop: 24 }} aria-label="آمار حضور">
+          <h2 className="venue-panel-title">حضور در شهر</h2>
+          <div className="account-stats">
+            <div className="account-stat">
+              <strong>{activity.stats.venuesVisited.toLocaleString("fa-IR")}</strong>
+              <span>مکان تأییدشده</span>
+            </div>
+            <div className="account-stat">
+              <strong>{activity.stats.eventsAttended.toLocaleString("fa-IR")}</strong>
+              <span>رویداد (چک‌این)</span>
+            </div>
+            <div className="account-stat">
+              <strong>{activity.stats.eventsGoing.toLocaleString("fa-IR")}</strong>
+              <span>RSVP فعال</span>
+            </div>
+            <div className="account-stat">
+              <strong>{activity.stats.eventsHosted.toLocaleString("fa-IR")}</strong>
+              <span>میزبانی</span>
+            </div>
+          </div>
+          {activity.stats.pendingVenueVisits > 0 ? (
+            <p className="muted" style={{ padding: "0 20px" }}>
+              {activity.stats.pendingVenueVisits.toLocaleString("fa-IR")} درخواست حضور در انتظار تأیید صاحب مکان است.
+            </p>
+          ) : null}
+
+          <h3 style={{ margin: "16px 20px 8px" }}>مکان‌هایی که رفته‌ای</h3>
+          {activity.venues.length === 0 ? (
+            <p className="muted" style={{ padding: "0 20px 16px" }}>
+              هنوز مکانی با تأیید صاحب کسب‌وکار ثبت نشده. از صفحهٔ مکان «درخواست تأیید حضور» بزن.
+            </p>
+          ) : (
+            <ul className="account-history">
+              {activity.venues.map((v) => (
+                <li key={v.id}>
+                  <Link href={`/venues/${v.venueSlug}`}>{v.venueName}</Link>
+                  <span className="muted">
+                    {" "}
+                    · {v.visitCount.toLocaleString("fa-IR")} بار ·{" "}
+                    {new Date(v.lastVisitedAt).toLocaleDateString("fa-IR")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <h3 style={{ margin: "16px 20px 8px" }}>رویدادهایی که وارد شده‌ای</h3>
+          {activity.eventsAttended.length === 0 ? (
+            <p className="muted" style={{ padding: "0 20px 16px" }}>
+              هنوز چک‌این رویدادی نداری. دم در با QR میزبان وارد شو.
+            </p>
+          ) : (
+            <ul className="account-history">
+              {activity.eventsAttended.map((ev) => (
+                <li key={ev.id}>
+                  <Link href={`/events/${ev.id}`}>{ev.title}</Link>
+                  <span className="muted">
+                    {ev.venue ? ` · ${ev.venue}` : ""} · {new Date(ev.startsAt).toLocaleDateString("fa-IR")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
 
       <form className="form wide" onSubmit={saveProfile}>
         <label>

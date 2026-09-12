@@ -67,7 +67,16 @@ async function main() {
         priceRange: venue.priceRange ?? null,
         menuNotes: venue.menuNotes ?? null,
         description: venue.description,
+        photos: [],
       },
+    });
+  }
+
+  const admin = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  if (admin) {
+    await prisma.venue.updateMany({
+      where: { ownerId: null },
+      data: { ownerId: admin.id },
     });
   }
 

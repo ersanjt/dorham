@@ -53,7 +53,36 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
           )}
         </p>
         <p className="prose">{person.bio || "هنوز معرفی ننوشته."}</p>
+        {person.stats ? (
+          <div className="account-stats" style={{ marginTop: 16 }}>
+            <div className="account-stat">
+              <strong>{person.stats.venuesVisited.toLocaleString("fa-IR")}</strong>
+              <span>مکان</span>
+            </div>
+            <div className="account-stat">
+              <strong>{person.stats.eventsAttended.toLocaleString("fa-IR")}</strong>
+              <span>رویداد</span>
+            </div>
+            <div className="account-stat">
+              <strong>{person.stats.eventsHosted.toLocaleString("fa-IR")}</strong>
+              <span>میزبانی</span>
+            </div>
+          </div>
+        ) : null}
       </article>
+      {person.venuesVisited && person.venuesVisited.length > 0 ? (
+        <section style={{ marginTop: 28 }}>
+          <h2>مکان‌های تأییدشده</h2>
+          <ul className="account-history">
+            {person.venuesVisited.map((v) => (
+              <li key={v.venueId}>
+                <Link href={`/venues/${v.venueSlug}`}>{v.venueName}</Link>
+                <span className="muted"> · {v.visitCount.toLocaleString("fa-IR")} بار</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       {hosted.length > 0 ? (
         <section style={{ marginTop: 32 }}>
           <h2>جمعه‌های این میزبان</h2>

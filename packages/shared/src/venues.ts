@@ -18,6 +18,16 @@ export const venueSchema = z.object({
   mapImageUrl: z.string().nullable(),
   /** Google Maps iframe embed for the exact pin. */
   mapsEmbedUrl: z.string().nullable(),
+  /** Gallery: photos (img), street (iframe/img), map (iframe/img). */
+  gallery: z.array(
+    z.object({
+      kind: z.enum(["photo", "street", "map"]),
+      src: z.string(),
+      label: z.string(),
+    }),
+  ),
+  /** Convenience cover images for cards (img URLs only). */
+  photos: z.array(z.string()),
   lat: z.number().nullable(),
   lng: z.number().nullable(),
   phone: z.string().nullable(),
