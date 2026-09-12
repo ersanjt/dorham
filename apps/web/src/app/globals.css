@@ -201,6 +201,11 @@ a { color: inherit; text-underline-offset: 0.18em; }
 .venue-card .row { padding-inline: 20px; }
 .venue-card .card-top { padding-top: 16px; }
 .venue-card .row { padding-bottom: 18px; }
+.venue-map-link {
+  position: relative;
+  display: block;
+  background: var(--paper-deep);
+}
 .venue-map {
   display: block;
   width: 100%;
@@ -209,6 +214,26 @@ a { color: inherit; text-underline-offset: 0.18em; }
   object-fit: cover;
   background: var(--paper-deep);
   border: 0;
+}
+.venue-map-pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -22px 0 0 -9px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--clay, #b12e28);
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(40, 20, 10, 0.35);
+  pointer-events: none;
+}
+.venue-map-pin::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: #fff8f0;
 }
 .venue-map-embed {
   display: block;

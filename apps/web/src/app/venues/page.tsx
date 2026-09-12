@@ -63,9 +63,10 @@ export default async function VenuesPage({
         {venues.map((venue) => (
           <article className="card venue-card" key={venue.id}>
             {venue.mapImageUrl ? (
-              <a href={venue.mapsUrl} target="_blank" rel="noreferrer" aria-label={`گوگل‌مپ ${venue.name}`}>
+              <a className="venue-map-link" href={venue.mapsUrl} target="_blank" rel="noreferrer" aria-label={`گوگل‌مپ ${venue.name}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img className="venue-map" src={venue.mapImageUrl} alt={`نقشه ${venue.name}`} loading="lazy" />
+                <span className="venue-map-pin" aria-hidden />
               </a>
             ) : null}
             <div className="card-top">

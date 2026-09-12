@@ -5,6 +5,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { assertActive } from "../../common/account-status";
 
 import { loadEnv } from "../../config/env";
+import { cartoMapPreviewUrl } from "./map-preview";
 
 @Injectable()
 export class VenuesService {
@@ -220,7 +221,7 @@ export class VenuesService {
         const marker = `${row.lat},${row.lng}`;
         mapImageUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker}&zoom=16&size=640x360&scale=2&maptype=roadmap&markers=color:0xB12E28%7C${marker}&key=${encodeURIComponent(key)}`;
       } else {
-        mapImageUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${row.lat},${row.lng}&zoom=16&size=640x360&maptype=mapnik&markers=${row.lat},${row.lng},red-pushpin`;
+        mapImageUrl = cartoMapPreviewUrl(row.lat, row.lng, 15);
       }
       mapsEmbedUrl = `https://maps.google.com/maps?q=${row.lat},${row.lng}&z=16&hl=tr&output=embed`;
     }
