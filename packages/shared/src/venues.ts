@@ -14,8 +14,10 @@ export const venueSchema = z.object({
   area: z.string(),
   address: z.string(),
   mapsUrl: z.string(),
-  /** OpenStreetMap static preview from real lat/lng — not a stock photo of the venue. */
+  /** Static map preview (Google Static if keyed, else OSM). */
   mapImageUrl: z.string().nullable(),
+  /** Google Maps iframe embed for the exact pin. */
+  mapsEmbedUrl: z.string().nullable(),
   lat: z.number().nullable(),
   lng: z.number().nullable(),
   phone: z.string().nullable(),

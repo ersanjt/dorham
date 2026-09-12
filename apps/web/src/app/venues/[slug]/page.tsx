@@ -57,15 +57,29 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
       <PageIntro kicker={`${KIND_LABEL[venue.kind]} · ${AREA_LABEL[venue.area] ?? venue.area}`} title={venue.name}>
         <p className="lead">{venue.description}</p>
       </PageIntro>
-      {venue.mapImageUrl ? (
+      {venue.mapsEmbedUrl || venue.mapImageUrl ? (
         <section className="card venue-hero-map">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="venue-map" src={venue.mapImageUrl} alt={`نقشه ${venue.name}`} />
-          {venue.lat != null && venue.lng != null ? (
-            <p className="meta">
-              مختصات واقعی: {venue.lat.toFixed(5)}, {venue.lng.toFixed(5)} · منبع پیش‌نمایش: OpenStreetMap
-            </p>
+          {venue.mapsEmbedUrl ? (
+            <iframe
+              className="venue-map-embed"
+              title={`نقشه گوگل ${venue.name}`}
+              src={venue.mapsEmbedUrl}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
+            />
+          ) : venue.mapImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="venue-map" src={venue.mapImageUrl} alt={`نقشه ${venue.name}`} />
           ) : null}
+          <p className="meta" style={{ padding: "12px 20px 16px" }}>
+            {venue.lat != null && venue.lng != null
+              ? `${venue.lat.toFixed(5)}, ${venue.lng.toFixed(5)} · `
+              : null}
+            <a href={venue.mapsUrl} target="_blank" rel="noreferrer">
+              باز کردن در گوگل‌مپ
+            </a>
+          </p>
         </section>
       ) : null}
       <section className="card">

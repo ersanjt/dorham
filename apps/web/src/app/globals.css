@@ -210,6 +210,13 @@ a { color: inherit; text-underline-offset: 0.18em; }
   background: var(--paper-deep);
   border: 0;
 }
+.venue-map-embed {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  background: var(--paper-deep);
+}
 .venue-hero-map { padding: 0; overflow: hidden; margin-bottom: 18px; }
 .venue-hero-map .meta { padding: 12px 20px 16px; margin: 0; }
 .hero-visual {

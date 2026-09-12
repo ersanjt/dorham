@@ -1,0 +1,147 @@
+{
+  "safir-aksaray": {
+    "lat": 41.005498,
+    "lng": 28.950193
+  },
+  "safir-sisli": {
+    "lat": 41.059418,
+    "lng": 28.986572
+  },
+  "asuman-aksaray": {
+    "lat": 41.008181,
+    "lng": 28.953739
+  },
+  "nayeb-findikzade": {
+    "lat": 41.011772,
+    "lng": 28.940412
+  },
+  "reyhun-taksim": {
+    "lat": 41.03255,
+    "lng": 28.97795
+  },
+  "termeh-beyoglu": {
+    "lat": 41.03285,
+    "lng": 28.97755
+  },
+  "mojgan-taksim": {
+    "lat": 41.040891,
+    "lng": 28.985484
+  },
+  "shamse-istiklal": {
+    "lat": 41.033861,
+    "lng": 28.978167
+  },
+  "safran-gumussuyu": {
+    "lat": 41.04015,
+    "lng": 28.989257
+  },
+  "daryakenar-sisli": {
+    "lat": 41.045225,
+    "lng": 28.986566
+  },
+  "gulistan-sisli": null,
+  "golab-atakoy": {
+    "lat": 40.971128,
+    "lng": 28.876129
+  },
+  "shiraz-kadikoy": {
+    "lat": 40.987938,
+    "lng": 29.024155
+  },
+  "cheshmeh-kadikoy": {
+    "lat": 40.993191,
+    "lng": 29.025508
+  },
+  "gilan-acibadem": {
+    "lat": 41.055786,
+    "lng": 28.999567
+  },
+  "tehroon-maslak": {
+    "lat": 41.114656,
+    "lng": 29.024038
+  },
+  "lalezaar-maslak": {
+    "lat": 41.114656,
+    "lng": 29.024038
+  },
+  "zolfa-maslak": {
+    "lat": 41.112711,
+    "lng": 29.0186
+  },
+  "arya-sariyer": {
+    "lat": 41.111636,
+    "lng": 28.988744
+  },
+  "sudi-atasehir": {
+    "lat": 40.98982,
+    "lng": 29.142991
+  },
+  "shandiz-maltepe": {
+    "lat": 40.938805,
+    "lng": 29.112076
+  },
+  "sevenkhan-kagithane": {
+    "lat": 41.070707,
+    "lng": 28.980513
+  },
+  "shahrzad-ortakoy": {
+    "lat": 41.054627,
+    "lng": 29.02819
+  },
+  "kralice-ortakoy": {
+    "lat": 41.054627,
+    "lng": 29.02819
+  },
+  "keyvan-esenyurt": {
+    "lat": 41.034286,
+    "lng": 28.680111
+  },
+  "atabak-esenyurt": {
+    "lat": 41.012453,
+    "lng": 28.656766
+  },
+  "zaim-avcilar": {
+    "lat": 40.99856,
+    "lng": 28.700572
+  },
+  "masihanim-beylikduzu": {
+    "lat": 41.000628,
+    "lng": 28.643851
+  },
+  "iran-market-aksaray": {
+    "lat": 41.015736,
+    "lng": 28.95556
+  },
+  "iran-market-sisli": {
+    "lat": 41.055284,
+    "lng": 28.982071
+  },
+  "iran-market-maslak": {
+    "lat": 41.109999,
+    "lng": 29.020591
+  },
+  "damo-taksim": {
+    "lat": 41.033744,
+    "lng": 28.983689
+  },
+  "aydan-esenyurt": {
+    "lat": 41.008356,
+    "lng": 28.680873
+  },
+  "shah-kebab-basaksehir": {
+    "lat": 41.084411,
+    "lng": 28.678821
+  },
+  "tehroon-kadikoy": {
+    "lat": 40.993218,
+    "lng": 29.051621
+  },
+  "palmiye-esenyurt": {
+    "lat": 41.025505,
+    "lng": 28.661415
+  },
+  "aksaray-mahalle": {
+    "lat": 41.010738,
+    "lng": 28.950078
+  }
+}

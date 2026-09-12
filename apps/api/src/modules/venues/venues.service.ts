@@ -4,8 +4,12 @@ import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { assertActive } from "../../common/account-status";
 
+import { loadEnv } from "../../config/env";
+
 @Injectable()
 export class VenuesService {
+  private readonly env = loadEnv();
+
   constructor(private readonly prisma: PrismaService) {}
 
   async list(query: ListVenuesQuery) {
@@ -207,10 +211,20 @@ export class VenuesService {
     const mapsUrl = row.mapsQuery.startsWith("http")
       ? row.mapsQuery
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(row.mapsQuery)}`;
-    const mapImageUrl =
-      row.lat != null && row.lng != null
-        ? `https://staticmap.openstreetmap.de/staticmap.php?center=${row.lat},${row.lng}&zoom=16&size=640x360&maptype=mapnik&markers=${row.lat},${row.lng},red-pushpin`
-        : null;
+
+    let mapImageUrl: string | null = null;
+    let mapsEmbedUrl: string | null = null;
+    if (row.lat != null && row.lng != null) {
+      const key = this.env.GOOGLE_MAPS_API_KEY?.trim();
+      if (key) {
+        const marker = `${row.lat},${row.lng}`;
+        mapImageUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker}&zoom=16&size=640x360&scale=2&maptype=roadmap&markers=color:0xB12E28%7C${marker}&key=${encodeURIComponent(key)}`;
+      } else {
+        mapImageUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${row.lat},${row.lng}&zoom=16&size=640x360&maptype=mapnik&markers=${row.lat},${row.lng},red-pushpin`;
+      }
+      mapsEmbedUrl = `https://maps.google.com/maps?q=${row.lat},${row.lng}&z=16&hl=tr&output=embed`;
+    }
+
     return {
       id: row.id,
       slug: row.slug,
@@ -221,6 +235,7 @@ export class VenuesService {
       address: row.address,
       mapsUrl,
       mapImageUrl,
+      mapsEmbedUrl,
       lat: row.lat,
       lng: row.lng,
       phone: row.phone,

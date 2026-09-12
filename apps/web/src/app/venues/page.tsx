@@ -37,7 +37,7 @@ export default async function VenuesPage({
       <SiteHeader />
       <PageIntro kicker="نقشهٔ خوردنی" title="مکان‌های ایرانی استانبول">
         <p className="lead">
-          رستوران، کافه، مارکت با آدرس و مختصات واقعی. پیش‌نمایش نقشه از OpenStreetMap است — نه عکس جعلی رستوران.
+          رستوران، کافه و مارکت ایرانی استانبول با آدرس و پین گوگل‌مپ. پیش‌نمایش نقشه از همان مختصات واقعی است.
         </p>
       </PageIntro>
       {submitted === "1" ? (
@@ -63,8 +63,10 @@ export default async function VenuesPage({
         {venues.map((venue) => (
           <article className="card venue-card" key={venue.id}>
             {venue.mapImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img className="venue-map" src={venue.mapImageUrl} alt={`نقشه ${venue.name}`} loading="lazy" />
+              <a href={venue.mapsUrl} target="_blank" rel="noreferrer" aria-label={`گوگل‌مپ ${venue.name}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="venue-map" src={venue.mapImageUrl} alt={`نقشه ${venue.name}`} loading="lazy" />
+              </a>
             ) : null}
             <div className="card-top">
               <span className="date-chip">{KIND_LABEL[venue.kind]}</span>

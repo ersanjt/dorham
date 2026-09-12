@@ -4,7 +4,8 @@ Dorham shows **real places and real gatherings**. Seed data must not invent a sc
 
 ## Allowed in seed / fixtures
 
-- Istanbul venues that exist as public businesses (address + maps query; phone/website when known)
+- Istanbul venues that exist as public businesses (address + **Google Maps URL** + lat/lng pin)
+- Map previews from the same coordinates (Google Static if `GOOGLE_MAPS_API_KEY` is set, else OSM tiles)
 - One local **dev admin** account for login (`host@dorham.app`) — clearly a tooling account, not a public persona
 - Empty events / feed lists until a real host publishes
 

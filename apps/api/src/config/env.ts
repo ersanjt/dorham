@@ -18,6 +18,8 @@ const envSchema = z.object({
   MAIL_FROM: z.string().default("Dorham <noreply@dorham.app>"),
   /** Bind address. Production behind Cloudflare Tunnel should use 127.0.0.1. */
   API_HOST: z.string().default("0.0.0.0"),
+  /** Optional Google Maps Static API key for venue map previews. */
+  GOOGLE_MAPS_API_KEY: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
