@@ -63,4 +63,11 @@ Rotate seed password `DorhamHost1` after first login.
 
 Guests can request presence at a place; **only the venue owner** (or QR door link) verifies it. Verified visits appear on `/account` and public profiles. This is historical trust — not a live “who is at this cafe” disco map (see north star).
 
+## Venue UGC + hang plans
+
+- Reviews and community photos go **PENDING** until moderator/admin publishes them (`/admin`).
+- Venue facts (address, hours, cover) stay staff-controlled; members submit new places unpublished.
+- **Hang plans** (“I’ll be there Thu 13:00 for lunch”) are future opt-in slots others can see and join — still not live GPS presence.
+
 Dating tab, Boost, swipe decks, Iran market, Iyzico, store listing until first real Friday.
+**Not a global launch product in v1** — Istanbul soft-launch first; city expansion only after events fill.

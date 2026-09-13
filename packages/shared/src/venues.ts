@@ -5,6 +5,14 @@ export const VENUE_KINDS = ["RESTAURANT", "CAFE", "MARKET", "CULTURAL"] as const
 export const venueKindSchema = z.enum(VENUE_KINDS);
 export type VenueKind = (typeof VENUE_KINDS)[number];
 
+export const MODERATION_STATUSES = ["PENDING", "PUBLISHED", "REJECTED"] as const;
+export const moderationStatusSchema = z.enum(MODERATION_STATUSES);
+export type ModerationStatus = (typeof MODERATION_STATUSES)[number];
+
+export const HANG_INTENTS = ["LUNCH", "DINNER", "COFFEE", "OTHER"] as const;
+export const hangIntentSchema = z.enum(HANG_INTENTS);
+export type HangIntent = (typeof HANG_INTENTS)[number];
+
 export const venueSchema = z.object({
   id: z.string(),
   slug: z.string(),
@@ -77,6 +85,7 @@ export type SubmitVenueBody = z.infer<typeof submitVenueBodySchema>;
 export const venueReviewSchema = z.object({
   id: z.string(),
   body: z.string(),
+  status: moderationStatusSchema,
   createdAt: z.string().datetime(),
   author: z.object({
     id: z.string(),
@@ -92,3 +101,60 @@ export const createVenueReviewBodySchema = z.object({
 });
 
 export type CreateVenueReviewBody = z.infer<typeof createVenueReviewBodySchema>;
+
+export const submitVenuePhotoBodySchema = z.object({
+  mediaId: z.string().min(8).max(64),
+  caption: z.string().trim().max(120).optional(),
+});
+
+export type SubmitVenuePhotoBody = z.infer<typeof submitVenuePhotoBodySchema>;
+
+export const venuePhotoSchema = z.object({
+  id: z.string(),
+  venueId: z.string(),
+  venueSlug: z.string(),
+  venueName: z.string(),
+  url: z.string(),
+  caption: z.string().nullable(),
+  status: moderationStatusSchema,
+  createdAt: z.string().datetime(),
+  uploader: z.object({
+    id: z.string(),
+    displayName: z.string(),
+  }),
+});
+
+export type VenuePhotoDto = z.infer<typeof venuePhotoSchema>;
+
+export const createVenueHangPlanBodySchema = z.object({
+  startsAt: z.string().datetime(),
+  intent: hangIntentSchema.default("OTHER"),
+  note: z.string().trim().max(120).optional(),
+});
+
+export type CreateVenueHangPlanBody = z.infer<typeof createVenueHangPlanBodySchema>;
+
+export const venueHangPlanSchema = z.object({
+  id: z.string(),
+  venueId: z.string(),
+  venueSlug: z.string(),
+  venueName: z.string(),
+  venueArea: z.string(),
+  startsAt: z.string().datetime(),
+  intent: hangIntentSchema,
+  note: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  user: z.object({
+    id: z.string(),
+    displayName: z.string(),
+    verificationStatus: z.enum(["NONE", "PENDING", "VERIFIED", "REJECTED"]),
+  }),
+});
+
+export type VenueHangPlanDto = z.infer<typeof venueHangPlanSchema>;
+
+export const moderateVenueContentBodySchema = z.object({
+  status: z.enum(["PUBLISHED", "REJECTED"]),
+});
+
+export type ModerateVenueContentBody = z.infer<typeof moderateVenueContentBodySchema>;

@@ -8,6 +8,7 @@ import { SiteHeader } from "../../../components/site-header";
 import { VenueReviews } from "./reviews";
 import { VenueGallery } from "./gallery";
 import { VenueVisitActions } from "./visit-actions";
+import { VenueCommunity } from "./community";
 import { resolveApiBase } from "../../../lib/api-base";
 import { AREA_LABEL, KIND_LABEL } from "../../../lib/venues";
 
@@ -131,6 +132,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
       </section>
 
       <VenueVisitActions slug={venue.slug} venueId={venue.id} />
+      <VenueCommunity slug={venue.slug} />
 
       <section className="stack" style={{ marginTop: 28 }}>
         <h2>رویدادها در این مکان</h2>

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const mediaKindSchema = z.enum(["PROFILE", "VERIFICATION"]);
+export const mediaKindSchema = z.enum(["PROFILE", "VERIFICATION", "VENUE_PHOTO"]);
 
 export const uploadMediaQuerySchema = z.object({
   kind: mediaKindSchema.default("PROFILE"),

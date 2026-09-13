@@ -85,6 +85,19 @@ Refresh is a body token, not a JS-readable cookie on mobile. Web may later use h
 | POST | `/v1/admin/verifications/:id/review` | moderator+ | approve / reject |
 | GET | `/v1/venues` | no | Iranian places in a city |
 | GET | `/v1/venues/:id` | no | slug or id |
+| POST | `/v1/venues` | yes | submit place (unpublished until admin) |
+| GET | `/v1/venues/:id/reviews` | no | published reviews only |
+| POST | `/v1/venues/:id/reviews` | yes | review → PENDING until staff publish |
+| POST | `/v1/venues/:id/photos` | yes | `{ mediaId }` → PENDING until staff publish |
+| GET | `/v1/venues/:id/plans` | no | upcoming hang plans (14 days) |
+| POST | `/v1/venues/:id/plans` | yes | declare future visit (lunch/dinner/coffee) |
+| DELETE | `/v1/venues/plans/:planId` | yes | cancel own hang plan |
+| GET | `/v1/admin/venues/pending` | moderator+ | unpublished venues |
+| POST | `/v1/admin/venues/:id/publish` | moderator+ | publish venue |
+| GET | `/v1/admin/venues/reviews/pending` | moderator+ | review queue |
+| POST | `/v1/admin/venues/reviews/:id/review` | moderator+ | `{ status: PUBLISHED\|REJECTED }` |
+| GET | `/v1/admin/venues/photos/pending` | moderator+ | photo queue |
+| POST | `/v1/admin/venues/photos/:id/review` | moderator+ | `{ status: PUBLISHED\|REJECTED }` |
 | GET | `/v1/feed` | optional | city posts, newest first |
 | POST | `/v1/feed` | host+ or verified | create a city post |
 | GET | `/v1/feed/:id` | optional | one post |

@@ -23,12 +23,11 @@ export function VenueReviews({ slug, initial }: { slug: string; initial: VenueRe
     setError("");
     setNotice("");
     try {
-      const row = await api<VenueReview>(`/venues/${slug}/reviews`, {
+      await api<VenueReview>(`/venues/${slug}/reviews`, {
         method: "POST",
         body: JSON.stringify({ body }),
       });
-      setRows((current) => [row, ...current]);
-      setNotice("تجربه‌ات ثبت شد.");
+      setNotice("نظرت ثبت شد و بعد از بررسی مدیر منتشر می‌شود.");
       e.currentTarget.reset();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "نظر ثبت نشد.");
@@ -38,7 +37,7 @@ export function VenueReviews({ slug, initial }: { slug: string; initial: VenueRe
   return (
     <section style={{ marginTop: 32 }}>
       <h2>تجربهٔ این مکان</h2>
-      <p className="muted">غذا، شلوغی، برخورد. نه امتیاز ستاره‌ای برای مچ.</p>
+      <p className="muted">غذا، شلوغی، برخورد. نظرات بعد از تأیید مدیر عمومی می‌شوند.</p>
       {notice ? <div className="banner ok">{notice}</div> : null}
       {error ? <div className="banner err">{error}</div> : null}
       {signedIn ? (
@@ -48,7 +47,7 @@ export function VenueReviews({ slug, initial }: { slug: string; initial: VenueRe
             <textarea name="body" minLength={10} maxLength={800} rows={3} required />
           </label>
           <button className="btn" type="submit">
-            ثبت نظر
+            ارسال برای بررسی
           </button>
         </form>
       ) : (
@@ -57,7 +56,7 @@ export function VenueReviews({ slug, initial }: { slug: string; initial: VenueRe
         </p>
       )}
       <div className="stack">
-        {rows.length === 0 ? <p className="muted">هنوز نظری نیست.</p> : null}
+        {rows.length === 0 ? <p className="muted">هنوز نظر تأییدشده‌ای نیست.</p> : null}
         {rows.map((row) => (
           <article className="card" key={row.id}>
             <p className="muted">

@@ -1,17 +1,47 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { CreateVenueReviewBody, ListVenuesQuery, SubmitVenueBody, VenueCheckInBody } from "@dorham/shared";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import {
+  CreateVenueHangPlanBody,
+  CreateVenueReviewBody,
+  ListVenuesQuery,
+  ModerateVenueContentBody,
+  SubmitVenueBody,
+  SubmitVenuePhotoBody,
+  VenueCheckInBody,
+} from "@dorham/shared";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { assertActive } from "../../common/account-status";
 import { newOpaqueToken, secretsEqual } from "../../common/crypto";
 import { loadEnv } from "../../config/env";
+import { MediaService } from "../media/media.service";
 import { cartoMapPreviewUrl, streetViewEmbedUrl, streetViewPhotoUrl } from "./map-preview";
+
+const publishedReviewCount = { reviews: { where: { status: "PUBLISHED" as const } } };
+
+const venueDtoInclude = {
+  _count: { select: publishedReviewCount },
+  communityPhotos: {
+    where: { status: "PUBLISHED" as const },
+    orderBy: { createdAt: "desc" as const },
+    take: 16,
+    select: { mediaId: true, caption: true },
+  },
+};
 
 @Injectable()
 export class VenuesService {
   private readonly env = loadEnv();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly media: MediaService,
+  ) {}
 
   async list(query: ListVenuesQuery) {
     const where: Prisma.VenueWhereInput = {
@@ -25,10 +55,10 @@ export class VenuesService {
       where,
       orderBy: [{ area: "asc" }, { kind: "asc" }, { name: "asc" }],
       take: query.limit,
-      include: { _count: { select: { reviews: true } } },
+      include: venueDtoInclude,
     });
     return {
-      data: rows.map((row) => this.toDto(row)),
+      data: await Promise.all(rows.map((row) => this.toDto(row))),
       page: { nextCursor: null, limit: query.limit },
     };
   }
@@ -39,12 +69,12 @@ export class VenuesService {
         published: true,
         OR: [{ id: idOrSlug }, { slug: idOrSlug }],
       },
-      include: { _count: { select: { reviews: true } } },
+      include: venueDtoInclude,
     });
     if (!row) {
       throw new NotFoundException({ code: "VENUE_NOT_FOUND", message: "Venue not found." });
     }
-    return { data: this.toDto(row) };
+    return { data: await this.toDto(row) };
   }
 
   async submit(userId: string, body: SubmitVenueBody) {
@@ -71,14 +101,14 @@ export class VenuesService {
         ownerId: userId,
         checkInSecret: newOpaqueToken(),
       },
-      include: { _count: { select: { reviews: true } } },
+      include: venueDtoInclude,
     });
     await this.prisma.auditLog.create({
       data: { userId, action: "venue.submit", entity: "Venue", entityId: row.id },
     });
     return {
       data: {
-        ...this.toDto(row),
+        ...(await this.toDto(row)),
         published: false as const,
         pendingReview: true as const,
       },
@@ -90,9 +120,9 @@ export class VenuesService {
       where: { published: false },
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: { _count: { select: { reviews: true } } },
+      include: venueDtoInclude,
     });
-    return { data: rows.map((row) => this.toDto(row)) };
+    return { data: await Promise.all(rows.map((row) => this.toDto(row))) };
   }
 
   async publish(venueId: string, actorId: string) {
@@ -103,34 +133,23 @@ export class VenuesService {
     const updated = await this.prisma.venue.update({
       where: { id: venueId },
       data: { published: true },
-      include: { _count: { select: { reviews: true } } },
+      include: venueDtoInclude,
     });
     await this.prisma.auditLog.create({
       data: { userId: actorId, action: "venue.publish", entity: "Venue", entityId: venueId },
     });
-    return { data: this.toDto(updated) };
+    return { data: await this.toDto(updated) };
   }
 
   async reviews(idOrSlug: string) {
     const venue = await this.requirePublished(idOrSlug);
     const rows = await this.prisma.venueReview.findMany({
-      where: { venueId: venue.id },
+      where: { venueId: venue.id, status: "PUBLISHED" },
       orderBy: { createdAt: "desc" },
       take: 50,
       include: { author: { include: { profile: true, verification: true } } },
     });
-    return {
-      data: rows.map((row) => ({
-        id: row.id,
-        body: row.body,
-        createdAt: row.createdAt.toISOString(),
-        author: {
-          id: row.authorId,
-          displayName: row.author.profile?.displayName ?? "عضو",
-          verificationStatus: row.author.verification?.status ?? "NONE",
-        },
-      })),
-    };
+    return { data: rows.map((row) => this.reviewDto(row)) };
   }
 
   async addReview(idOrSlug: string, userId: string, body: CreateVenueReviewBody) {
@@ -139,27 +158,207 @@ export class VenuesService {
     const venue = await this.requirePublished(idOrSlug);
     try {
       const row = await this.prisma.venueReview.create({
-        data: { venueId: venue.id, authorId: userId, body: body.body },
+        data: { venueId: venue.id, authorId: userId, body: body.body, status: "PENDING" },
         include: { author: { include: { profile: true, verification: true } } },
       });
-      return {
-        data: {
-          id: row.id,
-          body: row.body,
-          createdAt: row.createdAt.toISOString(),
-          author: {
-            id: row.authorId,
-            displayName: row.author.profile?.displayName ?? "عضو",
-            verificationStatus: row.author.verification?.status ?? "NONE",
-          },
-        },
-      };
+      await this.prisma.auditLog.create({
+        data: { userId, action: "venue.review_submit", entity: "VenueReview", entityId: row.id },
+      });
+      return { data: this.reviewDto(row) };
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
         throw new ConflictException({ code: "REVIEW_DUPLICATE", message: "You already reviewed this venue." });
       }
       throw err;
     }
+  }
+
+  async listPendingReviews() {
+    const rows = await this.prisma.venueReview.findMany({
+      where: { status: "PENDING" },
+      orderBy: { createdAt: "asc" },
+      take: 60,
+      include: {
+        venue: true,
+        author: { include: { profile: true, verification: true } },
+      },
+    });
+    return {
+      data: rows.map((row) => ({
+        ...this.reviewDto(row),
+        venueId: row.venueId,
+        venueSlug: row.venue.slug,
+        venueName: row.venue.name,
+      })),
+    };
+  }
+
+  async moderateReview(id: string, actorId: string, body: ModerateVenueContentBody) {
+    const row = await this.prisma.venueReview.findUnique({ where: { id } });
+    if (!row) throw new NotFoundException({ code: "VENUE_NOT_FOUND", message: "Review not found." });
+    const updated = await this.prisma.venueReview.update({
+      where: { id },
+      data: { status: body.status, reviewedAt: new Date(), reviewedById: actorId },
+      include: { author: { include: { profile: true, verification: true } }, venue: true },
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        userId: actorId,
+        action: body.status === "PUBLISHED" ? "venue.review_publish" : "venue.review_reject",
+        entity: "VenueReview",
+        entityId: id,
+      },
+    });
+    return {
+      data: {
+        ...this.reviewDto(updated),
+        venueId: updated.venueId,
+        venueSlug: updated.venue.slug,
+        venueName: updated.venue.name,
+      },
+    };
+  }
+
+  async submitPhoto(idOrSlug: string, userId: string, body: SubmitVenuePhotoBody) {
+    const account = await this.prisma.user.findUnique({ where: { id: userId }, select: { status: true } });
+    assertActive(account?.status ?? "DELETED");
+    const venue = await this.requirePublished(idOrSlug);
+    await this.media.requireOwned(userId, body.mediaId, "VENUE_PHOTO");
+    const recent = await this.prisma.venuePhoto.count({
+      where: {
+        uploaderId: userId,
+        venueId: venue.id,
+        createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      },
+    });
+    if (recent >= 5) {
+      throw new BadRequestException({ code: "RATE_LIMITED", message: "Too many photos today for this venue." });
+    }
+    const row = await this.prisma.venuePhoto.create({
+      data: {
+        venueId: venue.id,
+        uploaderId: userId,
+        mediaId: body.mediaId,
+        caption: body.caption?.trim() || null,
+        status: "PENDING",
+      },
+      include: { venue: true, uploader: { include: { profile: true } } },
+    });
+    await this.prisma.auditLog.create({
+      data: { userId, action: "venue.photo_submit", entity: "VenuePhoto", entityId: row.id },
+    });
+    return { data: await this.photoDto(row) };
+  }
+
+  async listPendingPhotos() {
+    const rows = await this.prisma.venuePhoto.findMany({
+      where: { status: "PENDING" },
+      orderBy: { createdAt: "asc" },
+      take: 60,
+      include: { venue: true, uploader: { include: { profile: true } } },
+    });
+    return { data: await Promise.all(rows.map((row) => this.photoDto(row))) };
+  }
+
+  async moderatePhoto(id: string, actorId: string, body: ModerateVenueContentBody) {
+    const row = await this.prisma.venuePhoto.findUnique({ where: { id } });
+    if (!row) throw new NotFoundException({ code: "MEDIA_NOT_FOUND", message: "Photo not found." });
+    const updated = await this.prisma.venuePhoto.update({
+      where: { id },
+      data: { status: body.status, reviewedAt: new Date(), reviewedById: actorId },
+      include: { venue: true, uploader: { include: { profile: true } } },
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        userId: actorId,
+        action: body.status === "PUBLISHED" ? "venue.photo_publish" : "venue.photo_reject",
+        entity: "VenuePhoto",
+        entityId: id,
+      },
+    });
+    return { data: await this.photoDto(updated) };
+  }
+
+  async listHangPlans(idOrSlug: string) {
+    const venue = await this.requirePublished(idOrSlug);
+    const now = new Date();
+    const horizon = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const rows = await this.prisma.venueHangPlan.findMany({
+      where: {
+        venueId: venue.id,
+        cancelledAt: null,
+        startsAt: { gte: now, lte: horizon },
+      },
+      orderBy: { startsAt: "asc" },
+      take: 80,
+      include: { venue: true, user: { include: { profile: true, verification: true } } },
+    });
+    return { data: rows.map((row) => this.hangDto(row)) };
+  }
+
+  async createHangPlan(idOrSlug: string, userId: string, body: CreateVenueHangPlanBody) {
+    const account = await this.prisma.user.findUnique({ where: { id: userId }, select: { status: true } });
+    assertActive(account?.status ?? "DELETED");
+    const venue = await this.requirePublished(idOrSlug);
+    const startsAt = new Date(body.startsAt);
+    const now = new Date();
+    const max = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    if (!(startsAt > now) || startsAt > max) {
+      throw new BadRequestException({
+        code: "HANG_PLAN_INVALID",
+        message: "Pick a time between now and 14 days ahead.",
+      });
+    }
+    const dayStart = new Date(startsAt);
+    dayStart.setUTCHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+    const existing = await this.prisma.venueHangPlan.findFirst({
+      where: {
+        venueId: venue.id,
+        userId,
+        cancelledAt: null,
+        startsAt: { gte: dayStart, lt: dayEnd },
+      },
+    });
+    if (existing) {
+      const updated = await this.prisma.venueHangPlan.update({
+        where: { id: existing.id },
+        data: {
+          startsAt,
+          intent: body.intent,
+          note: body.note?.trim() || null,
+        },
+        include: { venue: true, user: { include: { profile: true, verification: true } } },
+      });
+      return { data: this.hangDto(updated) };
+    }
+    const row = await this.prisma.venueHangPlan.create({
+      data: {
+        venueId: venue.id,
+        userId,
+        startsAt,
+        intent: body.intent,
+        note: body.note?.trim() || null,
+      },
+      include: { venue: true, user: { include: { profile: true, verification: true } } },
+    });
+    await this.prisma.auditLog.create({
+      data: { userId, action: "venue.hang_plan", entity: "VenueHangPlan", entityId: row.id },
+    });
+    return { data: this.hangDto(row) };
+  }
+
+  async cancelHangPlan(planId: string, userId: string) {
+    const row = await this.prisma.venueHangPlan.findUnique({ where: { id: planId } });
+    if (!row || row.userId !== userId) {
+      throw new NotFoundException({ code: "VENUE_NOT_FOUND", message: "Plan not found." });
+    }
+    await this.prisma.venueHangPlan.update({
+      where: { id: planId },
+      data: { cancelledAt: new Date() },
+    });
+    return { data: { ok: true as const } };
   }
 
   /** Guest asks to be checked in — stays PENDING until the venue owner confirms. */
@@ -208,11 +407,6 @@ export class VenuesService {
     }
     if (guestId === actor.id && !body.secret && !isStaff) {
       throw new ForbiddenException({ code: "USER_SELF_ACTION", message: "Ask the venue to confirm your visit." });
-    }
-
-    const guest = await this.prisma.user.findUnique({ where: { id: guestId }, select: { id: true, status: true } });
-    if (!guest || guest.status === "DELETED") {
-      throw new NotFoundException({ code: "USER_NOT_FOUND", message: "User not found." });
     }
 
     const now = new Date();
@@ -269,9 +463,9 @@ export class VenuesService {
         ownerId: userId,
         checkInSecret: venue.checkInSecret ?? newOpaqueToken(),
       },
-      include: { _count: { select: { reviews: true } } },
+      include: venueDtoInclude,
     });
-    return { data: this.toDto(updated) };
+    return { data: await this.toDto(updated) };
   }
 
   async door(idOrSlug: string, actor: { id: string; role: string }) {
@@ -317,6 +511,89 @@ export class VenuesService {
         guestName: row.user.profile?.displayName ?? "عضو",
         guestId: row.userId,
       })),
+    };
+  }
+
+  private reviewDto(row: {
+    id: string;
+    body: string;
+    status: "PENDING" | "PUBLISHED" | "REJECTED";
+    createdAt: Date;
+    authorId: string;
+    author: {
+      profile: { displayName: string } | null;
+      verification: { status: "NONE" | "PENDING" | "VERIFIED" | "REJECTED" } | null;
+    };
+  }) {
+    return {
+      id: row.id,
+      body: row.body,
+      status: row.status,
+      createdAt: row.createdAt.toISOString(),
+      author: {
+        id: row.authorId,
+        displayName: row.author.profile?.displayName ?? "عضو",
+        verificationStatus: row.author.verification?.status ?? "NONE",
+      },
+    };
+  }
+
+  private async photoDto(row: {
+    id: string;
+    venueId: string;
+    mediaId: string;
+    caption: string | null;
+    status: "PENDING" | "PUBLISHED" | "REJECTED";
+    createdAt: Date;
+    uploaderId: string;
+    venue: { slug: string; name: string };
+    uploader: { profile: { displayName: string } | null };
+  }) {
+    return {
+      id: row.id,
+      venueId: row.venueId,
+      venueSlug: row.venue.slug,
+      venueName: row.venue.name,
+      url: this.media.signedUrl(row.mediaId, 7 * 24 * 60 * 60),
+      caption: row.caption,
+      status: row.status,
+      createdAt: row.createdAt.toISOString(),
+      uploader: {
+        id: row.uploaderId,
+        displayName: row.uploader.profile?.displayName ?? "عضو",
+      },
+    };
+  }
+
+  private hangDto(row: {
+    id: string;
+    venueId: string;
+    startsAt: Date;
+    intent: "LUNCH" | "DINNER" | "COFFEE" | "OTHER";
+    note: string | null;
+    createdAt: Date;
+    userId: string;
+    venue: { slug: string; name: string; area: string };
+    user: {
+      profile: { displayName: string } | null;
+      verification: { status: "NONE" | "PENDING" | "VERIFIED" | "REJECTED" } | null;
+    };
+  }) {
+    return {
+      id: row.id,
+      venueId: row.venueId,
+      venueSlug: row.venue.slug,
+      venueName: row.venue.name,
+      venueArea: row.venue.area,
+      startsAt: row.startsAt.toISOString(),
+      intent: row.intent,
+      note: row.note,
+      createdAt: row.createdAt.toISOString(),
+      user: {
+        id: row.userId,
+        displayName: row.user.profile?.displayName ?? "عضو",
+        verificationStatus: row.user.verification?.status ?? "NONE",
+      },
     };
   }
 
@@ -392,7 +669,7 @@ export class VenuesService {
     throw new BadRequestException({ code: "VALIDATION_FAILED", message: "Could not make a venue slug." });
   }
 
-  private toDto(row: {
+  private async toDto(row: {
     id: string;
     slug: string;
     name: string;
@@ -410,6 +687,7 @@ export class VenuesService {
     menuNotes: string | null;
     description: string;
     photos?: unknown;
+    communityPhotos?: Array<{ mediaId: string; caption: string | null }>;
     _count: { reviews: number };
   }) {
     const mapsUrl = row.mapsQuery.startsWith("http")
@@ -425,6 +703,14 @@ export class VenuesService {
 
     for (const url of stored) {
       gallery.push({ kind: "photo", src: url, label: row.name });
+    }
+
+    for (const photo of row.communityPhotos ?? []) {
+      gallery.push({
+        kind: "photo",
+        src: this.media.signedUrl(photo.mediaId, 7 * 24 * 60 * 60),
+        label: photo.caption?.trim() || row.name,
+      });
     }
 
     if (row.lat != null && row.lng != null) {

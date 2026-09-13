@@ -39,7 +39,8 @@ export class UsersService {
   }
 
   async activity(userId: string) {
-    const [venuesVisited, eventsAttended, eventsGoing, eventsHosted, pendingVenueVisits, venueRows, eventRows] =
+    const now = new Date();
+    const [venuesVisited, eventsAttended, eventsGoing, eventsHosted, pendingVenueVisits, venueRows, eventRows, hangRows] =
       await Promise.all([
         this.prisma.venueVisit.count({ where: { userId, status: "VERIFIED" } }),
         this.prisma.eventRsvp.count({ where: { userId, checkedInAt: { not: null } } }),
@@ -59,6 +60,12 @@ export class UsersService {
           orderBy: { checkedInAt: "desc" },
           take: 40,
           include: { event: true },
+        }),
+        this.prisma.venueHangPlan.findMany({
+          where: { userId, cancelledAt: null, startsAt: { gte: now } },
+          orderBy: { startsAt: "asc" },
+          take: 20,
+          include: { venue: true },
         }),
       ]);
 
@@ -87,6 +94,16 @@ export class UsersService {
         venue: row.event.venue,
         startsAt: row.event.startsAt.toISOString(),
         checkedInAt: row.checkedInAt?.toISOString() ?? null,
+      })),
+      hangPlans: hangRows.map((row) => ({
+        id: row.id,
+        venueId: row.venueId,
+        venueSlug: row.venue.slug,
+        venueName: row.venue.name,
+        venueArea: row.venue.area,
+        startsAt: row.startsAt.toISOString(),
+        intent: row.intent,
+        note: row.note,
       })),
     };
   }

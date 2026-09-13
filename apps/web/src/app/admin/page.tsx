@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { Me, VenueDto } from "@dorham/shared";
+import type { Me, VenueDto, VenuePhotoDto, VenueReview } from "@dorham/shared";
+import { AuthImage } from "../../components/auth-image";
 import { PageIntro } from "../../components/page-intro";
 import { SiteHeader } from "../../components/site-header";
 import { api, ApiError } from "../../lib/api";
@@ -29,22 +30,34 @@ type Reports = {
   }>;
 };
 
+type PendingReview = VenueReview & {
+  venueId: string;
+  venueSlug: string;
+  venueName: string;
+};
+
 export default function AdminModerationPage() {
   const [me, setMe] = useState<Me | null>(null);
   const [venues, setVenues] = useState<VenueDto[]>([]);
+  const [pendingReviews, setPendingReviews] = useState<PendingReview[]>([]);
+  const [pendingPhotos, setPendingPhotos] = useState<VenuePhotoDto[]>([]);
   const [reports, setReports] = useState<Reports | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [userId, setUserId] = useState("");
 
   async function load() {
-    const [profile, pending, reps] = await Promise.all([
+    const [profile, pending, reviews, photos, reps] = await Promise.all([
       api<Me>("/users/me"),
       api<VenueDto[]>("/admin/venues/pending"),
+      api<PendingReview[]>("/admin/venues/reviews/pending"),
+      api<VenuePhotoDto[]>("/admin/venues/photos/pending"),
       api<Reports>("/admin/reports"),
     ]);
     setMe(profile);
     setVenues(pending);
+    setPendingReviews(reviews);
+    setPendingPhotos(photos);
     setReports(reps);
   }
 
@@ -72,7 +85,7 @@ export default function AdminModerationPage() {
     <main className="wrap">
       <SiteHeader />
       <PageIntro kicker="مدیریت" title="صف بررسی">
-        <p className="muted">مکان‌های در انتظار، گزارش‌ها، و نقش میزبان.</p>
+        <p className="muted">مکان‌ها، نظرات، عکس‌ها، گزارش‌ها، و نقش میزبان.</p>
       </PageIntro>
       {!staff ? (
         <div className="banner err">فقط مدیر و ناظر.</div>
@@ -105,6 +118,109 @@ export default function AdminModerationPage() {
                 >
                   انتشار
                 </button>
+              </article>
+            ))}
+          </section>
+
+          <section className="stack" style={{ marginTop: 32 }}>
+            <h2>نظرات در انتظار</h2>
+            {pendingReviews.length === 0 ? <p className="muted">نظری در صف نیست.</p> : null}
+            {pendingReviews.map((r) => (
+              <article className="card" key={r.id}>
+                <p className="muted">
+                  <Link href={`/venues/${r.venueSlug}`}>{r.venueName}</Link> · {r.author.displayName}
+                </p>
+                <p>{r.body}</p>
+                <div className="row">
+                  <button
+                    className="btn"
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await api(`/admin/venues/reviews/${r.id}/review`, {
+                          method: "POST",
+                          body: JSON.stringify({ status: "PUBLISHED" }),
+                        });
+                        setMessage("نظر منتشر شد.");
+                        await load();
+                      } catch (err) {
+                        setError(err instanceof ApiError ? err.message : "نشد.");
+                      }
+                    }}
+                  >
+                    انتشار
+                  </button>
+                  <button
+                    className="btn danger"
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await api(`/admin/venues/reviews/${r.id}/review`, {
+                          method: "POST",
+                          body: JSON.stringify({ status: "REJECTED" }),
+                        });
+                        setMessage("نظر رد شد.");
+                        await load();
+                      } catch (err) {
+                        setError(err instanceof ApiError ? err.message : "نشد.");
+                      }
+                    }}
+                  >
+                    رد
+                  </button>
+                </div>
+              </article>
+            ))}
+          </section>
+
+          <section className="stack" style={{ marginTop: 32 }}>
+            <h2>عکس‌های در انتظار</h2>
+            {pendingPhotos.length === 0 ? <p className="muted">عکسی در صف نیست.</p> : null}
+            {pendingPhotos.map((p) => (
+              <article className="card" key={p.id}>
+                <p className="muted">
+                  <Link href={`/venues/${p.venueSlug}`}>{p.venueName}</Link> · {p.uploader.displayName}
+                </p>
+                {p.caption ? <p>{p.caption}</p> : null}
+                <AuthImage src={p.url} />
+                <div className="row" style={{ marginTop: 12 }}>
+                  <button
+                    className="btn"
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await api(`/admin/venues/photos/${p.id}/review`, {
+                          method: "POST",
+                          body: JSON.stringify({ status: "PUBLISHED" }),
+                        });
+                        setMessage("عکس منتشر شد.");
+                        await load();
+                      } catch (err) {
+                        setError(err instanceof ApiError ? err.message : "نشد.");
+                      }
+                    }}
+                  >
+                    انتشار
+                  </button>
+                  <button
+                    className="btn danger"
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await api(`/admin/venues/photos/${p.id}/review`, {
+                          method: "POST",
+                          body: JSON.stringify({ status: "REJECTED" }),
+                        });
+                        setMessage("عکس رد شد.");
+                        await load();
+                      } catch (err) {
+                        setError(err instanceof ApiError ? err.message : "نشد.");
+                      }
+                    }}
+                  >
+                    رد
+                  </button>
+                </div>
               </article>
             ))}
           </section>

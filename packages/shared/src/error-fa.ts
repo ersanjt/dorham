@@ -35,4 +35,7 @@ export const ERROR_FA: Record<string, string> = {
   VENUE_VISIT_FORBIDDEN: "فقط صاحب مکان می‌تواند حضور را تأیید کند.",
   VENUE_VISIT_NOT_FOUND: "بازدید پیدا نشد.",
   VENUE_OWNER_REQUIRED: "اول مالکیت مکان را بگیر.",
+  REVIEW_PENDING: "نظرت ثبت شد و بعد از بررسی مدیر منتشر می‌شود.",
+  PHOTO_PENDING: "عکس ثبت شد و بعد از بررسی مدیر منتشر می‌شود.",
+  HANG_PLAN_INVALID: "زمان برنامه نامعتبر است.",
 };

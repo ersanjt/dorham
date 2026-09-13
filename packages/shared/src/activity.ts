@@ -49,6 +49,18 @@ export const userActivitySchema = z.object({
       checkedInAt: z.string().datetime().nullable(),
     }),
   ),
+  hangPlans: z.array(
+    z.object({
+      id: z.string(),
+      venueId: z.string(),
+      venueSlug: z.string(),
+      venueName: z.string(),
+      venueArea: z.string(),
+      startsAt: z.string().datetime(),
+      intent: z.enum(["LUNCH", "DINNER", "COFFEE", "OTHER"]),
+      note: z.string().nullable(),
+    }),
+  ),
 });
 
 export type UserActivity = z.infer<typeof userActivitySchema>;

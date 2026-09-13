@@ -206,6 +206,48 @@ function AccountBody() {
               ))}
             </ul>
           )}
+
+          <h3 style={{ margin: "16px 20px 8px" }}>برنامه‌های حضور آینده</h3>
+          {(activity.hangPlans ?? []).length === 0 ? (
+            <p className="muted" style={{ padding: "0 20px 16px" }}>
+              برنامه‌ای ثبت نکرده‌ای. از صفحهٔ یک مکان بگو کی می‌آیی.
+            </p>
+          ) : (
+            <ul className="account-history">
+              {(activity.hangPlans ?? []).map((plan) => (
+                <li key={plan.id}>
+                  <Link href={`/venues/${plan.venueSlug}`}>{plan.venueName}</Link>
+                  <span className="muted">
+                    {" "}
+                    ·{" "}
+                    {new Date(plan.startsAt).toLocaleString("fa-IR", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>{" "}
+                  <button
+                    className="btn ghost"
+                    type="button"
+                    style={{ padding: "2px 8px", fontSize: "0.85rem" }}
+                    onClick={async () => {
+                      try {
+                        await api(`/venues/plans/${plan.id}`, { method: "DELETE" });
+                        await reload();
+                        setNotice("برنامه لغو شد.");
+                      } catch (err) {
+                        setError(err instanceof ApiError ? err.message : "لغو نشد.");
+                      }
+                    }}
+                  >
+                    لغو
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       ) : null}
 

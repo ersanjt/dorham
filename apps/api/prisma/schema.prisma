@@ -55,6 +55,20 @@ enum EmailTokenPurpose {
 enum MediaKind {
   PROFILE
   VERIFICATION
+  VENUE_PHOTO
+}
+
+enum ModerationStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+}
+
+enum HangIntent {
+  LUNCH
+  DINNER
+  COFFEE
+  OTHER
 }
 
 enum VenueKind {
@@ -111,6 +125,10 @@ model User {
   comments       PostComment[]
   feedReports    FeedReport[]
   venueReviews   VenueReview[]
+  venueReviewsReviewed VenueReview[] @relation("VenueReviewModerator")
+  venuePhotos    VenuePhoto[] @relation("VenuePhotoUploader")
+  venuePhotosReviewed VenuePhoto[] @relation("VenuePhotoModerator")
+  venueHangPlans VenueHangPlan[]
   venuesSubmitted Venue[] @relation("VenueSubmitter")
   venuesOwned     Venue[] @relation("VenueOwner")
   venueVisits     VenueVisit[] @relation("VenueVisitor")
@@ -222,6 +240,8 @@ model Venue {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   reviews     VenueReview[]
+  communityPhotos VenuePhoto[]
+  hangPlans   VenueHangPlan[]
   events      Event[]
   visits      VenueVisit[]
 
@@ -258,16 +278,62 @@ model VenueVisit {
 }
 
 model VenueReview {
-  id        String   @id @default(cuid())
-  venueId   String
-  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  body      String
-  createdAt DateTime @default(now())
+  id           String            @id @default(cuid())
+  venueId      String
+  venue        Venue             @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  authorId     String
+  author       User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body         String
+  status       ModerationStatus  @default(PENDING)
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewedBy   User?             @relation("VenueReviewModerator", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime          @default(now())
 
   @@unique([venueId, authorId])
-  @@index([venueId, createdAt])
+  @@index([venueId, status, createdAt])
+  @@index([status, createdAt])
+}
+
+/** User-submitted venue photos — public only after staff publish. */
+model VenuePhoto {
+  id           String           @id @default(cuid())
+  venueId      String
+  venue        Venue            @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  uploaderId   String
+  uploader     User             @relation("VenuePhotoUploader", fields: [uploaderId], references: [id], onDelete: Cascade)
+  mediaId      String
+  caption      String?
+  status       ModerationStatus @default(PENDING)
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewedBy   User?            @relation("VenuePhotoModerator", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime         @default(now())
+
+  @@index([venueId, status, createdAt])
+  @@index([status, createdAt])
+  @@index([uploaderId, createdAt])
+}
+
+/**
+ * Soft plan to be at a venue later (lunch/dinner/coffee) — not live GPS presence.
+ * Visible so others can join the same slot; expires after startsAt.
+ */
+model VenueHangPlan {
+  id          String     @id @default(cuid())
+  venueId     String
+  venue       Venue      @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startsAt    DateTime
+  intent      HangIntent @default(OTHER)
+  note        String?
+  cancelledAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([venueId, startsAt])
+  @@index([userId, startsAt])
 }
 
 model Event {

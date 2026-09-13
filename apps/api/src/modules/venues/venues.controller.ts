@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import {
+  createVenueHangPlanBodySchema,
   createVenueReviewBodySchema,
   listVenuesQuerySchema,
   submitVenueBodySchema,
+  submitVenuePhotoBodySchema,
   venueCheckInBodySchema,
 } from "@dorham/shared";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
@@ -45,6 +47,40 @@ export class VenuesController {
     @Body(new ZodPipe(createVenueReviewBodySchema)) body: ReturnType<typeof createVenueReviewBodySchema.parse>,
   ) {
     return this.venues.addReview(id, user.id, body);
+  }
+
+  @Post(":id/photos")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  addPhoto(
+    @Param("id") id: string,
+    @CurrentUser() user: { id: string },
+    @Body(new ZodPipe(submitVenuePhotoBodySchema)) body: ReturnType<typeof submitVenuePhotoBodySchema.parse>,
+  ) {
+    return this.venues.submitPhoto(id, user.id, body);
+  }
+
+  @Get(":id/plans")
+  plans(@Param("id") id: string) {
+    return this.venues.listHangPlans(id);
+  }
+
+  @Post(":id/plans")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  createPlan(
+    @Param("id") id: string,
+    @CurrentUser() user: { id: string },
+    @Body(new ZodPipe(createVenueHangPlanBodySchema)) body: ReturnType<typeof createVenueHangPlanBodySchema.parse>,
+  ) {
+    return this.venues.createHangPlan(id, user.id, body);
+  }
+
+  @Delete("plans/:planId")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  cancelPlan(@Param("planId") planId: string, @CurrentUser() user: { id: string }) {
+    return this.venues.cancelHangPlan(planId, user.id);
   }
 
   @Post(":id/claim")
