@@ -9,13 +9,18 @@ export function latLngToTile(lat: number, lng: number, zoom: number) {
 }
 
 /**
- * Reliable basemap preview. CartoCDN serves OSM-derived tiles with CORS + CDN.
- * Marker is drawn in CSS on the client (tile itself has no pin).
+ * Single OSM raster tile as a cover preview when Google Maps key is missing.
+ * CartoCDN basemaps now require an API key and render as broken "API KEY REQUIRED" images.
+ * Marker pin is drawn in CSS on the client.
  */
-export function cartoMapPreviewUrl(lat: number, lng: number, zoom = 15): string {
+export function osmMapPreviewUrl(lat: number, lng: number, zoom = 15): string {
   const { x, y } = latLngToTile(lat, lng, zoom);
-  const host = ["a", "b", "c", "d"][(Math.abs(x) + Math.abs(y)) % 4];
-  return `https://${host}.basemaps.cartocdn.com/rastertiles/voyager/${zoom}/${x}/${y}@2x.png`;
+  return `https://tile.openstreetmap.org/${zoom}/${x}/${y}.png`;
+}
+
+/** @deprecated Use osmMapPreviewUrl — Carto public basemaps now require a key. */
+export function cartoMapPreviewUrl(lat: number, lng: number, zoom = 15): string {
+  return osmMapPreviewUrl(lat, lng, zoom);
 }
 
 /** Google Street View stills — requires Maps Static / Street View API key. */
@@ -31,7 +36,7 @@ export function streetViewPhotoUrl(lat: number, lng: number, heading: number, ke
   return `https://maps.googleapis.com/maps/api/streetview?${params}`;
 }
 
-/** Street View embed (no key) — exterior of the pin for gallery. */
+/** Street View embed (no key) — exterior of the pin for gallery iframes only. */
 export function streetViewEmbedUrl(lat: number, lng: number, heading: number): string {
   return `https://www.google.com/maps?layer=c&cbll=${lat},${lng}&cbp=12,${heading},0,0,5&hl=tr&output=svembed`;
 }

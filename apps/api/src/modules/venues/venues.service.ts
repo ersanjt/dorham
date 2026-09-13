@@ -21,7 +21,7 @@ import { newOpaqueToken, secretsEqual } from "../../common/crypto";
 import { loadEnv } from "../../config/env";
 import { MediaService } from "../media/media.service";
 import { NotificationsService } from "../users/notifications.service";
-import { cartoMapPreviewUrl, streetViewEmbedUrl, streetViewPhotoUrl } from "./map-preview";
+import { osmMapPreviewUrl, streetViewEmbedUrl, streetViewPhotoUrl } from "./map-preview";
 
 const publishedReviewCount = { reviews: { where: { status: "PUBLISHED" as const } } };
 
@@ -738,7 +738,7 @@ export class VenuesService {
           });
         }
       } else {
-        mapImageUrl = cartoMapPreviewUrl(row.lat, row.lng, 15);
+        mapImageUrl = osmMapPreviewUrl(row.lat, row.lng, 15);
         for (const heading of [20, 140, 260]) {
           gallery.push({
             kind: "street",
