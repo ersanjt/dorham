@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { EventDto, PublicUser } from "@dorham/shared";
 import { EventCard } from "../../../components/event-card";
-import { PageIntro } from "../../../components/page-intro";
 import { SiteFooter } from "../../../components/site-footer";
 import { SiteHeader } from "../../../components/site-header";
 import { resolveApiBase } from "../../../lib/api-base";
@@ -37,27 +36,54 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   const [person, hosted] = await Promise.all([loadPerson(id), loadHosted(id)]);
   if (!person) notFound();
 
+  const cityLabel = person.city === "istanbul" ? "استانبول" : person.city === "ankara" ? "آنکارا" : "ازمیر";
+  const memberSince = new Date(person.createdAt).toLocaleDateString("fa-IR", {
+    year: "numeric",
+    month: "long",
+  });
+
   return (
-    <main className="wrap">
+    <main className="wrap profile-page">
       <SiteHeader />
-      <PageIntro kicker="عضو شهر" title={person.displayName}>
-        <p className="lead">استانبول. ایمیل اینجا نیست.</p>
-      </PageIntro>
-      <article className="card">
-        {person.photoUrl ? <img className="avatar" src={person.photoUrl} alt="" /> : <div className="avatar" />}
-        <p>
-          {person.verificationStatus === "VERIFIED" ? (
-            <span className="verify-badge">{verifyFa.VERIFIED}</span>
-          ) : (
-            <span className="badge">{verifyFa[person.verificationStatus] ?? person.verificationStatus}</span>
-          )}
-        </p>
-        <p className="prose">{person.bio || "هنوز معرفی ننوشته."}</p>
-        {person.stats ? (
-          <div className="account-stats" style={{ marginTop: 16 }}>
+
+      <header className="profile-hero">
+        <div className="profile-hero-cover" aria-hidden />
+        <div className="profile-hero-body">
+          <div className="profile-avatar-wrap">
+            {person.photoUrl ? (
+              <img className="profile-avatar" src={person.photoUrl} alt="" />
+            ) : (
+              <div className="profile-avatar profile-avatar-empty" aria-hidden>
+                {person.displayName.slice(0, 1)}
+              </div>
+            )}
+          </div>
+          <div className="profile-hero-meta">
+            <div className="profile-name-row">
+              <h1 className="profile-name">{person.displayName}</h1>
+              {person.verificationStatus === "VERIFIED" ? (
+                <span className="verify-badge">{verifyFa.VERIFIED}</span>
+              ) : (
+                <span className="badge">{verifyFa[person.verificationStatus] ?? person.verificationStatus}</span>
+              )}
+            </div>
+            <p className="profile-sub">
+              {cityLabel} · عضو از {memberSince}
+            </p>
+            <p className="profile-bio-preview">{person.bio?.trim() || "هنوز معرفی عمومی ننوشته."}</p>
+            <p className="muted" style={{ marginTop: 8 }}>
+              ایمیل در پروفایل عمومی نیست.
+            </p>
+          </div>
+        </div>
+      </header>
+
+      {person.stats ? (
+        <section className="profile-panel">
+          <div className="account-stats profile-stats">
             <div className="account-stat">
               <strong>{person.stats.venuesVisited.toLocaleString("fa-IR")}</strong>
-              <span>مکان</span>
+              <span>مکان تأییدشده</span>
             </div>
             <div className="account-stat">
               <strong>{person.stats.eventsAttended.toLocaleString("fa-IR")}</strong>
@@ -68,12 +94,13 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               <span>میزبانی</span>
             </div>
           </div>
-        ) : null}
-      </article>
+        </section>
+      ) : null}
+
       {person.venuesVisited && person.venuesVisited.length > 0 ? (
-        <section style={{ marginTop: 28 }}>
+        <section className="profile-panel">
           <h2>مکان‌های تأییدشده</h2>
-          <ul className="account-history">
+          <ul className="account-history profile-history">
             {person.venuesVisited.map((v) => (
               <li key={v.venueId}>
                 <Link href={`/venues/${v.venueSlug}`}>{v.venueName}</Link>
@@ -83,9 +110,10 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
           </ul>
         </section>
       ) : null}
-      {hosted.length > 0 ? (
-        <section style={{ marginTop: 32 }}>
-          <h2>جمعه‌های این میزبان</h2>
+
+      <section className="profile-panel">
+        <h2>جمعه‌های این میزبان</h2>
+        {hosted.length > 0 ? (
           <div className="grid">
             {hosted.map((event) => (
               <EventCard
@@ -101,16 +129,19 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                   waitlistCount: event.waitlistCount,
                   hostName: event.host.displayName,
                   priceTry: event.priceTry,
+                  kind: event.kind,
+                  externalTicketUrl: event.externalTicketUrl,
                 }}
               />
             ))}
           </div>
-        </section>
-      ) : (
-        <p className="muted" style={{ marginTop: 24 }}>
-          هنوز رویدادی میزبانی نکرده. <Link href="/events">رویدادهای استانبول</Link>
-        </p>
-      )}
+        ) : (
+          <p className="muted">
+            هنوز رویدادی میزبانی نکرده. <Link href="/events">رویدادهای استانبول</Link>
+          </p>
+        )}
+      </section>
+
       <SiteFooter />
     </main>
   );
