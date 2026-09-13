@@ -14,7 +14,24 @@ async function main() {
   const passwordHash = await hashPassword("DorhamHost1");
   await prisma.user.upsert({
     where: { email },
-    update: { role: "ADMIN", emailVerifiedAt: new Date() },
+    update: {
+      role: "ADMIN",
+      emailVerifiedAt: new Date(),
+      profile: {
+        upsert: {
+          create: {
+            displayName: "سارا · میزبان استانبول",
+            bio: "میزبان نمونهٔ دورهم در استانبول.",
+            city: "istanbul",
+            country: "TR",
+          },
+          update: {
+            displayName: "سارا · میزبان استانبول",
+            bio: "میزبان نمونهٔ دورهم در استانبول.",
+          },
+        },
+      },
+    },
     create: {
       email,
       passwordHash,
@@ -23,8 +40,8 @@ async function main() {
       emailVerifiedAt: new Date(),
       profile: {
         create: {
-          displayName: "میزبان محلی (توسعه)",
-          bio: "حساب فنی برای تست ورود — رویداد واقعی را از اپ بساز.",
+          displayName: "سارا · میزبان استانبول",
+          bio: "میزبان نمونهٔ دورهم در استانبول.",
           city: "istanbul",
           country: "TR",
         },

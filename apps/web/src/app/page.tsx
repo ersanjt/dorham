@@ -23,7 +23,7 @@ async function loadFeed(): Promise<FeedPost[]> {
 
 async function loadEvents(): Promise<EventDto[]> {
   try {
-    const res = await fetch(`${API}/v1/events?city=istanbul&kind=COMMUNITY&limit=3`, { cache: "no-store" });
+    const res = await fetch(`${API}/v1/events?city=istanbul&kind=COMMUNITY&limit=4`, { cache: "no-store" });
     if (!res.ok) return [];
     const json = (await res.json()) as { data: EventDto[] };
     return json.data ?? [];
@@ -35,6 +35,7 @@ async function loadEvents(): Promise<EventDto[]> {
 export default async function HomePage() {
   const [events, posts] = await Promise.all([loadEvents(), loadFeed()]);
   const next = events[0];
+  const more = events.slice(1);
 
   return (
     <main className="wrap">
@@ -119,8 +120,13 @@ export default async function HomePage() {
               {formatPriceTry(next.priceTry)}
             </p>
             <p className="muted">
-              {next.goingCount}
-              {next.capacity ? ` از ${next.capacity}` : ""} نفر می‌آیند
+              {next.goingCount === 0
+                ? next.capacity
+                  ? `ظرفیت ${next.capacity.toLocaleString("fa-IR")} نفر · هنوز کسی ثبت نکرده`
+                  : "هنوز کسی ثبت نکرده"
+                : `${next.goingCount.toLocaleString("fa-IR")}${
+                    next.capacity ? ` از ${next.capacity.toLocaleString("fa-IR")}` : ""
+                  } نفر می‌آیند`}
             </p>
             <div className="row">
               <Link className="btn" href={`/events/${next.id}`}>
@@ -147,9 +153,9 @@ export default async function HomePage() {
               </Link>
             </div>
           </div>
-        ) : (
+        ) : more.length > 0 ? (
           <div className="grid">
-            {events.map((event) => (
+            {more.map((event) => (
               <EventCard
                 key={event.id}
                 event={{
@@ -168,7 +174,7 @@ export default async function HomePage() {
               />
             ))}
           </div>
-        )}
+        ) : null}
       </section>
 
       <SiteFooter />

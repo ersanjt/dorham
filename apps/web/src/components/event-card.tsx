@@ -46,14 +46,22 @@ export function EventCard({
       ) : null}
       <p className="meta">
         {cityShow
-          ? `${event.goingCount.toLocaleString("fa-IR")} نفر علاقه‌مند به هماهنگی`
-          : `${event.hostName ? `میزبان: ${event.hostName} · ` : ""}${event.goingCount}${
-              event.capacity ? ` از ${event.capacity}` : ""
-            } نفر${event.waitlistCount ? ` · ${event.waitlistCount} در انتظار` : ""}${
+          ? event.goingCount === 0
+            ? "هنوز کسی برای هماهنگی علامت نزده"
+            : `${event.goingCount.toLocaleString("fa-IR")} نفر علاقه‌مند به هماهنگی`
+          : `${event.hostName ? `میزبان: ${event.hostName} · ` : ""}${
+              event.goingCount === 0
+                ? event.capacity
+                  ? `ظرفیت ${event.capacity.toLocaleString("fa-IR")} نفر · هنوز خالی`
+                  : "هنوز خالی"
+                : `${event.goingCount.toLocaleString("fa-IR")}${
+                    event.capacity ? ` از ${event.capacity.toLocaleString("fa-IR")}` : ""
+                  } نفر`
+            }${event.waitlistCount ? ` · ${event.waitlistCount.toLocaleString("fa-IR")} در انتظار` : ""}${
               event.priceTry ? ` · ${event.priceTry.toLocaleString("fa-IR")} لیر` : ""
             }`}
       </p>
-      {!cityShow && filled != null ? (
+      {!cityShow && filled != null && event.goingCount > 0 ? (
         <div className="capacity" aria-hidden>
           <i style={{ width: `${filled}%` }} />
         </div>
