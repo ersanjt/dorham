@@ -1,13 +1,12 @@
-import { Controller, Get, Query, Res } from "@nestjs/common";
+import { BadRequestException, Controller, Get, Query, Res } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { loadEnv } from "../../config/env";
 import { osmMapPreviewUrl, streetViewPhotoUrl } from "./map-preview";
 
-/** Fastify reply used for binary image / redirect responses. */
-type ImageReply = {
-  code: (status: number) => ImageReply;
-  header: (name: string, value: string) => ImageReply;
-  redirect: (url: string, code?: number) => void;
+/** Fastify reply — same shape as media controller binary responses. */
+type BinaryReply = {
+  header: (name: string, value: string) => BinaryReply;
+  code: (status: number) => BinaryReply;
   send: (payload: Buffer | string) => void;
 };
 
@@ -19,8 +18,8 @@ function parseCoord(raw: string | undefined, min: number, max: number): number |
 }
 
 /**
- * Proxies Google Static / Street View images so the API key stays on the server.
- * Browser &lt;img&gt; tags must not call maps.googleapis.com with our key.
+ * Proxies Google Static / Street View so the API key never reaches the browser.
+ * Always returns image bytes (no HTTP redirect) — redirects break Next/Cloudflare rewrites.
  */
 @ApiTags("maps")
 @Controller("maps")
@@ -31,24 +30,18 @@ export class MapsController {
   async staticMap(
     @Query("lat") latRaw: string | undefined,
     @Query("lng") lngRaw: string | undefined,
-    @Res() reply: ImageReply,
+    @Res() reply: BinaryReply,
   ) {
     const lat = parseCoord(latRaw, -90, 90);
     const lng = parseCoord(lngRaw, -180, 180);
-    if (lat == null || lng == null) {
-      reply.code(400).send("bad coordinates");
-      return;
-    }
+    if (lat == null || lng == null) throw new BadRequestException({ code: "MAP_COORDS", message: "bad coordinates" });
 
     const key = this.env.GOOGLE_MAPS_API_KEY?.trim();
-    if (!key) {
-      reply.redirect(osmMapPreviewUrl(lat, lng, 15), 302);
-      return;
-    }
-
     const marker = `${lat},${lng}`;
-    const url = `https://maps.googleapis.com/maps/api/staticmap?center=${marker}&zoom=16&size=640x360&scale=2&maptype=roadmap&markers=color:0xB12E28%7C${marker}&key=${encodeURIComponent(key)}`;
-    await this.proxyImage(url, lat, lng, reply);
+    const googleUrl = key
+      ? `https://maps.googleapis.com/maps/api/staticmap?center=${marker}&zoom=16&size=640x360&scale=2&maptype=roadmap&markers=color:0xB12E28%7C${marker}&key=${encodeURIComponent(key)}`
+      : null;
+    await this.sendImage(googleUrl, osmMapPreviewUrl(lat, lng, 15), reply);
   }
 
   @Get("streetview")
@@ -56,41 +49,40 @@ export class MapsController {
     @Query("lat") latRaw: string | undefined,
     @Query("lng") lngRaw: string | undefined,
     @Query("heading") headingRaw: string | undefined,
-    @Res() reply: ImageReply,
+    @Res() reply: BinaryReply,
   ) {
     const lat = parseCoord(latRaw, -90, 90);
     const lng = parseCoord(lngRaw, -180, 180);
     const heading = parseCoord(headingRaw ?? "20", 0, 360) ?? 20;
-    if (lat == null || lng == null) {
-      reply.code(400).send("bad coordinates");
-      return;
-    }
+    if (lat == null || lng == null) throw new BadRequestException({ code: "MAP_COORDS", message: "bad coordinates" });
 
     const key = this.env.GOOGLE_MAPS_API_KEY?.trim();
-    if (!key) {
-      reply.redirect(osmMapPreviewUrl(lat, lng, 15), 302);
-      return;
-    }
-
-    await this.proxyImage(streetViewPhotoUrl(lat, lng, heading, key), lat, lng, reply);
+    const googleUrl = key ? streetViewPhotoUrl(lat, lng, heading, key) : null;
+    await this.sendImage(googleUrl, osmMapPreviewUrl(lat, lng, 15), reply);
   }
 
-  private async proxyImage(url: string, lat: number, lng: number, reply: ImageReply) {
-    try {
-      const upstream = await fetch(url);
-      if (!upstream.ok) {
-        reply.redirect(osmMapPreviewUrl(lat, lng, 15), 302);
+  private async sendImage(primary: string | null, fallback: string, reply: BinaryReply) {
+    const urls = primary ? [primary, fallback] : [fallback];
+    for (const url of urls) {
+      try {
+        const upstream = await fetch(url, {
+          headers: { "User-Agent": "DorhamMaps/1.0 (https://www.dorham.app)" },
+          signal: AbortSignal.timeout(12000),
+        });
+        if (!upstream.ok) continue;
+        const buf = Buffer.from(await upstream.arrayBuffer());
+        if (buf.length < 64) continue;
+        const type = upstream.headers.get("content-type") || "image/jpeg";
+        reply
+          .header("content-type", type)
+          .header("cache-control", "public, max-age=86400")
+          .header("x-content-type-options", "nosniff")
+          .send(buf);
         return;
+      } catch {
+        /* try next */
       }
-      const buf = Buffer.from(await upstream.arrayBuffer());
-      const type = upstream.headers.get("content-type") || "image/jpeg";
-      reply
-        .header("content-type", type)
-        .header("cache-control", "public, max-age=86400")
-        .header("x-content-type-options", "nosniff")
-        .send(buf);
-    } catch {
-      reply.redirect(osmMapPreviewUrl(lat, lng, 15), 302);
     }
+    reply.code(502).send("map unavailable");
   }
 }
