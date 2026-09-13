@@ -37,7 +37,8 @@ export default async function VenuesPage({
       <SiteHeader />
       <PageIntro kicker="نقشهٔ خوردنی" title="مکان‌های ایرانی استانبول">
         <p className="lead">
-          رستوران، کافه و مارکت ایرانی استانبول با آدرس و پین گوگل‌مپ. پیش‌نمایش نقشه از همان مختصات واقعی است.
+          رستوران، کافه و مارکت ایرانی با آدرس واقعی. کاور ترجیحاً عکس خود مکان است؛ اگر هنوز عکسی نباشد، نمای خیابان یا نقشه
+          نشان داده می‌شود. تو هم می‌توانی از صفحهٔ مکان عکس بفرستی تا بعد از تأیید مدیر عمومی شود.
         </p>
       </PageIntro>
       {submitted === "1" ? (
@@ -58,41 +59,46 @@ export default async function VenuesPage({
           </Link>
         ))}
       </div>
-      <p className="meta">{venues.length} مکان</p>
+      <p className="meta">{venues.length.toLocaleString("fa-IR")} مکان</p>
       <div className="grid">
-        {venues.map((venue) => (
-          <article className="card venue-card" key={venue.id}>
-            {venue.photos?.[0] || venue.mapImageUrl ? (
-              <a className="venue-map-link" href={venue.mapsUrl} target="_blank" rel="noreferrer" aria-label={`گوگل‌مپ ${venue.name}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  className="venue-map"
-                  src={venue.photos?.[0] || venue.mapImageUrl!}
-                  alt={`نقشه ${venue.name}`}
-                  loading="lazy"
-                />
-                <span className="venue-map-pin" aria-hidden />
-              </a>
-            ) : null}
-            <div className="card-top">
-              <span className="date-chip">{KIND_LABEL[venue.kind]}</span>
-              <span className="muted">{AREA_LABEL[venue.area] ?? venue.area}</span>
-            </div>
-            <h3>{venue.name}</h3>
-            <p className="muted">{venue.description}</p>
-            {venue.priceRange ? <p className="meta">{venue.priceRange}</p> : null}
-            <p className="meta">{venue.address}</p>
-            <p className="meta">{venue.reviewCount} نظر</p>
-            <div className="row">
-              <Link className="card-cta" href={`/venues/${venue.slug}`}>
-                جزئیات
-              </Link>
-              <a className="card-cta" href={venue.mapsUrl} target="_blank" rel="noreferrer">
-                گوگل‌مپ
-              </a>
-            </div>
-          </article>
-        ))}
+        {venues.map((venue) => {
+          const cover = venue.photos?.[0] || venue.mapImageUrl;
+          const coverIsMap = Boolean(cover && venue.mapImageUrl && cover === venue.mapImageUrl);
+          return (
+            <article className="card venue-card" key={venue.id}>
+              {cover ? (
+                <Link className="venue-map-link" href={`/venues/${venue.slug}`} aria-label={venue.name}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    className="venue-map"
+                    src={cover}
+                    alt={coverIsMap ? `نقشه ${venue.name}` : venue.name}
+                    loading="lazy"
+                  />
+                  {coverIsMap ? <span className="venue-map-pin" aria-hidden /> : null}
+                  <span className="venue-cover-tag">{coverIsMap ? "نقشه" : "عکس مکان"}</span>
+                </Link>
+              ) : null}
+              <div className="card-top">
+                <span className="date-chip">{KIND_LABEL[venue.kind]}</span>
+                <span className="muted">{AREA_LABEL[venue.area] ?? venue.area}</span>
+              </div>
+              <h3>{venue.name}</h3>
+              <p className="muted">{venue.description}</p>
+              {venue.priceRange ? <p className="meta">{venue.priceRange}</p> : null}
+              <p className="meta">{venue.address}</p>
+              <p className="meta">{venue.reviewCount.toLocaleString("fa-IR")} نظر</p>
+              <div className="row">
+                <Link className="card-cta" href={`/venues/${venue.slug}`}>
+                  جزئیات
+                </Link>
+                <a className="card-cta" href={venue.mapsUrl} target="_blank" rel="noreferrer">
+                  گوگل‌مپ
+                </a>
+              </div>
+            </article>
+          );
+        })}
       </div>
       <SiteFooter />
     </main>

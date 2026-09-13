@@ -713,16 +713,16 @@ export class VenuesService {
       ? (row.photos as unknown[]).filter((u): u is string => typeof u === "string" && /^https?:\/\//i.test(u))
       : [];
 
-    for (const url of stored) {
-      gallery.push({ kind: "photo", src: url, label: row.name });
-    }
-
+    // Prefer real place photos (community-approved, then curated) over maps.
     for (const photo of row.communityPhotos ?? []) {
       gallery.push({
         kind: "photo",
         src: this.media.signedUrl(photo.mediaId, 7 * 24 * 60 * 60),
         label: photo.caption?.trim() || row.name,
       });
+    }
+    for (const url of stored) {
+      gallery.push({ kind: "photo", src: url, label: row.name });
     }
 
     if (row.lat != null && row.lng != null) {
@@ -753,9 +753,14 @@ export class VenuesService {
       }
     }
 
-    const photos: string[] = gallery
-      .filter((g) => g.kind === "photo" || (g.kind === "street" && !g.src.includes("svembed")))
-      .map((g) => g.src);
+    // Card covers: real photos → Street View stills → map tile last.
+    const photos: string[] = [];
+    for (const g of gallery) {
+      if (g.kind === "photo") photos.push(g.src);
+    }
+    for (const g of gallery) {
+      if (g.kind === "street" && !g.src.includes("svembed")) photos.push(g.src);
+    }
     if (photos.length === 0 && mapImageUrl) {
       photos.push(mapImageUrl);
     }

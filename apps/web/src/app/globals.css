@@ -235,6 +235,18 @@ a { color: inherit; text-underline-offset: 0.18em; }
   border-radius: 50%;
   background: #fff8f0;
 }
+.venue-cover-tag {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(18, 12, 9, 0.72);
+  color: var(--cream);
+  pointer-events: none;
+}
 .venue-map-embed {
   display: block;
   width: 100%;
