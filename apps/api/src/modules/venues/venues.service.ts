@@ -21,7 +21,7 @@ import { newOpaqueToken, secretsEqual } from "../../common/crypto";
 import { loadEnv } from "../../config/env";
 import { MediaService } from "../media/media.service";
 import { NotificationsService } from "../users/notifications.service";
-import { osmMapPreviewUrl, streetViewEmbedUrl, streetViewPhotoUrl } from "./map-preview";
+import { osmMapPreviewUrl, streetViewEmbedUrl } from "./map-preview";
 
 const publishedReviewCount = { reviews: { where: { status: "PUBLISHED" as const } } };
 
@@ -728,12 +728,12 @@ export class VenuesService {
     if (row.lat != null && row.lng != null) {
       const key = this.env.GOOGLE_MAPS_API_KEY?.trim();
       if (key) {
-        const marker = `${row.lat},${row.lng}`;
-        mapImageUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker}&zoom=16&size=640x360&scale=2&maptype=roadmap&markers=color:0xB12E28%7C${marker}&key=${encodeURIComponent(key)}`;
+        // Same-origin /v1 proxy — Google key stays on the API (no browser IP / key leak).
+        mapImageUrl = `/v1/maps/static?lat=${row.lat}&lng=${row.lng}`;
         for (const heading of [20, 140, 260]) {
           gallery.push({
             kind: "street",
-            src: streetViewPhotoUrl(row.lat, row.lng, heading, key),
+            src: `/v1/maps/streetview?lat=${row.lat}&lng=${row.lng}&heading=${heading}`,
             label: `نمای خیابان · ${heading}°`,
           });
         }

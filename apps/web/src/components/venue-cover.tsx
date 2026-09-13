@@ -8,7 +8,10 @@ export type VenueCoverKind = "photo" | "street" | "map";
 function classifyCover(src: string | null | undefined, mapImageUrl: string | null | undefined): VenueCoverKind {
   if (!src) return "map";
   if (mapImageUrl && src === mapImageUrl) return "map";
-  if (/streetview|maps\.googleapis\.com\/maps\/api\/streetview/i.test(src)) return "street";
+  if (/\/v1\/maps\/static(\?|$)/i.test(src)) return "map";
+  if (/\/v1\/maps\/streetview(\?|$)|streetview|maps\.googleapis\.com\/maps\/api\/streetview/i.test(src)) {
+    return "street";
+  }
   return "photo";
 }
 
