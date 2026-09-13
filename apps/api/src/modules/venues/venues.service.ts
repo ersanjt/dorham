@@ -20,6 +20,7 @@ import { assertActive } from "../../common/account-status";
 import { newOpaqueToken, secretsEqual } from "../../common/crypto";
 import { loadEnv } from "../../config/env";
 import { MediaService } from "../media/media.service";
+import { NotificationsService } from "../users/notifications.service";
 import { cartoMapPreviewUrl, streetViewEmbedUrl, streetViewPhotoUrl } from "./map-preview";
 
 const publishedReviewCount = { reviews: { where: { status: "PUBLISHED" as const } } };
@@ -41,6 +42,7 @@ export class VenuesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly media: MediaService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async list(query: ListVenuesQuery) {
@@ -208,6 +210,16 @@ export class VenuesService {
         entity: "VenueReview",
         entityId: id,
       },
+    });
+    await this.notifications.push({
+      userId: updated.authorId,
+      kind: body.status === "PUBLISHED" ? "review.published" : "review.rejected",
+      title: body.status === "PUBLISHED" ? "نظرت منتشر شد" : "نظرت پذیرفته نشد",
+      body:
+        body.status === "PUBLISHED"
+          ? `تجربه‌ات برای «${updated.venue.name}» حالا عمومی است.`
+          : `نظر برای «${updated.venue.name}» رد شد.`,
+      href: `/venues/${updated.venue.slug}`,
     });
     return {
       data: {

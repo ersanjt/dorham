@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import type { VenueHangPlanDto, VenuePhotoDto } from "@dorham/shared";
 import { api, ApiError } from "../../../lib/api";
-import { isSignedIn } from "../../../lib/session";
+import { useSession } from "../../../lib/use-session";
 
 const INTENT_FA: Record<string, string> = {
   LUNCH: "ناهار",
@@ -19,10 +19,10 @@ function toLocalInputValue(d: Date) {
 }
 
 export function VenueCommunity({ slug }: { slug: string }) {
+  const { signedIn, ready } = useSession();
   const [plans, setPlans] = useState<VenueHangPlanDto[]>([]);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [signedIn, setSignedIn] = useState(false);
 
   async function loadPlans() {
     const data = await api<VenueHangPlanDto[]>(`/venues/${slug}/plans`);
@@ -30,7 +30,6 @@ export function VenueCommunity({ slug }: { slug: string }) {
   }
 
   useEffect(() => {
-    setSignedIn(isSignedIn());
     loadPlans().catch(() => setPlans([]));
   }, [slug]);
 
@@ -105,7 +104,7 @@ export function VenueCommunity({ slug }: { slug: string }) {
       {notice ? <div className="banner ok">{notice}</div> : null}
       {error ? <div className="banner err">{error}</div> : null}
 
-      {signedIn ? (
+      {!ready ? null : signedIn ? (
         <>
           <form className="form wide" onSubmit={onPhoto}>
             <label>

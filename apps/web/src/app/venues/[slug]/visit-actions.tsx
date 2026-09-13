@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import type { VenueDoor, VenueVisitDto } from "@dorham/shared";
 import { api, ApiError } from "../../../lib/api";
-import { isSignedIn } from "../../../lib/session";
+import { useSession } from "../../../lib/use-session";
 
 export function VenueVisitActions({
   slug,
@@ -13,13 +13,14 @@ export function VenueVisitActions({
   slug: string;
   venueId: string;
 }) {
+  const { signedIn, ready } = useSession();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [door, setDoor] = useState<VenueDoor | null>(null);
   const [pending, setPending] = useState<Array<VenueVisitDto & { guestName?: string; guestId?: string }>>([]);
 
   useEffect(() => {
-    if (!isSignedIn()) return;
+    if (!signedIn) return;
     api<VenueDoor>(`/venues/${slug}/door`)
       .then(async (d) => {
         setDoor(d);
@@ -27,9 +28,11 @@ export function VenueVisitActions({
         setPending(list.filter((v) => v.status === "PENDING"));
       })
       .catch(() => undefined);
-  }, [slug]);
+  }, [slug, signedIn]);
 
-  if (!isSignedIn()) {
+  if (!ready) return null;
+
+  if (!signedIn) {
     return (
       <p className="muted">
         برای ثبت حضور در این مکان <Link href={`/login?next=/venues/${slug}`}>وارد شو</Link>.

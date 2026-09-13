@@ -18,16 +18,27 @@ export class EventsService {
 
   async list(query: ListEventsQuery) {
     const limit = query.limit;
+    const now = new Date(Date.now() - 6 * 3600_000);
     const where: Prisma.EventWhereInput = {
       city: query.city,
-      status: "PUBLISHED",
-      startsAt: { gte: new Date(Date.now() - 6 * 3600_000) },
     };
+    if (query.when === "past") {
+      where.OR = [
+        { status: "ENDED" },
+        { status: "PUBLISHED", startsAt: { lt: now } },
+      ];
+    } else {
+      where.status = "PUBLISHED";
+      where.startsAt = { gte: now };
+    }
     if (query.hostId) {
       where.hostId = query.hostId;
     }
     if (query.venueSlug) {
       where.venueSlug = query.venueSlug;
+    }
+    if (query.kind) {
+      where.kind = query.kind;
     }
     if (query.cursor) {
       where.id = { lt: query.cursor };
@@ -35,7 +46,7 @@ export class EventsService {
 
     const rows = await this.prisma.event.findMany({
       where,
-      orderBy: [{ startsAt: "asc" }, { id: "desc" }],
+      orderBy: [{ startsAt: query.when === "past" ? "desc" : "asc" }, { id: "desc" }],
       take: limit + 1,
       include: this.eventInclude(),
     });
@@ -256,6 +267,21 @@ export class EventsService {
     const existing = await this.prisma.eventRsvp.findUnique({
       where: { eventId_userId: { eventId, userId } },
     });
+    if (event.kind === "CITY_SHOW") {
+      await this.prisma.eventRsvp.upsert({
+        where: { eventId_userId: { eventId, userId } },
+        create: { eventId, userId, status: "INTERESTED", ticketStatus: "NONE" },
+        update: { status: "INTERESTED", ticketStatus: "NONE" },
+      });
+      return {
+        data: {
+          ok: true as const,
+          status: "INTERESTED" as const,
+          waitlisted: false,
+          ticketStatus: "NONE" as const,
+        },
+      };
+    }
     if (existing?.status === "GOING") {
       return {
         data: {
@@ -355,6 +381,12 @@ export class EventsService {
 
   async door(eventId: string, actor: { id: string; role: string }) {
     const event = await this.requireHostEvent(eventId, actor);
+    if (event.kind === "CITY_SHOW") {
+      throw new ForbiddenException({
+        code: "AUTH_FORBIDDEN",
+        message: "City shows use external tickets — no Dorham door QR.",
+      });
+    }
     const secret = await this.ensureSecret(event.id, event.checkInSecret);
     const [goingCount, checkedInCount, dueCount, paidCount] = await Promise.all([
       this.prisma.eventRsvp.count({ where: { eventId, status: "GOING" } }),
@@ -450,7 +482,7 @@ export class EventsService {
   private async requireHostEvent(eventId: string, actor: { id: string; role: string }) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
-      select: { id: true, title: true, hostId: true, checkInSecret: true, status: true },
+      select: { id: true, title: true, hostId: true, checkInSecret: true, status: true, kind: true },
     });
     if (!event) {
       throw new NotFoundException({ code: "EVENT_NOT_FOUND", message: "Event not found." });
@@ -517,6 +549,8 @@ export class EventsService {
       capacity: number | null;
       priceTry: number;
       status: string;
+      kind?: string;
+      externalTicketUrl?: string | null;
       host: { id: string; profile: { displayName: string } | null };
       _count: { rsvps: number };
     },
@@ -542,6 +576,8 @@ export class EventsService {
       waitlistCount,
       priceTry: row.priceTry,
       status: row.status,
+      kind: (row.kind === "CITY_SHOW" ? "CITY_SHOW" : "COMMUNITY") as "COMMUNITY" | "CITY_SHOW",
+      externalTicketUrl: row.externalTicketUrl ?? null,
       host: {
         id: row.host.id,
         displayName: row.host.profile?.displayName ?? "Host",

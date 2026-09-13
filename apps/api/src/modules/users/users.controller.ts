@@ -5,11 +5,15 @@ import { JwtAuthGuard, OptionalJwtAuthGuard } from "../../common/jwt-auth.guard"
 import { CurrentUser, OptionalUser } from "../../common/current-user";
 import { ZodPipe } from "../../common/zod-pipe";
 import { UsersService } from "./users.service";
+import { NotificationsService } from "./notifications.service";
 
 @ApiTags("users")
 @Controller("users")
 export class UsersController {
-  constructor(private readonly users: UsersService) {}
+  constructor(
+    private readonly users: UsersService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   @Get("me")
   @ApiBearerAuth()
@@ -23,6 +27,27 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async activity(@CurrentUser() user: { id: string }) {
     return { data: await this.users.activity(user.id) };
+  }
+
+  @Get("me/notifications")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  async listNotifications(@CurrentUser() user: { id: string }) {
+    return { data: await this.notifications.listForUser(user.id) };
+  }
+
+  @Post("me/notifications/read")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  async readAll(@CurrentUser() user: { id: string }) {
+    return { data: await this.notifications.markRead(user.id) };
+  }
+
+  @Post("me/notifications/:id/read")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  async readOne(@CurrentUser() user: { id: string }, @Param("id") id: string) {
+    return { data: await this.notifications.markRead(user.id, id) };
   }
 
   @Patch("me")

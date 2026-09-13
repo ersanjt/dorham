@@ -1,0 +1,241 @@
+/**
+ * Public Istanbul show calendar (facts) + Dorham community gathers.
+ * CITY_SHOW = discovery only; tickets are outbound. Not a clone of IrConcerts copy.
+ */
+export type SeedEvent = {
+  externalKey: string;
+  kind: "COMMUNITY" | "CITY_SHOW";
+  status: "PUBLISHED" | "ENDED";
+  title: string;
+  description: string;
+  venue: string;
+  venueSlug?: string;
+  address?: string;
+  startsAt: string;
+  endsAt?: string;
+  capacity?: number;
+  priceTry?: number;
+  externalTicketUrl?: string;
+};
+
+export const ISTANBUL_SEED_EVENTS: SeedEvent[] = [
+  // —— Past CITY_SHOW (before 2026-09-13) ——
+  {
+    externalKey: "city:mathame-2026-08-22",
+    kind: "CITY_SHOW",
+    status: "ENDED",
+    title: "Mathame — EPHORIA",
+    description: "شب الکترونیک در Klein Phönix. بلیط از فروشندهٔ خارجی؛ دورهم میزبان در نیست.",
+    venue: "Klein Phönix (ICC)",
+    address: "Istanbul",
+    startsAt: "2026-08-22T18:00:00.000Z",
+    endsAt: "2026-08-23T02:00:00.000Z",
+    externalTicketUrl: "https://www.accesspointticket.com/",
+  },
+  {
+    externalKey: "city:sama-abdulhadi-2026-08-28",
+    kind: "CITY_SHOW",
+    status: "ENDED",
+    title: "Sama’ Abdulhadi",
+    description: "ست تکنو در Klein Phönix. تقویم شهر برای هماهنگی دوستان؛ ورود با بلیط خارجی.",
+    venue: "Klein Phönix (ICC)",
+    startsAt: "2026-08-28T18:00:00.000Z",
+    externalTicketUrl: "https://www.accesspointticket.com/",
+  },
+  {
+    externalKey: "city:shadmehr-2026-09-01",
+    kind: "CITY_SHOW",
+    status: "ENDED",
+    title: "کنسرت شادمهر عقیلی",
+    description: "اجرای زندهٔ شادمهر در استانبول (۱ سپتامبر ۲۰۲۶). بلیط از فروشنده‌های کنسرت؛ دورهم فقط هماهنگی دیدار قبل/بعد.",
+    venue: "Ülker Sports Arena / Ataşehir",
+    address: "Barbaros, Ihlamur Bulvarı, Ataşehir",
+    startsAt: "2026-09-01T17:00:00.000Z",
+    externalTicketUrl: "https://irconcerts.com/%DA%A9%D9%86%D8%B3%D8%B1%D8%AA-%D9%87%D8%A7/%da%a9%d9%86%d8%b3%d8%b1%d8%aa-%d8%b4%d8%a7%d8%af%d9%85%d9%87%d8%b1-%d8%af%d8%b1-%d8%a7%d8%b3%d8%aa%d8%a7%d9%86%d8%a8%d9%88%d9%84/",
+  },
+  {
+    externalKey: "city:moein-2026-09-03",
+    kind: "CITY_SHOW",
+    status: "ENDED",
+    title: "کنسرت معین",
+    description: "معین در Ülker Sports Arena (۳ سپتامبر ۲۰۲۶). دورهم بلیط نمی‌فروشد — لینک بلیط خارجی.",
+    venue: "Ülker Sports Arena",
+    address: "Ataşehir, Istanbul",
+    startsAt: "2026-09-03T17:00:00.000Z",
+    externalTicketUrl: "https://irconcerts.com/%DA%A9%D9%86%D8%B3%D8%B1%D8%AA-%D9%87%D8%A7/%da%a9%d9%86%d8%b3%d8%b1%d8%aa-%d9%85%d8%b9%db%8c%d9%86-%d8%af%d8%b1-%d8%a7%d8%b3%d8%aa%d8%a7%d9%86%d8%a8%d9%88%d9%84/",
+  },
+  {
+    externalKey: "city:ebi-2026-09-09",
+    kind: "CITY_SHOW",
+    status: "ENDED",
+    title: "کنسرت ابی",
+    description: "ابی در Ora Arena (۹ سپتامبر ۲۰۲۶). برای ایرانی‌های استانبول فرصت دیدار قبل از سالن.",
+    venue: "Ora Arena",
+    address: "Bayrampaşa, Istanbul",
+    startsAt: "2026-09-09T17:00:00.000Z",
+    externalTicketUrl: "https://irconcerts.com/%DA%A9%D9%86%D8%B3%D8%B1%D8%AA-%D9%87%D8%A7/%da%a9%d9%86%d8%b3%d8%b1%d8%aa-%d8%a7%d8%a8%db%8c-%d8%af%d8%b1-%d8%a7%d8%b3%d8%aa%d8%a7%d9%86%d8%a8%d9%88%d9%84/",
+  },
+  {
+    externalKey: "city:anyma-2026-09-12",
+    kind: "CITY_SHOW",
+    status: "ENDED",
+    title: "ANYMA — ÆDEN",
+    description: "شو الکترونیک ۱۲ سپتامبر ۲۰۲۶ در استانبول. کشف شهر؛ بلیط جدا.",
+    venue: "Istanbul (ICC)",
+    startsAt: "2026-09-12T16:00:00.000Z",
+    externalTicketUrl: "https://www.accesspointticket.com/",
+  },
+  {
+    externalKey: "past:community-asuman-2026-08-15",
+    kind: "COMMUNITY",
+    status: "ENDED",
+    title: "شام کوتاه آکسارای — رستوران آسمان",
+    description: "دورهمی کوچک دور میز ایرانی در آکسارای. رزرو از دورهم؛ پرداخت نقد دم در در صورت اعلام.",
+    venue: "رستوران آسمان",
+    venueSlug: "asuman-aksaray",
+    startsAt: "2026-08-15T16:30:00.000Z",
+    capacity: 18,
+    priceTry: 0,
+  },
+  {
+    externalKey: "past:community-cheshmeh-2026-08-22",
+    kind: "COMMUNITY",
+    status: "ENDED",
+    title: "جمعه کادیکوی — کافه کتاب",
+    description: "چای و گپ فارسی در کادیکوی. مهمان‌لیست دورهم؛ بدون سوایپ.",
+    venue: "چشمه",
+    venueSlug: "cheshmeh-kadikoy",
+    startsAt: "2026-08-22T15:00:00.000Z",
+    capacity: 24,
+  },
+  {
+    externalKey: "past:community-reyhun-2026-08-29",
+    kind: "COMMUNITY",
+    status: "ENDED",
+    title: "عصر تکسیم — ریحون",
+    description: "دورهم بعدازظهر نزدیک تکسیم برای تازه‌واردها.",
+    venue: "ریحون",
+    venueSlug: "reyhun-taksim",
+    startsAt: "2026-08-29T14:00:00.000Z",
+    capacity: 20,
+  },
+  {
+    externalKey: "past:community-shiraz-2026-09-05",
+    kind: "COMMUNITY",
+    status: "ENDED",
+    title: "ناهار شیراز — کادیکوی",
+    description: "ناهار جمعه با میزبان محلی. چک‌این دم در با QR.",
+    venue: "شیراز",
+    venueSlug: "shiraz-kadikoy",
+    startsAt: "2026-09-05T10:00:00.000Z",
+    capacity: 16,
+  },
+
+  // —— Future CITY_SHOW ——
+  {
+    externalKey: "city:black-coffee-2026-09-25",
+    kind: "CITY_SHOW",
+    status: "PUBLISHED",
+    title: "Black Coffee — Ataköy Marina",
+    description: "۲۵ سپتامبر ۲۰۲۶، فضای باز آتاکوی. بلیط خارجی؛ در دورهم «علاقه‌مندم» بزن تا دوستانت ببینند.",
+    venue: "Ataköy Marina Açık Hava",
+    startsAt: "2026-09-25T13:00:00.000Z",
+    externalTicketUrl: "https://irconcerts.com/%D8%B4%D9%87%D8%B1%D9%87%D8%A7/%D8%A7%D8%B3%D8%AA%D8%A7%D9%86%D8%A8%D9%88%D9%84/",
+  },
+  {
+    externalKey: "city:boris-brejcha-2026-09-26",
+    kind: "CITY_SHOW",
+    status: "PUBLISHED",
+    title: "Boris Brejcha — Reflections",
+    description: "۲۶ سپتامبر در KüçükÇiftlik Park. کشف شهر؛ بلیط از فروشندهٔ کنسرت.",
+    venue: "KüçükÇiftlik Park",
+    startsAt: "2026-09-26T14:00:00.000Z",
+    externalTicketUrl: "https://www.accesspointticket.com/",
+  },
+  {
+    externalKey: "city:amr-diab-2026-10-03",
+    kind: "CITY_SHOW",
+    status: "PUBLISHED",
+    title: "کنسرت عمرو دیاب",
+    description: "۳ اکتبر ۲۰۲۶ در استانبول. هماهنگی دوستان ایرانی در فید/علاقه‌مندی دورهم.",
+    venue: "Istanbul Arena",
+    startsAt: "2026-10-03T17:00:00.000Z",
+    externalTicketUrl: "https://irconcerts.com/%D8%B4%D9%87%D8%B1%D9%87%D8%A7/%D8%A7%D8%B3%D8%AA%D8%A7%D9%86%D8%A8%D9%88%D9%84/",
+  },
+  {
+    externalKey: "city:yann-tiersen-2026-10-10",
+    kind: "CITY_SHOW",
+    status: "PUBLISHED",
+    title: "Yann Tiersen",
+    description: "۱۰ اکتبر ۲۰۲۶ — اجرای زنده در استانبول (تقویم شهر).",
+    venue: "Istanbul",
+    startsAt: "2026-10-10T17:00:00.000Z",
+    externalTicketUrl: "https://www.accesspointticket.com/",
+  },
+  {
+    externalKey: "city:kpop-forever-2026-12-05",
+    kind: "CITY_SHOW",
+    status: "PUBLISHED",
+    title: "K-Pop Forever (Tribute)",
+    description: "۵ دسامبر ۲۰۲۶ در Ora Arena — شو ادای احترام کی‌پاپ. بلیط خارجی.",
+    venue: "Ora Arena",
+    startsAt: "2026-12-05T17:00:00.000Z",
+    externalTicketUrl: "https://irconcerts.com/%D8%B4%D9%87%D8%B1%D9%87%D8%A7/%D8%A7%D8%B3%D8%AA%D8%A7%D9%86%D8%A8%D9%88%D9%84/",
+  },
+  {
+    externalKey: "city:nancy-ajram-2026-12-30",
+    kind: "CITY_SHOW",
+    status: "PUBLISHED",
+    title: "کنسرت نانسی عجرم",
+    description: "اواخر ۲۰۲۶ در استانبول — تاریخ را قبل خرید بلیط از منبع بلیط تأیید کن.",
+    venue: "Istanbul",
+    startsAt: "2026-12-30T17:00:00.000Z",
+    externalTicketUrl: "https://irconcerts.com/%D8%B4%D9%87%D8%B1%D9%87%D8%A7/%D8%A7%D8%B3%D8%AA%D8%A7%D9%86%D8%A8%D9%88%D9%84/",
+  },
+  {
+    externalKey: "city:saint-levant-2026-12-10",
+    kind: "CITY_SHOW",
+    status: "PUBLISHED",
+    title: "Saint Levant",
+    description: "۱۰ دسامبر ۲۰۲۶ — اجرای زنده در استانبول (تقویم کشف شهر).",
+    venue: "Istanbul",
+    startsAt: "2026-12-10T17:00:00.000Z",
+    externalTicketUrl: "https://www.accesspointticket.com/",
+  },
+
+  // —— Future COMMUNITY (why people open Dorham daily) ——
+  {
+    externalKey: "community:asuman-2026-09-19",
+    kind: "COMMUNITY",
+    status: "PUBLISHED",
+    title: "جمعه آکسارای — شام در آسمان",
+    description: "دورهم رسمی: شام ایرانی در رستوران آسمان. RSVP اجباری، چک‌این دم در با QR میزبان.",
+    venue: "رستوران آسمان",
+    venueSlug: "asuman-aksaray",
+    startsAt: "2026-09-18T16:30:00.000Z",
+    capacity: 28,
+    priceTry: 250,
+  },
+  {
+    externalKey: "community:cheshmeh-2026-09-26",
+    kind: "COMMUNITY",
+    status: "PUBLISHED",
+    title: "جمعه کادیکوی — چشمه",
+    description: "گپ و کتاب و چای. مناسب تازه‌واردها. پروفایل تأییدشده اولویت دارد.",
+    venue: "چشمه",
+    venueSlug: "cheshmeh-kadikoy",
+    startsAt: "2026-09-25T15:00:00.000Z",
+    capacity: 22,
+  },
+  {
+    externalKey: "community:golab-2026-10-03",
+    kind: "COMMUNITY",
+    status: "PUBLISHED",
+    title: "شنبه آتاکوی — گلاب",
+    description: "ناهار ساحلی‌تر در سمت اروپایی شرقی. مهمان‌لیست واقعی.",
+    venue: "گلاب",
+    venueSlug: "golab-atakoy",
+    startsAt: "2026-10-03T11:00:00.000Z",
+    capacity: 20,
+  },
+];

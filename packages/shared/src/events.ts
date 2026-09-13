@@ -3,6 +3,9 @@ import { CITIES } from "./cities.js";
 
 export const eventStatusSchema = z.enum(["DRAFT", "PUBLISHED", "CANCELLED", "ENDED"]);
 
+export const eventKindSchema = z.enum(["COMMUNITY", "CITY_SHOW"]);
+export type EventKind = z.infer<typeof eventKindSchema>;
+
 export const ticketStatusSchema = z.enum(["NONE", "DUE", "PAID_DOOR"]);
 export type TicketStatus = z.infer<typeof ticketStatusSchema>;
 
@@ -31,6 +34,8 @@ export const eventSchema = z.object({
   waitlistCount: z.number().int().nonnegative(),
   priceTry: z.number().int().nonnegative(),
   status: eventStatusSchema,
+  kind: eventKindSchema,
+  externalTicketUrl: z.string().nullable(),
   host: z.object({
     id: z.string(),
     displayName: z.string(),
@@ -44,6 +49,8 @@ export const listEventsQuerySchema = z.object({
   city: z.enum(CITIES).default("istanbul"),
   hostId: z.string().min(8).max(64).optional(),
   venueSlug: z.string().trim().min(2).max(80).optional(),
+  kind: eventKindSchema.optional(),
+  when: z.enum(["upcoming", "past"]).default("upcoming"),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   cursor: z.string().optional(),
 });

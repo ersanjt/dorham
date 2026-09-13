@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
-import type { EventDto, Me, MyVerification, UserActivity } from "@dorham/shared";
+import type { EventDto, Me, MyVerification, NotificationsList, UserActivity } from "@dorham/shared";
 import { EventCard } from "../../components/event-card";
 import { SiteHeader } from "../../components/site-header";
 import { PageIntro } from "../../components/page-intro";
@@ -18,20 +18,23 @@ function AccountBody() {
   const [verification, setVerification] = useState<MyVerification | null>(null);
   const [mine, setMine] = useState<EventDto[]>([]);
   const [activity, setActivity] = useState<UserActivity | null>(null);
+  const [notes, setNotes] = useState<NotificationsList | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState(search.get("verify") === "1" ? "لینک تأیید به ایمیلت فرستاده شد." : "");
 
   async function reload() {
-    const [profile, verify, events, act] = await Promise.all([
+    const [profile, verify, events, act, inbox] = await Promise.all([
       api<Me>("/users/me"),
       api<MyVerification>("/users/me/verification"),
       api<EventDto[]>("/events/mine"),
       api<UserActivity>("/users/me/activity"),
+      api<NotificationsList>("/users/me/notifications").catch(() => ({ unreadCount: 0, items: [] })),
     ]);
     setMe(profile);
     setVerification(verify);
     setMine(events);
     setActivity(act);
+    setNotes(inbox);
   }
 
   useEffect(() => {
@@ -102,6 +105,40 @@ function AccountBody() {
       {error ? <div className="banner err">{error}</div> : null}
       {me.status === "PAUSED" ? (
         <div className="banner err">حساب متوقف است. از سر بگیر تا پروفایل، ثبت حضور و فید دوباره باز شوند.</div>
+      ) : null}
+
+      {notes && notes.items.length > 0 ? (
+        <section id="notifications" className="venue-panel" style={{ marginTop: 24 }} aria-label="اعلان‌ها">
+          <div className="row" style={{ justifyContent: "space-between", padding: "0 20px", alignItems: "center" }}>
+            <h2 className="venue-panel-title" style={{ margin: 0 }}>
+              اعلان‌ها
+            </h2>
+            <button
+              className="btn ghost"
+              type="button"
+              onClick={async () => {
+                await api("/users/me/notifications/read", { method: "POST", body: "{}" });
+                await reload();
+              }}
+            >
+              همه خوانده شد
+            </button>
+          </div>
+          <ul className="account-history">
+            {notes.items.map((n) => (
+              <li key={n.id} style={{ opacity: n.readAt ? 0.65 : 1 }}>
+                <strong>{n.title}</strong>
+                <span className="muted"> — {n.body}</span>
+                {n.href ? (
+                  <>
+                    {" "}
+                    <Link href={n.href}>باز کن</Link>
+                  </>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
 
       <section className="card" style={{ marginTop: 24 }}>

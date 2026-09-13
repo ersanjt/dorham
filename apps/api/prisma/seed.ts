@@ -1,12 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../src/common/crypto";
 import { ISTANBUL_VENUES } from "./venues-data";
+import { ISTANBUL_SEED_EVENTS } from "./seed-events-data";
 
 const prisma = new PrismaClient();
 
 /**
- * Seed = real venue directory + local admin only.
- * No fabricated events or feed posts (see docs/08-data-policy.md).
+ * Seed = real venues + admin + city calendar facts + a few Dorham community gathers.
+ * CITY_SHOW is discovery (outbound tickets). COMMUNITY is Dorham RSVP/door.
  */
 async function main() {
   const email = "host@dorham.app";
@@ -73,34 +74,51 @@ async function main() {
   }
 
   const admin = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-  if (admin) {
-    await prisma.venue.updateMany({
-      where: { ownerId: null },
-      data: { ownerId: admin.id },
+  if (!admin) throw new Error("admin missing");
+
+  await prisma.venue.updateMany({
+    where: { ownerId: null },
+    data: { ownerId: admin.id },
+  });
+
+  for (const ev of ISTANBUL_SEED_EVENTS) {
+    await prisma.event.upsert({
+      where: { externalKey: ev.externalKey },
+      update: {
+        title: ev.title,
+        description: ev.description,
+        venue: ev.venue,
+        venueSlug: ev.venueSlug ?? null,
+        address: ev.address ?? null,
+        startsAt: new Date(ev.startsAt),
+        endsAt: ev.endsAt ? new Date(ev.endsAt) : null,
+        capacity: ev.capacity ?? null,
+        priceTry: ev.priceTry ?? 0,
+        status: ev.status,
+        kind: ev.kind,
+        externalTicketUrl: ev.externalTicketUrl ?? null,
+        hostId: admin.id,
+      },
+      create: {
+        externalKey: ev.externalKey,
+        hostId: admin.id,
+        title: ev.title,
+        description: ev.description,
+        city: "istanbul",
+        venue: ev.venue,
+        venueSlug: ev.venueSlug ?? null,
+        address: ev.address ?? null,
+        startsAt: new Date(ev.startsAt),
+        endsAt: ev.endsAt ? new Date(ev.endsAt) : null,
+        capacity: ev.capacity ?? null,
+        priceTry: ev.priceTry ?? 0,
+        status: ev.status,
+        kind: ev.kind,
+        externalTicketUrl: ev.externalTicketUrl ?? null,
+        locale: "FA",
+      },
     });
   }
-
-  // Drop any older demo gatherings / posts from previous seed versions.
-  await prisma.post.deleteMany({
-    where: {
-      OR: [
-        { body: { startsWith: "جمعه کادیکوی" } },
-        { body: { startsWith: "وسط هفته اکسره" } },
-      ],
-    },
-  });
-  await prisma.event.deleteMany({
-    where: {
-      title: {
-        in: [
-          "جمعه دورهم — کافه در کادیکوی",
-          "وسط‌هفته آکسارای — شام کوتاه",
-          "جمعهٔ بعد — تکسیم دامو",
-          "کافه کتاب چشمه — کادیکوی",
-        ],
-      },
-    },
-  });
 }
 
 main()

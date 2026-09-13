@@ -2,14 +2,23 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { isSignedIn } from "../lib/session";
+import type { NotificationsList } from "@dorham/shared";
+import { api } from "../lib/api";
+import { useSession } from "../lib/use-session";
 
 export function SiteHeader() {
-  const [signedIn, setSignedIn] = useState(false);
+  const { signedIn, ready } = useSession();
+  const [unread, setUnread] = useState(0);
 
   useEffect(() => {
-    setSignedIn(isSignedIn());
-  }, []);
+    if (!signedIn) {
+      setUnread(0);
+      return;
+    }
+    api<NotificationsList>("/users/me/notifications")
+      .then((data) => setUnread(data.unreadCount))
+      .catch(() => setUnread(0));
+  }, [signedIn]);
 
   return (
     <nav className="nav">
@@ -26,10 +35,15 @@ export function SiteHeader() {
         <Link href="/venues">مکان‌ها</Link>
         <Link href="/get-app">اپ</Link>
         <Link href="/safety">امنیت</Link>
-        {signedIn ? (
-          <Link className="btn ghost" href="/account">
-            حساب من
-          </Link>
+        {!ready ? null : signedIn ? (
+          <>
+            <Link className="btn ghost" href="/account#notifications">
+              اعلان‌ها{unread > 0 ? ` (${unread.toLocaleString("fa-IR")})` : ""}
+            </Link>
+            <Link className="btn ghost" href="/account">
+              حساب من
+            </Link>
+          </>
         ) : (
           <Link className="btn ghost" href="/login">
             ورود

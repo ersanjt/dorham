@@ -4,16 +4,15 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import type { VenueReview } from "@dorham/shared";
 import { api, ApiError } from "../../../lib/api";
-import { isSignedIn } from "../../../lib/session";
+import { useSession } from "../../../lib/use-session";
 
 export function VenueReviews({ slug, initial }: { slug: string; initial: VenueReview[] }) {
+  const { signedIn, ready } = useSession();
   const [rows, setRows] = useState<VenueReview[]>(initial);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
-    setSignedIn(isSignedIn());
     setRows(initial);
   }, [initial]);
 
@@ -40,7 +39,9 @@ export function VenueReviews({ slug, initial }: { slug: string; initial: VenueRe
       <p className="muted">غذا، شلوغی، برخورد. نظرات بعد از تأیید مدیر عمومی می‌شوند.</p>
       {notice ? <div className="banner ok">{notice}</div> : null}
       {error ? <div className="banner err">{error}</div> : null}
-      {signedIn ? (
+      {!ready ? (
+        <p className="muted">…</p>
+      ) : signedIn ? (
         <form className="form wide" onSubmit={onSubmit}>
           <label>
             تجربه‌ات

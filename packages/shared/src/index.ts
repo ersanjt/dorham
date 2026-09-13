@@ -11,3 +11,4 @@ export * from "./venues";
 export * from "./feed";
 export * from "./admin";
 export * from "./activity";
+export * from "./notifications";

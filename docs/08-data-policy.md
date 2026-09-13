@@ -7,13 +7,15 @@ Dorham shows **real places and real gatherings**. Seed data must not invent a sc
 - Istanbul venues that exist as public businesses (address + **Google Maps URL** + lat/lng pin)
 - Map previews from the same coordinates (Google Static if `GOOGLE_MAPS_API_KEY` is set, else OSM tiles)
 - One local **dev admin** account for login (`host@dorham.app`) — clearly a tooling account, not a public persona
-- Empty events / feed lists until a real host publishes
+- **CITY_SHOW** calendar rows: public concert/show facts (artist, date, venue name) + outbound ticket link. Dorham does not sell arena tickets and does not copy third-party marketing copy.
+- A small number of **COMMUNITY** Dorham gathers at real Iranian venues (RSVP + door) so the city page is not empty at soft-launch
 
 ## Not allowed
 
-- Fabricated “this Friday” events with made-up capacity, price, or attendance
-- Fake feed posts that imply a live community calendar
+- Fabricating attendance counts or “sold out” theater for CITY_SHOW
+- Fake feed posts that imply a live community calendar without hosts
 - Fake nearby profiles, Boost-style decoys, or invented venue hours presented as verified fact
+- Cloning IrConcerts (or any ticket reseller) as Dorham’s product identity
 - Using `dorham.com` as if we own it (we do not; see `06-naming.md`)
 
 ## Copy rules
