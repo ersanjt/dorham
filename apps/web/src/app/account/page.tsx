@@ -8,21 +8,29 @@ import { EventCard } from "../../components/event-card";
 import { SiteHeader } from "../../components/site-header";
 import { SiteFooter } from "../../components/site-footer";
 import { api, ApiError } from "../../lib/api";
-import { verifyFa } from "../../lib/format";
+import { verifyFa, formatMemberSince } from "../../lib/format";
 import { publicMediaUrl } from "../../lib/media-url";
 import { clearSession, isSignedIn } from "../../lib/session";
 
 type Tab = "overview" | "edit" | "activity" | "trust" | "inbox";
 
 function completeness(me: Me, verification: MyVerification | null) {
+  const verifyStatus = verification?.status ?? me.verificationStatus;
   const checks = [
-    { id: "photo", ok: Boolean(me.photoUrl), label: "عکس پروفایل", href: "#edit" as const },
-    { id: "bio", ok: Boolean(me.bio && me.bio.trim().length >= 20), label: "معرفی حداقل ۲۰ حرف", href: "#edit" as const },
-    { id: "email", ok: me.emailVerified, label: "تأیید ایمیل", href: "#trust" as const },
+    { id: "photo", ok: Boolean(me.photoUrl), pending: false, label: "عکس پروفایل", href: "#edit" as const },
+    {
+      id: "bio",
+      ok: Boolean(me.bio && me.bio.trim().length >= 20),
+      pending: false,
+      label: "معرفی حداقل ۲۰ حرف",
+      href: "#edit" as const,
+    },
+    { id: "email", ok: me.emailVerified, pending: false, label: "تأیید ایمیل", href: "#trust" as const },
     {
       id: "verify",
-      ok: (verification?.status ?? me.verificationStatus) === "VERIFIED",
-      label: "تأیید دست‌نویس",
+      ok: verifyStatus === "VERIFIED",
+      pending: verifyStatus === "PENDING",
+      label: verifyStatus === "PENDING" ? "تأیید دست‌نویس (در صف بررسی)" : "تأیید دست‌نویس",
       href: "#trust" as const,
     },
   ];
@@ -35,15 +43,23 @@ function AccountBody() {
   const search = useSearchParams();
   const photoInput = useRef<HTMLInputElement>(null);
   const verifyInput = useRef<HTMLInputElement>(null);
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(() => {
+    if (search.get("verify") === "1" || search.get("tab") === "trust") return "trust";
+    const t = search.get("tab");
+    if (t === "edit" || t === "activity" || t === "inbox" || t === "overview" || t === "trust") return t;
+    return "overview";
+  });
   const [me, setMe] = useState<Me | null>(null);
   const [verification, setVerification] = useState<MyVerification | null>(null);
   const [mine, setMine] = useState<EventDto[]>([]);
   const [activity, setActivity] = useState<UserActivity | null>(null);
   const [notes, setNotes] = useState<NotificationsList | null>(null);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState(search.get("verify") === "1" ? "لینک تأیید به ایمیلت فرستاده شد." : "");
+  const [notice, setNotice] = useState(
+    search.get("verify") === "1" ? "از اینجا لینک تأیید ایمیل را بفرست و وضعیت تأیید دست‌نویس را ببین." : "",
+  );
   const [saving, setSaving] = useState(false);
+  const [resending, setResending] = useState(false);
 
   async function reload() {
     const [profile, verify, events, act, inbox] = await Promise.all([
@@ -69,6 +85,20 @@ function AccountBody() {
       setError(err instanceof ApiError ? err.message : "حساب خوانده نشد.");
     });
   }, [router]);
+
+  useEffect(() => {
+    const applyHash = () => {
+      if (typeof window === "undefined") return;
+      if (window.location.hash === "#notifications" || window.location.hash === "#inbox") {
+        setTab("inbox");
+      }
+      if (window.location.hash === "#trust") setTab("trust");
+      if (window.location.hash === "#edit") setTab("edit");
+    };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, []);
 
   const progress = useMemo(() => (me ? completeness(me, verification) : null), [me, verification]);
 
@@ -113,11 +143,26 @@ function AccountBody() {
   }
 
   async function resend() {
-    const data = await api<{ verifyEmailToken?: string }>("/auth/resend-verification", { method: "POST" });
-    if (data.verifyEmailToken) {
-      router.push(`/verify-email?token=${encodeURIComponent(data.verifyEmailToken)}`);
-    } else {
-      setNotice("اگر ایمیل تأیید نشده باشد، لینک جدید ساخته شد.");
+    setError("");
+    setResending(true);
+    try {
+      const data = await api<{
+        verifyEmailToken?: string;
+        alreadyVerified?: boolean;
+        mailed?: boolean;
+      }>("/auth/resend-verification", { method: "POST" });
+      if (data.alreadyVerified) {
+        setNotice("ایمیلت از قبل تأیید شده.");
+        await reload();
+        return;
+      }
+      if (data.verifyEmailToken) {
+        router.push(`/verify-email?token=${encodeURIComponent(data.verifyEmailToken)}`);
+        return;
+      }
+      setNotice("لینک تأیید فرستاده شد. صندوق ورودی و پوشهٔ اسپم را چک کن.");
+    } finally {
+      setResending(false);
     }
   }
 
@@ -130,10 +175,7 @@ function AccountBody() {
     );
   }
 
-  const memberSince = new Date(me.createdAt).toLocaleDateString("fa-IR", {
-    year: "numeric",
-    month: "long",
-  });
+  const memberSince = formatMemberSince(me.createdAt);
   const cityLabel = me.city === "istanbul" ? "استانبول" : me.city === "ankara" ? "آنکارا" : "ازمیر";
   const unread = notes?.unreadCount ?? 0;
 
@@ -240,16 +282,21 @@ function AccountBody() {
           </div>
           <ul className="profile-checklist">
             {progress.checks.map((c) => (
-              <li key={c.id} className={c.ok ? "done" : ""}>
-                <span>{c.ok ? "✓" : "○"}</span>
+              <li key={c.id} className={c.ok ? "done" : c.pending ? "pending" : ""}>
+                <span>{c.ok ? "✓" : c.pending ? "…" : "○"}</span>
                 {c.label}
-                {!c.ok ? (
+                {!c.ok && !c.pending ? (
                   <button
                     className="linkish"
                     type="button"
                     onClick={() => setTab(c.href === "#trust" ? "trust" : "edit")}
                   >
                     تکمیل
+                  </button>
+                ) : null}
+                {c.pending ? (
+                  <button className="linkish" type="button" onClick={() => setTab("trust")}>
+                    وضعیت
                   </button>
                 ) : null}
               </li>
@@ -281,6 +328,22 @@ function AccountBody() {
 
       {tab === "overview" ? (
         <section className="profile-panel">
+          {!me.emailVerified || me.verificationStatus !== "VERIFIED" ? (
+            <div className="banner">
+              برای اعتماد مهمان‌لیست:{" "}
+              {!me.emailVerified ? "ایمیل را تأیید کن" : null}
+              {!me.emailVerified && me.verificationStatus !== "VERIFIED" ? " · " : null}
+              {me.verificationStatus !== "VERIFIED"
+                ? me.verificationStatus === "PENDING"
+                  ? "تأیید دست‌نویس در صف بررسی است"
+                  : "عکس دست‌نویس بفرست"
+                : null}
+              .{" "}
+              <button className="linkish" type="button" onClick={() => setTab("trust")}>
+                امنیت و تأیید
+              </button>
+            </div>
+          ) : null}
           {activity ? (
             <div className="account-stats profile-stats">
               <div className="account-stat">
@@ -508,8 +571,17 @@ function AccountBody() {
               ) : (
                 <>
                   <p className="muted">تا تأیید ایمیل، برخی کارها محدود می‌مانند.</p>
-                  <button className="btn" type="button" onClick={() => resend().catch((err: unknown) => setError(err instanceof ApiError ? err.message : "ارسال نشد."))}>
-                    ارسال لینک تأیید
+                  <button
+                    className="btn"
+                    type="button"
+                    disabled={resending}
+                    onClick={() =>
+                      resend().catch((err: unknown) =>
+                        setError(err instanceof ApiError ? err.message : "ارسال نشد."),
+                      )
+                    }
+                  >
+                    {resending ? "در حال ارسال…" : "ارسال لینک تأیید"}
                   </button>
                 </>
               )}
@@ -528,6 +600,9 @@ function AccountBody() {
                   verifyFa[verification?.status ?? me.verificationStatus] ?? verification?.status
                 )}
               </p>
+              {(verification?.status ?? me.verificationStatus) === "PENDING" ? (
+                <p className="muted">عکست رسیده؛ منتظر بررسی ناظر بمان. تا تأیید، این قدم کامل نمی‌شود.</p>
+              ) : null}
               {verification?.notes ? <p className="muted">{verification.notes}</p> : null}
               <button
                 className="btn ghost"

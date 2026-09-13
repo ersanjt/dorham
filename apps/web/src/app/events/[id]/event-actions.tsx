@@ -1,10 +1,175 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { EventGuest, Me, RsvpResult } from "@dorham/shared";
 import { api, ApiError } from "../../../lib/api";
+import { publicMediaUrl } from "../../../lib/media-url";
 import { isSignedIn } from "../../../lib/session";
+
+function GuestRow({
+  guest,
+  cityShow,
+  isHost,
+  eventId,
+  onCheckedIn,
+  onError,
+}: {
+  guest: EventGuest;
+  cityShow: boolean;
+  isHost: boolean;
+  eventId: string;
+  onCheckedIn: (name: string) => void;
+  onError: (msg: string) => void;
+}) {
+  const photo = publicMediaUrl(guest.photoUrl);
+  return (
+    <li className="guest-row">
+      <Link className="guest-row-link" href={`/people/${guest.id}`}>
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photo} alt="" />
+        ) : (
+          <span className="guest-avatar-fallback" aria-hidden>
+            {guest.displayName.slice(0, 1)}
+          </span>
+        )}
+        <span className="guest-row-meta">
+          <strong>{guest.displayName}</strong>
+          {guest.verificationStatus === "VERIFIED" ? <span className="verify-badge">تأییدشده</span> : null}
+          <span className="muted">
+            {cityShow
+              ? "علاقه‌مند"
+              : guest.status === "GOING"
+                ? guest.checkedInAt
+                  ? "وارد شد"
+                  : "می‌آید"
+                : "لیست انتظار"}
+            {!cityShow && guest.ticketStatus === "DUE" ? " · بلیت دم در" : ""}
+            {!cityShow && guest.ticketStatus === "PAID_DOOR" ? " · بلیت گرفته شد" : ""}
+          </span>
+        </span>
+      </Link>
+      {isHost && !cityShow && guest.status === "GOING" && !guest.checkedInAt ? (
+        <button
+          className="btn ghost"
+          type="button"
+          onClick={async () => {
+            try {
+              await api(`/events/${eventId}/checkin`, {
+                method: "POST",
+                body: JSON.stringify({ userId: guest.id }),
+              });
+              onCheckedIn(guest.displayName);
+            } catch (err) {
+              onError(err instanceof ApiError ? err.message : "چک‌این نشد.");
+            }
+          }}
+        >
+          ورود
+        </button>
+      ) : null}
+    </li>
+  );
+}
+
+function GuestSections({
+  guests,
+  cityShow,
+  isHost,
+  eventId,
+  onReload,
+  setMessage,
+  setError,
+}: {
+  guests: EventGuest[];
+  cityShow: boolean;
+  isHost: boolean;
+  eventId: string;
+  onReload: () => Promise<void>;
+  setMessage: (s: string) => void;
+  setError: (s: string) => void;
+}) {
+  const going = useMemo(() => guests.filter((g) => g.status === "GOING"), [guests]);
+  const wait = useMemo(() => guests.filter((g) => g.status === "INTERESTED"), [guests]);
+  const checkedIn = going.filter((g) => g.checkedInAt).length;
+
+  if (guests.length === 0) {
+    return (
+      <div className="guest-empty">
+        <p className="muted">
+          {cityShow ? "هنوز کسی علاقه‌مندی نزده." : "هنوز کسی ثبت‌نام نکرده. اولین نفر باش یا دعوت کن."}
+        </p>
+        <div className="row">
+          <Link className="btn ghost" href="/venues">
+            هماهنگی در مکان‌ها
+          </Link>
+          <Link className="btn ghost" href="/feed">
+            فید شهر
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="guest-sections">
+      {!cityShow ? (
+        <p className="meta guest-summary">
+          {going.length.toLocaleString("fa-IR")} می‌آیند
+          {wait.length > 0 ? ` · ${wait.length.toLocaleString("fa-IR")} در انتظار` : ""}
+          {checkedIn > 0 ? ` · ${checkedIn.toLocaleString("fa-IR")} وارد شده` : ""}
+        </p>
+      ) : (
+        <p className="meta guest-summary">{wait.length.toLocaleString("fa-IR")} علاقه‌مند</p>
+      )}
+
+      {(cityShow ? wait : going).length > 0 ? (
+        <>
+          <h4>{cityShow ? "علاقه‌مندان" : "می‌آیند"}</h4>
+          <ul className="guest-list">
+            {(cityShow ? wait : going).map((guest) => (
+              <GuestRow
+                key={guest.id}
+                guest={guest}
+                cityShow={cityShow}
+                isHost={isHost}
+                eventId={eventId}
+                onCheckedIn={async (name) => {
+                  setMessage(`${name} وارد شد.`);
+                  await onReload();
+                }}
+                onError={setError}
+              />
+            ))}
+          </ul>
+        </>
+      ) : null}
+
+      {!cityShow && wait.length > 0 ? (
+        <>
+          <h4>لیست انتظار</h4>
+          <ul className="guest-list">
+            {wait.map((guest) => (
+              <GuestRow
+                key={guest.id}
+                guest={guest}
+                cityShow={cityShow}
+                isHost={isHost}
+                eventId={eventId}
+                onCheckedIn={async (name) => {
+                  setMessage(`${name} وارد شد.`);
+                  await onReload();
+                }}
+                onError={setError}
+              />
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </div>
+  );
+}
 
 export function EventActions({
   eventId,
@@ -56,7 +221,7 @@ export function EventActions({
 
   if (!signedIn) {
     return (
-      <section style={{ marginTop: 28 }}>
+      <section className="event-actions" style={{ marginTop: 28 }}>
         <div className="row">
           <Link className="btn" href={`/login?next=/events/${eventId}`}>
             {cityShow ? "برای اعلام علاقه وارد شو" : "برای ثبت حضور وارد شو"}
@@ -66,31 +231,21 @@ export function EventActions({
           </Link>
         </div>
         <h3>{cityShow ? "علاقه‌مندان" : "مهمان‌ها"}</h3>
-        {guests.length === 0 ? (
-          <p className="muted">{cityShow ? "هنوز کسی علاقه‌مندی نزده." : "هنوز کسی ثبت‌نام نکرده."}</p>
-        ) : (
-          <div className="grid">
-            {guests.map((guest) => (
-              <div className="card guest" key={guest.id}>
-                {guest.photoUrl ? <img src={guest.photoUrl} alt="" /> : <div className="avatar" style={{ width: 36, height: 36 }} />}
-                <div>
-                  <strong>
-                    <Link href={`/people/${guest.id}`}>{guest.displayName}</Link>
-                  </strong>
-                  <div className="muted">
-                    {cityShow ? "علاقه‌مند" : guest.status === "GOING" ? "می‌آید" : "لیست انتظار"}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <GuestSections
+          guests={guests}
+          cityShow={cityShow}
+          isHost={false}
+          eventId={eventId}
+          onReload={reloadGuests}
+          setMessage={setMessage}
+          setError={setError}
+        />
       </section>
     );
   }
 
   return (
-    <section style={{ marginTop: 28 }}>
+    <section className="event-actions" style={{ marginTop: 28 }}>
       {mine?.status === "GOING" && mine.ticketStatus === "DUE" && !cityShow ? (
         <div className="banner">
           بلیت تو: {priceTry.toLocaleString("fa-IR")} لیر نقد دم در. وقتی وارد شوی، گرفته می‌شود.
@@ -102,6 +257,11 @@ export function EventActions({
           {cityShow
             ? "علاقه‌مندی‌ات ثبت شد. دیگران می‌توانند برای هماهنگی ببینند."
             : "در لیست انتظاری. اگر جا باز شود، در همین صفحه وضعیتت عوض می‌شود."}
+        </div>
+      ) : null}
+      {mine?.status === "GOING" && !cityShow ? (
+        <div className="banner ok">
+          ثبت شدی. پروفایل مهمان‌ها را ببین — و برای هفتهٔ بعد، مکان‌ها را برای هماهنگی چک کن.
         </div>
       ) : null}
       {paused ? (
@@ -214,55 +374,16 @@ export function EventActions({
         ) : null}
       </div>
 
-      <h3>مهمان‌ها</h3>
-      {guests.length === 0 ? (
-        <p className="muted">هنوز کسی ثبت‌نام نکرده یا باید وارد شوی.</p>
-      ) : (
-        <div className="grid">
-          {guests.map((guest) => (
-            <div className="card guest" key={guest.id}>
-              {guest.photoUrl ? <img src={guest.photoUrl} alt="" /> : <div className="avatar" style={{ width: 36, height: 36 }} />}
-              <div>
-                <strong>
-                  <Link href={`/people/${guest.id}`}>{guest.displayName}</Link>
-                </strong>
-                <div className="muted">
-                  {guest.status === "GOING" ? "می‌آید" : "لیست انتظار"}
-                  {guest.ticketStatus === "DUE" ? " · بلیت دم در" : ""}
-                  {guest.ticketStatus === "PAID_DOOR" ? " · بلیت گرفته شد" : ""}
-                  {guest.verificationStatus === "VERIFIED" ? (
-                    <>
-                      {" "}
-                      <span className="verify-badge">تأییدشده</span>
-                    </>
-                  ) : null}
-                  {guest.checkedInAt ? " · وارد شد" : ""}
-                </div>
-                {isHost && guest.status === "GOING" && !guest.checkedInAt ? (
-                  <button
-                    className="btn ghost"
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await api(`/events/${eventId}/checkin`, {
-                          method: "POST",
-                          body: JSON.stringify({ userId: guest.id }),
-                        });
-                        setMessage(`${guest.displayName} وارد شد.`);
-                        await reloadGuests();
-                      } catch (err) {
-                        setError(err instanceof ApiError ? err.message : "چک‌این نشد.");
-                      }
-                    }}
-                  >
-                    ورود دستی
-                  </button>
-                ) : null}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <h3>{cityShow ? "علاقه‌مندان" : "مهمان‌ها"}</h3>
+      <GuestSections
+        guests={guests}
+        cityShow={cityShow}
+        isHost={isHost}
+        eventId={eventId}
+        onReload={reloadGuests}
+        setMessage={setMessage}
+        setError={setError}
+      />
     </section>
   );
 }

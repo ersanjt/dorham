@@ -5,7 +5,7 @@ export function SiteFooter() {
     <footer>
       <p className="footer-line">دورهم محصول جامعه است، نه کازینوی سوایپ. اول استانبول.</p>
       <p>
-        <Link href="/get-app">اپ</Link>
+        <Link href="/register">عضویت</Link>
         {" · "}
         <Link href="/feed">فید شهر</Link>
         {" · "}

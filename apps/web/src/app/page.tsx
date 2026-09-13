@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { EventDto, FeedPost } from "@dorham/shared";
+import type { EventDto, FeedPost, VenueHangPlanDto } from "@dorham/shared";
 import { EventCard } from "../components/event-card";
 import { FeedPostCard } from "../components/feed-post";
 import { ShareEvent } from "../components/share-event";
@@ -7,8 +7,16 @@ import { SiteFooter } from "../components/site-footer";
 import { SiteHeader } from "../components/site-header";
 import { eventInviteText, eventPageUrl, formatDayChip, formatPriceTry } from "../lib/format";
 import { resolveApiBase } from "../lib/api-base";
+import { publicMediaUrl } from "../lib/media-url";
 
 const API = resolveApiBase();
+
+const INTENT_FA: Record<string, string> = {
+  LUNCH: "ناهار",
+  DINNER: "شام",
+  COFFEE: "قهوه",
+  OTHER: "دورهم",
+};
 
 async function loadFeed(): Promise<FeedPost[]> {
   try {
@@ -32,8 +40,19 @@ async function loadEvents(): Promise<EventDto[]> {
   }
 }
 
+async function loadHangPlans(): Promise<VenueHangPlanDto[]> {
+  try {
+    const res = await fetch(`${API}/v1/venues/hang-plans?city=istanbul&limit=8`, { cache: "no-store" });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { data: VenueHangPlanDto[] };
+    return json.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function HomePage() {
-  const [events, posts] = await Promise.all([loadEvents(), loadFeed()]);
+  const [events, posts, hangPlans] = await Promise.all([loadEvents(), loadFeed(), loadHangPlans()]);
   const next = events[0];
   const more = events.slice(1);
 
@@ -45,7 +64,7 @@ export default async function HomePage() {
         <p className="kicker">جامعهٔ ایرانی · استانبول</p>
         <h1>دورهم، توی همین شهر</h1>
         <p className="lead">
-          برای ایرانی‌های ترکیه. اول استانبول. جمعه دور هم جمع می‌شویم — نه اینکه بی‌نهایت کارت سوایپ کنیم.
+          جایی که ایرانی‌های استانبول برای رویداد، کافه و آدم واقعی برمی‌گردند — نه برای سوایپ بی‌پایان.
         </p>
         <div className="hero-visual">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -53,60 +72,17 @@ export default async function HomePage() {
         </div>
         <div className="row">
           <Link className="btn" href={next ? `/events/${next.id}` : "/events"}>
-            {next ? "رویداد بعدی" : "رویدادها"}
-          </Link>
-          <Link className="btn ghost" href="/feed">
-            فید شهر
+            {next ? "رویداد بعدی" : "رویدادهای شهر"}
           </Link>
           <Link className="btn ghost" href="/venues">
-            رستوران و کافه ایرانی
-          </Link>
-          <Link className="btn ghost" href="/get-app">
-            اپ گوشی
+            مکان‌ها و هماهنگی
           </Link>
         </div>
       </section>
 
-      <section className="grid">
-        <article className="card">
-          <p className="kicker">حضوری</p>
-          <h3>رویداد شهری</h3>
-          <p className="muted">بهانهٔ حضوری. کافه، پیاده‌روی، شب شعر. مهمان‌لیست واقعی.</p>
-        </article>
-        <article className="card">
-          <p className="kicker">اعتماد</p>
-          <h3>آدم تأییدشده</h3>
-          <p className="muted">عکس دست‌نویس. نشان زعفرانی. بدون پروفایل فیک نزدیک.</p>
-        </article>
-        <article className="card">
-          <p className="kicker">بعداً</p>
-          <h3>دیتینگ بعداً</h3>
-          <p className="muted">یک تب اختیاری، وقتی جامعه زنده شد. نه صفحهٔ اول.</p>
-        </article>
-      </section>
-
-      {posts.length > 0 ? (
-        <section>
-          <div className="section-head">
-            <p className="kicker">خبر شهر</p>
-            <h2>حرف‌های این هفته</h2>
-          </div>
-          <div className="stack">
-            {posts.map((post) => (
-              <FeedPostCard key={post.id} post={post} />
-            ))}
-          </div>
-          <p style={{ marginTop: 16 }}>
-            <Link className="card-cta" href="/feed">
-              فید کامل شهر
-            </Link>
-          </p>
-        </section>
-      ) : null}
-
       <section id="events">
         <div className="section-head">
-          <p className="kicker">صفحهٔ اول دورهم</p>
+          <p className="kicker">حلقهٔ برگشت</p>
           <h2>این هفته در استانبول</h2>
         </div>
         {next ? (
@@ -141,15 +117,15 @@ export default async function HomePage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/empty-events.png" alt="" />
             <p className="muted">
-              هنوز رویدادی برای این هفته ثبت نشده. دورهم رویداد جعلی نمی‌سازد — اولین جمعه را میزبان واقعی اعلام
-              می‌کند.
+              هنوز رویدادی برای این هفته ثبت نشده. دورهم رویداد جعلی نمی‌سازد — تا آن موقع از مکان‌ها و هماهنگی
+              حضور شروع کن.
             </p>
             <div className="row" style={{ marginTop: 12 }}>
-              <Link className="btn" href="/events/new">
-                ساخت رویداد (میزبان)
-              </Link>
-              <Link className="btn ghost" href="/venues">
+              <Link className="btn" href="/venues">
                 مکان‌های ایرانی
+              </Link>
+              <Link className="btn ghost" href="/events/new">
+                میزبانی رویداد
               </Link>
             </div>
           </div>
@@ -175,6 +151,87 @@ export default async function HomePage() {
             ))}
           </div>
         ) : null}
+      </section>
+
+      {hangPlans.length > 0 ? (
+        <section className="home-hangs">
+          <div className="section-head">
+            <p className="kicker">هماهنگی</p>
+            <h2>کی کجاست؟</h2>
+          </div>
+          <p className="muted">برنامهٔ حضور در کافه و رستوران — ببین و بپیوند.</p>
+          <ul className="home-hang-list">
+            {hangPlans.map((plan) => {
+              const photo = publicMediaUrl(plan.user.photoUrl);
+              return (
+                <li key={plan.id}>
+                  <Link className="home-hang-row" href={`/venues/${plan.venueSlug}`}>
+                    {photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={photo} alt="" />
+                    ) : (
+                      <span className="hang-avatar-fallback" aria-hidden>
+                        {plan.user.displayName.slice(0, 1)}
+                      </span>
+                    )}
+                    <span>
+                      <strong>{plan.user.displayName}</strong>
+                      <span className="muted">
+                        {" "}
+                        · {INTENT_FA[plan.intent] ?? plan.intent} در {plan.venueName} · {formatDayChip(plan.startsAt)}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <p style={{ marginTop: 12 }}>
+            <Link className="card-cta" href="/venues">
+              همه مکان‌ها
+            </Link>
+          </p>
+        </section>
+      ) : null}
+
+      {posts.length > 0 ? (
+        <section>
+          <div className="section-head">
+            <p className="kicker">خبر شهر</p>
+            <h2>حرف‌های این هفته</h2>
+          </div>
+          <div className="stack">
+            {posts.map((post) => (
+              <FeedPostCard key={post.id} post={post} />
+            ))}
+          </div>
+          <p style={{ marginTop: 16 }}>
+            <Link className="card-cta" href="/feed">
+              فید کامل شهر
+            </Link>
+          </p>
+        </section>
+      ) : null}
+
+      <section className="home-why">
+        <div className="section-head">
+          <p className="kicker">چرا دورهم</p>
+          <h2>سه دلیل برگشتن</h2>
+        </div>
+        <div className="home-why-grid">
+          <article>
+            <h3>رویداد شهری</h3>
+            <p className="muted">جمعه و بهانه‌های حضوری. مهمان‌لیست واقعی، نه کارت سوایپ.</p>
+          </article>
+          <article>
+            <h3>هماهنگی مکان</h3>
+            <p className="muted">بگو کی می‌آیی کافه؛ بقیه ببینند و بپیوندند.</p>
+          </article>
+          <article>
+            <h3>آدم تأییدشده</h3>
+            <p className="muted">عکس دست‌نویس و نشان زعفرانی. اعتماد برای ماندن زنان و خانواده‌ها.</p>
+          </article>
+        </div>
       </section>
 
       <SiteFooter />

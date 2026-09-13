@@ -131,7 +131,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
         </div>
       </section>
 
-      <VenueVisitActions slug={venue.slug} venueId={venue.id} />
+      <VenueVisitActions slug={venue.slug} />
       <VenueCommunity slug={venue.slug} />
 
       <section className="stack" style={{ marginTop: 28 }}>

@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import {
   createVenueHangPlanBodySchema,
   createVenueReviewBodySchema,
+  listCityHangPlansQuerySchema,
   listVenuesQuerySchema,
   submitVenueBodySchema,
   submitVenuePhotoBodySchema,
@@ -21,6 +22,13 @@ export class VenuesController {
   @Get()
   list(@Query(new ZodPipe(listVenuesQuerySchema)) query: ReturnType<typeof listVenuesQuerySchema.parse>) {
     return this.venues.list(query);
+  }
+
+  @Get("hang-plans")
+  cityHangPlans(
+    @Query(new ZodPipe(listCityHangPlansQuerySchema)) query: ReturnType<typeof listCityHangPlansQuerySchema.parse>,
+  ) {
+    return this.venues.listCityHangPlans(query.city, query.limit);
   }
 
   @Post()

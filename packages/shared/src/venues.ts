@@ -148,10 +148,18 @@ export const venueHangPlanSchema = z.object({
     id: z.string(),
     displayName: z.string(),
     verificationStatus: z.enum(["NONE", "PENDING", "VERIFIED", "REJECTED"]),
+    photoUrl: z.string().nullable().optional(),
   }),
 });
 
 export type VenueHangPlanDto = z.infer<typeof venueHangPlanSchema>;
+
+export const listCityHangPlansQuerySchema = z.object({
+  city: z.enum(CITIES).default("istanbul"),
+  limit: z.coerce.number().int().min(1).max(40).default(12),
+});
+
+export type ListCityHangPlansQuery = z.infer<typeof listCityHangPlansQuerySchema>;
 
 export const moderateVenueContentBodySchema = z.object({
   status: z.enum(["PUBLISHED", "REJECTED"]),

@@ -305,7 +305,23 @@ export class VenuesService {
       take: 80,
       include: { venue: true, user: { include: { profile: true, verification: true } } },
     });
-    return { data: rows.map((row) => this.hangDto(row)) };
+    return { data: await Promise.all(rows.map((row) => this.hangDto(row))) };
+  }
+
+  async listCityHangPlans(city: "istanbul" | "ankara" | "izmir", limit: number) {
+    const now = new Date();
+    const horizon = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const rows = await this.prisma.venueHangPlan.findMany({
+      where: {
+        cancelledAt: null,
+        startsAt: { gte: now, lte: horizon },
+        venue: { city, published: true },
+      },
+      orderBy: { startsAt: "asc" },
+      take: limit,
+      include: { venue: true, user: { include: { profile: true, verification: true } } },
+    });
+    return { data: await Promise.all(rows.map((row) => this.hangDto(row))) };
   }
 
   async createHangPlan(idOrSlug: string, userId: string, body: CreateVenueHangPlanBody) {
@@ -343,7 +359,7 @@ export class VenuesService {
         },
         include: { venue: true, user: { include: { profile: true, verification: true } } },
       });
-      return { data: this.hangDto(updated) };
+      return { data: await this.hangDto(updated) };
     }
     const row = await this.prisma.venueHangPlan.create({
       data: {
@@ -358,7 +374,7 @@ export class VenuesService {
     await this.prisma.auditLog.create({
       data: { userId, action: "venue.hang_plan", entity: "VenueHangPlan", entityId: row.id },
     });
-    return { data: this.hangDto(row) };
+    return { data: await this.hangDto(row) };
   }
 
   async cancelHangPlan(planId: string, userId: string) {
@@ -577,7 +593,7 @@ export class VenuesService {
     };
   }
 
-  private hangDto(row: {
+  private async hangDto(row: {
     id: string;
     venueId: string;
     startsAt: Date;
@@ -587,7 +603,7 @@ export class VenuesService {
     userId: string;
     venue: { slug: string; name: string; area: string };
     user: {
-      profile: { displayName: string } | null;
+      profile: { displayName: string; photoId: string | null } | null;
       verification: { status: "NONE" | "PENDING" | "VERIFIED" | "REJECTED" } | null;
     };
   }) {
@@ -605,6 +621,7 @@ export class VenuesService {
         id: row.userId,
         displayName: row.user.profile?.displayName ?? "عضو",
         verificationStatus: row.user.verification?.status ?? "NONE",
+        photoUrl: await this.media.photoUrl(row.user.profile?.photoId),
       },
     };
   }

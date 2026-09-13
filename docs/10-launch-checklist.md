@@ -16,9 +16,10 @@ Keep a tunnel hostname for `api.dorham.app` for mobile / Expo.
 | `www.dorham.app` | `http://127.0.0.1:3000` |
 | `api.dorham.app` | `http://127.0.0.1:4000` |
 
-- Delete orange/grey **A** records for `@` / `www` / `api` that point at the VPS (`92.205.182.99`). Those hit **Xray on :443**.
+- Delete orange/grey **A** records for `@` / `www` / `api` that point at the VPS (`92.205.182.99`). Those hit **Xray on :443** and cause **`NET::ERR_CERT_COMMON_NAME_INVALID`** on apex.
 - Keep `vpn.dorham.app` as DNS-only **A** → VPS for Vira.
-- Prove: `https://api.dorham.app/v1/health` returns JSON, not «Invalid URL».
+- Prove: `https://dorham.app` and `https://api.dorham.app/v1/health` work. Helper: `powershell -File scripts/verify-public.ps1`.
+- Until apex is fixed, invite only with **`https://www.dorham.app`**.
 
 ## Server env
 

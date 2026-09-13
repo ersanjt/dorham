@@ -33,11 +33,10 @@ export function SiteHeader() {
         <Link href="/events">رویدادها</Link>
         <Link href="/feed">فید شهر</Link>
         <Link href="/venues">مکان‌ها</Link>
-        <Link href="/get-app">اپ</Link>
         <Link href="/safety">امنیت</Link>
         {!ready ? null : signedIn ? (
           <>
-            <Link className="btn ghost" href="/account#notifications">
+            <Link className="btn ghost" href="/account?tab=inbox">
               اعلان‌ها{unread > 0 ? ` (${unread.toLocaleString("fa-IR")})` : ""}
             </Link>
             <Link className="btn ghost" href="/account">

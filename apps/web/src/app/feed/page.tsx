@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { SiteFooter } from "../../components/site-footer";
 import { SiteHeader } from "../../components/site-header";
 import { PageIntro } from "../../components/page-intro";
@@ -34,7 +35,20 @@ export default async function FeedPage() {
         </Suspense>
       </div>
       {posts.length === 0 ? (
-        <p className="muted">هنوز پستی نیست. اولین یادداشت شهر را بنویس.</p>
+        <div className="feed-empty card">
+          <p className="muted">هنوز پستی نیست. فید برای حرف وسط هفته و بعد از دورهم است — نه سوایپ.</p>
+          <div className="feed-prompt-row">
+            <Link className="pill solid" href="/venues">
+              پیشنهاد مکان ایرانی
+            </Link>
+            <Link className="pill" href="/events">
+              بعد از رویداد بنویس
+            </Link>
+            <Link className="pill" href="/account?tab=trust">
+              اول تأیید هویت
+            </Link>
+          </div>
+        </div>
       ) : (
         <div className="stack">
           {posts.map((post) => (

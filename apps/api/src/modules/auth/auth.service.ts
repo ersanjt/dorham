@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ForgotPasswordBody, LoginBody, RegisterBody, ResetPasswordBody } from "@dorham/shared";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -160,12 +165,21 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || user.emailVerifiedAt) {
       return this.env.NODE_ENV === "production"
-        ? { ok: true as const }
-        : { ok: true as const, verifyEmailToken: undefined };
+        ? { ok: true as const, alreadyVerified: true as const }
+        : { ok: true as const, alreadyVerified: true as const, verifyEmailToken: undefined };
     }
     const verifyEmailToken = await this.issueEmailToken(userId, "EMAIL_VERIFY", EMAIL_TOKEN_HOURS);
-    await this.mail.sendVerifyEmail(user.email, verifyEmailToken);
-    return this.env.NODE_ENV === "production" ? { ok: true as const } : { ok: true as const, verifyEmailToken };
+    const mailed = await this.mail.sendVerifyEmail(user.email, verifyEmailToken);
+    if (this.env.NODE_ENV === "production") {
+      if (!mailed.sent) {
+        throw new ServiceUnavailableException({
+          code: "MAIL_UNAVAILABLE",
+          message: "ارسال ایمیل الان ممکن نیست. کلید Resend روی سرور تنظیم نشده یا سرویس ایمیل قطع است.",
+        });
+      }
+      return { ok: true as const, mailed: true as const };
+    }
+    return { ok: true as const, mailed: mailed.sent, verifyEmailToken };
   }
 
   /** Always returns ok to avoid email enumeration. */

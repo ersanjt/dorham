@@ -98,7 +98,27 @@ async function main() {
     data: { ownerId: admin.id },
   });
 
-  for (const ev of ISTANBUL_SEED_EVENTS) {
+  /** Soft-launch: never invent Dorham COMMUNITY gathers unless explicitly opted in. */
+  const allowDemoCommunity = process.env.SEED_DEMO_EVENTS === "1";
+  const communityDemo = ISTANBUL_SEED_EVENTS.filter((ev) => ev.kind === "COMMUNITY");
+  const calendarShows = ISTANBUL_SEED_EVENTS.filter((ev) => ev.kind !== "COMMUNITY");
+
+  if (!allowDemoCommunity) {
+    const cancelled = await prisma.event.updateMany({
+      where: {
+        externalKey: { in: communityDemo.map((ev) => ev.externalKey) },
+        status: "PUBLISHED",
+      },
+      data: { status: "CANCELLED" },
+    });
+    if (cancelled.count > 0) {
+      console.log(`Cancelled ${cancelled.count} demo COMMUNITY event(s) (SEED_DEMO_EVENTS!=1).`);
+    }
+  }
+
+  const toUpsert = allowDemoCommunity ? ISTANBUL_SEED_EVENTS : calendarShows;
+
+  for (const ev of toUpsert) {
     await prisma.event.upsert({
       where: { externalKey: ev.externalKey },
       update: {

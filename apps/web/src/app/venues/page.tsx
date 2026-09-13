@@ -61,6 +61,21 @@ export default async function VenuesPage({
         ))}
       </div>
       <p className="meta">{venues.length.toLocaleString("fa-IR")} مکان</p>
+      {venues.length === 0 ? (
+        <div className="empty-art card" style={{ marginTop: 16 }}>
+          <p className="muted">
+            هنوز مکانی در این فیلتر نیست. می‌توانی مکان ایرانی واقعی ثبت کنی تا بعد از بررسی منتشر شود.
+          </p>
+          <div className="row" style={{ marginTop: 12 }}>
+            <Link className="btn" href="/venues/new">
+              ثبت مکان
+            </Link>
+            <Link className="btn ghost" href="/events">
+              رویدادهای شهر
+            </Link>
+          </div>
+        </div>
+      ) : (
       <div className="venues-grid">
         {venues.map((venue) => {
           const cover = venue.photos?.[0] || venue.mapImageUrl;
@@ -99,6 +114,7 @@ export default async function VenuesPage({
           );
         })}
       </div>
+      )}
       <SiteFooter />
     </main>
   );

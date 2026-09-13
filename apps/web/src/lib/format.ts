@@ -31,6 +31,15 @@ export function formatWhen(iso: string) {
   });
 }
 
+/** Member-since line: Persian digits, Gregorian month/year (never Jalali). */
+export function formatMemberSince(iso: string) {
+  return new Date(iso).toLocaleDateString(DATE_LOCALE, {
+    year: "numeric",
+    month: "long",
+    timeZone: TIME_ZONE,
+  });
+}
+
 export function capacityWidth(going: number, capacity: number | null | undefined) {
   if (!capacity || capacity <= 0) return null;
   return Math.min(100, Math.round((going / capacity) * 100));

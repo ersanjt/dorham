@@ -28,6 +28,7 @@ export const ERROR_FA: Record<string, string> = {
   ALREADY_BLOCKED: "قبلاً بلاک شده.",
   REPORT_INVALID: "گزارش پذیرفته نشد.",
   RATE_LIMITED: "چند لحظه صبر کن و دوباره تلاش کن.",
+  MAIL_UNAVAILABLE: "ارسال ایمیل الان ممکن نیست. کمی بعد دوباره امتحان کن.",
   INTERNAL: "خطای داخلی. دوباره تلاش کن.",
   NETWORK: "ارتباط با سرور برقرار نشد. اتصال اینترنت را چک کن و دوباره تلاش کن.",
   EVENT_CANCELLED: "این رویداد لغو شده.",

@@ -1,10 +1,10 @@
+import Link from "next/link";
 import { PageIntro } from "../../components/page-intro";
 import { SiteFooter } from "../../components/site-footer";
 import { SiteHeader } from "../../components/site-header";
 
 const PLAY = process.env.NEXT_PUBLIC_PLAY_STORE_URL?.trim();
 const APPLE = process.env.NEXT_PUBLIC_APP_STORE_URL?.trim();
-const EXPO = process.env.NEXT_PUBLIC_EXPO_URL?.trim();
 
 export default function GetAppPage() {
   const hasStores = Boolean(PLAY || APPLE);
@@ -12,22 +12,39 @@ export default function GetAppPage() {
   return (
     <main className="wrap">
       <SiteHeader />
-      <PageIntro kicker="اپ شهر" title="دورهم روی گوشی">
-        <p className="lead">یک اپ برای آیفون و اندروید. صفحهٔ اول شهر و رویداد است، نه سوایپ.</p>
+      <PageIntro kicker="شروع از وب" title="الان روی وبسایت">
+        <p className="lead">
+          برای لانچ استانبول همهٔ کارها از وب انجام می‌شود: ثبت‌نام، رویداد، RSVP، مکان‌ها و تأیید هویت. اپ استور هنوز
+          منتشر نشده — لینک دانلود الکی نمی‌گذاریم.
+        </p>
       </PageIntro>
 
       <article className="card">
-        <h2>همین حالا روی وب</h2>
-        <p>
-          تا انتشار استور، همهٔ کارها از وب انجام می‌شود:{" "}
-          <a href="https://www.dorham.app">www.dorham.app</a>
-        </p>
-        <p className="muted">ثبت‌نام، رویداد، RSVP، فید شهر، مکان‌ها و تأیید دست‌نویس روی وب آماده است.</p>
+        <h2>مسیر درست عضویت</h2>
+        <ol className="prose" style={{ paddingInlineStart: "1.2rem", lineHeight: 1.9 }}>
+          <li>
+            برو به{" "}
+            <Link href="https://www.dorham.app/register">www.dorham.app/register</Link>
+          </li>
+          <li>ایمیل را تأیید کن (لینک از صندوق ورودی)</li>
+          <li>رویداد این هفته را RSVP کن یا در مکان‌ها هماهنگی بگذار</li>
+        </ol>
+        <div className="row" style={{ marginTop: 16 }}>
+          <Link className="btn" href="/register">
+            عضویت
+          </Link>
+          <Link className="btn ghost" href="/events">
+            رویدادها
+          </Link>
+          <Link className="btn ghost" href="/venues">
+            مکان‌ها
+          </Link>
+        </div>
       </article>
 
       {hasStores ? (
         <article className="card">
-          <h2>دانلود</h2>
+          <h2>دانلود اپ</h2>
           <div className="row">
             {PLAY ? (
               <a className="btn" href={PLAY} rel="noopener noreferrer">
@@ -43,24 +60,14 @@ export default function GetAppPage() {
         </article>
       ) : (
         <article className="card">
-          <h2>استور</h2>
+          <h2>اپ گوشی</h2>
           <p>
-            نام استور <strong>Dorham</strong>، دستهٔ شبکه‌های اجتماعی، سن ۱۷+. انتشار Play و App Store بعد از
-            اولین جمعهٔ واقعی استانبول.
+            iOS و Android بعد از اولین جمعهٔ واقعی و وقتی <code>api.dorham.app</code> سالم باشد منتشر می‌شوند. تا آن
+            موقع از وب استفاده کن؛ دکمهٔ دانلود ساختگی نشان نمی‌دهیم.
           </p>
-          <p className="muted">الان از وب استفاده کن؛ لینک دانلود اینجا اضافه می‌شود.</p>
+          <p className="muted">اگر کسی لینک استور خواست: بگو «فعلاً فقط وب — www.dorham.app».</p>
         </article>
       )}
-
-      {EXPO && process.env.NODE_ENV !== "production" ? (
-        <article className="card">
-          <h2>توسعه (Expo Go)</h2>
-          <p className="strong" style={{ wordBreak: "break-all" }}>
-            <a href={EXPO}>{EXPO}</a>
-          </p>
-          <p className="muted">فقط برای تیم — روی شبکهٔ محلی.</p>
-        </article>
-      ) : null}
 
       <SiteFooter />
     </main>

@@ -126,7 +126,7 @@ export class UsersService {
       throw new NotFoundException({ code: "USER_NOT_FOUND", message: "User not found." });
     }
 
-    const [venuesVisited, eventsAttended, eventsHosted, venueRows] = await Promise.all([
+    const [venuesVisited, eventsAttended, eventsHosted, venueRows, eventRows, hangRows] = await Promise.all([
       this.prisma.venueVisit.count({ where: { userId, status: "VERIFIED" } }),
       this.prisma.eventRsvp.count({ where: { userId, checkedInAt: { not: null } } }),
       this.prisma.event.count({ where: { hostId: userId, status: { in: ["PUBLISHED", "ENDED"] } } }),
@@ -134,6 +134,18 @@ export class UsersService {
         where: { userId, status: "VERIFIED" },
         orderBy: { lastVisitedAt: "desc" },
         take: 24,
+        include: { venue: true },
+      }),
+      this.prisma.eventRsvp.findMany({
+        where: { userId, checkedInAt: { not: null } },
+        orderBy: { checkedInAt: "desc" },
+        take: 12,
+        include: { event: true },
+      }),
+      this.prisma.venueHangPlan.findMany({
+        where: { userId, cancelledAt: null, startsAt: { gte: new Date() } },
+        orderBy: { startsAt: "asc" },
+        take: 8,
         include: { venue: true },
       }),
     ]);
@@ -156,6 +168,19 @@ export class UsersService {
         venueArea: row.venue.area,
         visitCount: row.visitCount,
         lastVisitedAt: row.lastVisitedAt.toISOString(),
+      })),
+      eventsAttended: eventRows.map((row) => ({
+        id: row.event.id,
+        title: row.event.title,
+        venue: row.event.venue,
+        startsAt: row.event.startsAt.toISOString(),
+      })),
+      hangPlans: hangRows.map((row) => ({
+        id: row.id,
+        venueSlug: row.venue.slug,
+        venueName: row.venue.name,
+        startsAt: row.startsAt.toISOString(),
+        intent: row.intent,
       })),
     };
   }

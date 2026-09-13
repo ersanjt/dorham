@@ -30,6 +30,27 @@ export const publicUserSchema = z.object({
       }),
     )
     .optional(),
+  eventsAttended: z
+    .array(
+      z.object({
+        id: z.string(),
+        title: z.string(),
+        venue: z.string().nullable(),
+        startsAt: z.string().datetime(),
+      }),
+    )
+    .optional(),
+  hangPlans: z
+    .array(
+      z.object({
+        id: z.string(),
+        venueSlug: z.string(),
+        venueName: z.string(),
+        startsAt: z.string().datetime(),
+        intent: z.enum(["LUNCH", "DINNER", "COFFEE", "OTHER"]),
+      }),
+    )
+    .optional(),
 });
 
 export type PublicUser = z.infer<typeof publicUserSchema>;

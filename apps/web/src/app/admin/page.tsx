@@ -88,13 +88,28 @@ export default function AdminModerationPage() {
         <p className="muted">مکان‌ها، نظرات، عکس‌ها، گزارش‌ها، و نقش میزبان.</p>
       </PageIntro>
       {!staff ? (
-        <div className="banner err">فقط مدیر و ناظر.</div>
+        <div className="banner err">فقط مدیر و ناظر. این صفحه برای عموم نیست.</div>
       ) : (
         <>
           {message ? <div className="banner ok">{message}</div> : null}
           {error ? <div className="banner err">{error}</div> : null}
 
-          <section className="stack">
+          <div className="admin-summary">
+            <Link className="admin-summary-chip" href="#venues-pending">
+              مکان {venues.length.toLocaleString("fa-IR")}
+            </Link>
+            <Link className="admin-summary-chip" href="#reviews-pending">
+              نظر {pendingReviews.length.toLocaleString("fa-IR")}
+            </Link>
+            <Link className="admin-summary-chip" href="#photos-pending">
+              عکس {pendingPhotos.length.toLocaleString("fa-IR")}
+            </Link>
+            <Link className="admin-summary-chip" href="/admin/verify">
+              تأیید دست‌نویس
+            </Link>
+          </div>
+
+          <section className="stack" id="venues-pending">
             <h2>مکان‌های در انتظار</h2>
             {venues.length === 0 ? <p className="muted">صف خالی است.</p> : null}
             {venues.map((v) => (
@@ -123,7 +138,7 @@ export default function AdminModerationPage() {
           </section>
 
           <section className="stack" style={{ marginTop: 32 }}>
-            <h2>نظرات در انتظار</h2>
+            <h2 id="reviews-pending">نظرات در انتظار</h2>
             {pendingReviews.length === 0 ? <p className="muted">نظری در صف نیست.</p> : null}
             {pendingReviews.map((r) => (
               <article className="card" key={r.id}>
@@ -174,7 +189,7 @@ export default function AdminModerationPage() {
           </section>
 
           <section className="stack" style={{ marginTop: 32 }}>
-            <h2>عکس‌های در انتظار</h2>
+            <h2 id="photos-pending">عکس‌های در انتظار</h2>
             {pendingPhotos.length === 0 ? <p className="muted">عکسی در صف نیست.</p> : null}
             {pendingPhotos.map((p) => (
               <article className="card" key={p.id}>

@@ -40,7 +40,27 @@ EXPO_PUBLIC_WEB_URL=https://dorham.app
 
 ## Same VPS as Vira VPN (important)
 
-On `92.205.182.99`, **port 443 is owned by Xray** (`vira.service`). Proxied Cloudflare `A` records to that IP send HTTPS to Xray → `Invalid URL` / AkamaiGHost.
+On `92.205.182.99`, **port 443 is owned by Xray** (`vira.service`). Proxied Cloudflare `A` records to that IP send HTTPS to Xray → `Invalid URL` / AkamaiGHost / **`NET::ERR_CERT_COMMON_NAME_INVALID`**.
+
+### Fix apex `dorham.app` cert error (do this in Cloudflare DNS)
+
+Symptom: Chrome shows «Your connection is not private» on `https://dorham.app` while `https://www.dorham.app` works.
+
+Cause (live check): `@` resolves to **`92.205.182.99`** (VPS). `www` resolves to **Cloudflare** (`104.21…` / `172.67…`).
+
+1. Cloudflare → zone **dorham.app** → **DNS**.
+2. Delete (or turn off proxy then delete) any **A** / **AAAA** for `@` / `dorham.app` that points to `92.205.182.99`.
+3. Cloudflare → **Zero Trust** → **Networks** → **Tunnels** → your dorham tunnel → **Public Hostname**:
+   - `dorham.app` → `http://127.0.0.1:3000`
+   - `www.dorham.app` → `http://127.0.0.1:3000`
+   - `api.dorham.app` → `http://127.0.0.1:4000`
+4. Saving a Public Hostname usually creates the right **CNAME** to `*.cfargotunnel.com` (proxied). Do **not** recreate an A to the VPS for web/api.
+5. Keep **`vpn.dorham.app`** as DNS-only **A** → `92.205.182.99` for Vira.
+6. Prove:
+   - `nslookup dorham.app` → Cloudflare IPs (not `92.205.182.99`)
+   - `https://dorham.app` loads (no cert warning)
+   - `https://dorham.app/v1/health` → JSON
+   - `https://api.dorham.app/v1/health` → JSON
 
 | Service | Bind | Notes |
 | --- | --- | --- |

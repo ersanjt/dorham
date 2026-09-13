@@ -3,6 +3,7 @@ import { Image, Linking } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import type { EventDto, VenueDto, VenueReview } from "@dorham/shared";
 import { EventCard } from "../../../components/event-card";
+import { VenueHangPlans } from "../../../components/venue-hang-plans";
 import { AppText, Banner, Button, Card, Field, Loading, Screen } from "../../../components/ui";
 import { api, ApiError } from "../../../lib/api";
 import { publicMediaUrl } from "../../../lib/api-base";
@@ -102,6 +103,7 @@ export default function VenueDetailScreen() {
           onPress={() => router.push(`/feed?venue=${venue.slug}`)}
         />
       ) : null}
+      {slug ? <VenueHangPlans slug={slug} /> : null}
       <AppText bold size="title">
         رویدادها در این مکان
       </AppText>
