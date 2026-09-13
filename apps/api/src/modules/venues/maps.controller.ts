@@ -1,7 +1,7 @@
-import { BadRequestException, Controller, Get, Header, Query, ServiceUnavailableException, StreamableFile } from "@nestjs/common";
+import { BadRequestException, Controller, Get, Header, Query, StreamableFile } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { loadEnv } from "../../config/env";
-import { osmMapPreviewUrl, streetViewPhotoUrl } from "./map-preview";
+import { streetViewPhotoUrl, venueCoverSvg } from "./map-preview";
 
 function parseCoord(raw: string | undefined, min: number, max: number): number | null {
   if (raw == null || raw === "") return null;
@@ -19,9 +19,12 @@ async function fetchImageBytes(url: string): Promise<{ buf: Buffer; type: string
       signal: ctrl.signal,
     });
     if (!upstream.ok) return null;
+    const type = upstream.headers.get("content-type") || "";
+    // Google returns text/plain JSON errors with 200 sometimes; reject non-images.
+    if (type.includes("text/") || type.includes("json")) return null;
     const buf = Buffer.from(await upstream.arrayBuffer());
-    if (buf.length < 64) return null;
-    return { buf, type: upstream.headers.get("content-type") || "image/jpeg" };
+    if (buf.length < 256) return null;
+    return { buf, type: type || "image/jpeg" };
   } catch {
     return null;
   } finally {
@@ -29,10 +32,6 @@ async function fetchImageBytes(url: string): Promise<{ buf: Buffer; type: string
   }
 }
 
-/**
- * Proxies Google Static / Street View so the API key never reaches the browser.
- * Returns image bytes via StreamableFile (no @Res / redirect — those 502 under Cloudflare).
- */
 @ApiTags("maps")
 @Controller("maps")
 export class MapsController {
@@ -44,6 +43,7 @@ export class MapsController {
   async staticMap(
     @Query("lat") latRaw: string | undefined,
     @Query("lng") lngRaw: string | undefined,
+    @Query("label") label: string | undefined,
   ): Promise<StreamableFile> {
     const lat = parseCoord(latRaw, -90, 90);
     const lng = parseCoord(lngRaw, -180, 180);
@@ -53,10 +53,16 @@ export class MapsController {
 
     const key = this.env.GOOGLE_MAPS_API_KEY?.trim();
     const marker = `${lat},${lng}`;
-    const googleUrl = key
-      ? `https://maps.googleapis.com/maps/api/staticmap?center=${marker}&zoom=16&size=640x360&scale=2&maptype=roadmap&markers=color:0xB12E28%7C${marker}&key=${encodeURIComponent(key)}`
-      : null;
-    return this.imageResponse(googleUrl, osmMapPreviewUrl(lat, lng, 15));
+    if (key) {
+      const googleUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${marker}&zoom=16&size=640x360&scale=2&maptype=roadmap&markers=color:0xB12E28%7C${marker}&key=${encodeURIComponent(key)}`;
+      const hit = await fetchImageBytes(googleUrl);
+      if (hit) return new StreamableFile(hit.buf, { type: hit.type, disposition: "inline" });
+    }
+
+    return new StreamableFile(venueCoverSvg(lat, lng, label?.trim() || "استانبول"), {
+      type: "image/svg+xml",
+      disposition: "inline",
+    });
   }
 
   @Get("streetview")
@@ -66,6 +72,7 @@ export class MapsController {
     @Query("lat") latRaw: string | undefined,
     @Query("lng") lngRaw: string | undefined,
     @Query("heading") headingRaw: string | undefined,
+    @Query("label") label: string | undefined,
   ): Promise<StreamableFile> {
     const lat = parseCoord(latRaw, -90, 90);
     const lng = parseCoord(lngRaw, -180, 180);
@@ -75,16 +82,15 @@ export class MapsController {
     }
 
     const key = this.env.GOOGLE_MAPS_API_KEY?.trim();
-    const googleUrl = key ? streetViewPhotoUrl(lat, lng, heading, key) : null;
-    return this.imageResponse(googleUrl, osmMapPreviewUrl(lat, lng, 15));
-  }
-
-  private async imageResponse(primary: string | null, fallback: string): Promise<StreamableFile> {
-    const urls = primary ? [primary, fallback] : [fallback];
-    for (const url of urls) {
-      const hit = await fetchImageBytes(url);
+    if (key) {
+      const hit = await fetchImageBytes(streetViewPhotoUrl(lat, lng, heading, key));
       if (hit) return new StreamableFile(hit.buf, { type: hit.type, disposition: "inline" });
     }
-    throw new ServiceUnavailableException({ code: "MAP_UNAVAILABLE", message: "map unavailable" });
+
+    // Google 403 / missing key → crisp SVG, not a stretched 256px OSM tile.
+    return new StreamableFile(venueCoverSvg(lat, lng, label?.trim() || "استانبول"), {
+      type: "image/svg+xml",
+      disposition: "inline",
+    });
   }
 }

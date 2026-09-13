@@ -21,7 +21,7 @@ import { newOpaqueToken, secretsEqual } from "../../common/crypto";
 import { loadEnv } from "../../config/env";
 import { MediaService } from "../media/media.service";
 import { NotificationsService } from "../users/notifications.service";
-import { osmMapPreviewUrl, streetViewEmbedUrl } from "./map-preview";
+import { streetViewEmbedUrl } from "./map-preview";
 
 const publishedReviewCount = { reviews: { where: { status: "PUBLISHED" as const } } };
 
@@ -727,18 +727,18 @@ export class VenuesService {
 
     if (row.lat != null && row.lng != null) {
       const key = this.env.GOOGLE_MAPS_API_KEY?.trim();
+      const label = encodeURIComponent(row.area || row.name);
       if (key) {
-        // Same-origin /v1 proxy — Google key stays on the API (no browser IP / key leak).
-        mapImageUrl = `/v1/maps/static?lat=${row.lat}&lng=${row.lng}`;
+        mapImageUrl = `/v1/maps/static?lat=${row.lat}&lng=${row.lng}&label=${label}`;
         for (const heading of [20, 140, 260]) {
           gallery.push({
             kind: "street",
-            src: `/v1/maps/streetview?lat=${row.lat}&lng=${row.lng}&heading=${heading}`,
+            src: `/v1/maps/streetview?lat=${row.lat}&lng=${row.lng}&heading=${heading}&label=${label}`,
             label: `نمای خیابان · ${heading}°`,
           });
         }
       } else {
-        mapImageUrl = osmMapPreviewUrl(row.lat, row.lng, 15);
+        mapImageUrl = `/v1/maps/static?lat=${row.lat}&lng=${row.lng}&label=${label}`;
         for (const heading of [20, 140, 260]) {
           gallery.push({
             kind: "street",
@@ -753,17 +753,12 @@ export class VenuesService {
       }
     }
 
-    // Card covers: real photos → Street View stills → map tile last.
+    // Card covers: community/curated photos → static map cover (street stays in gallery).
     const photos: string[] = [];
     for (const g of gallery) {
       if (g.kind === "photo") photos.push(g.src);
     }
-    for (const g of gallery) {
-      if (g.kind === "street" && !g.src.includes("svembed")) photos.push(g.src);
-    }
-    if (photos.length === 0 && mapImageUrl) {
-      photos.push(mapImageUrl);
-    }
+    if (mapImageUrl) photos.push(mapImageUrl);
 
     return {
       id: row.id,

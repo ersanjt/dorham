@@ -9,6 +9,7 @@ import { SiteHeader } from "../../components/site-header";
 import { SiteFooter } from "../../components/site-footer";
 import { api, ApiError } from "../../lib/api";
 import { verifyFa } from "../../lib/format";
+import { publicMediaUrl } from "../../lib/media-url";
 import { clearSession, isSignedIn } from "../../lib/session";
 
 type Tab = "overview" | "edit" | "activity" | "trust" | "inbox";
@@ -150,8 +151,9 @@ function AccountBody() {
         <div className="profile-hero-cover" aria-hidden />
         <div className="profile-hero-body">
           <div className="profile-avatar-wrap">
-            {me.photoUrl ? (
-              <img className="profile-avatar" src={me.photoUrl} alt="" />
+            {publicMediaUrl(me.photoUrl) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="profile-avatar" src={publicMediaUrl(me.photoUrl)!} alt="" />
             ) : (
               <div className="profile-avatar profile-avatar-empty" aria-hidden>
                 {me.displayName.slice(0, 1)}

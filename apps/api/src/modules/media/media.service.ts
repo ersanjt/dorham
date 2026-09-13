@@ -29,7 +29,8 @@ export class MediaService {
   signedUrl(id: string, ttlSeconds = SIGN_SECONDS) {
     const exp = Math.floor(Date.now() / 1000) + ttlSeconds;
     const sig = signMediaQuery(id, exp, this.env.JWT_ACCESS_SECRET);
-    return `${this.env.API_PUBLIC_URL}/v1/media/${id}?exp=${exp}&sig=${sig}`;
+    // Path-only so www.dorham.app Next rewrite + Expo publicMediaUrl both work.
+    return `/v1/media/${id}?exp=${exp}&sig=${sig}`;
   }
 
   async photoUrl(photoId: string | null | undefined) {
