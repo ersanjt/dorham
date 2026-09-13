@@ -23,7 +23,7 @@ async function loadFeed(): Promise<FeedPost[]> {
 
 async function loadEvents(): Promise<EventDto[]> {
   try {
-    const res = await fetch(`${API}/v1/events?city=istanbul&limit=3`, { cache: "no-store" });
+    const res = await fetch(`${API}/v1/events?city=istanbul&kind=COMMUNITY&limit=3`, { cache: "no-store" });
     if (!res.ok) return [];
     const json = (await res.json()) as { data: EventDto[] };
     return json.data ?? [];
@@ -163,6 +163,7 @@ export default async function HomePage() {
                   waitlistCount: event.waitlistCount,
                   hostName: event.host.displayName,
                   priceTry: event.priceTry,
+                  kind: event.kind,
                 }}
               />
             ))}

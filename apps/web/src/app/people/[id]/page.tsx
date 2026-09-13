@@ -130,7 +130,6 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                   hostName: event.host.displayName,
                   priceTry: event.priceTry,
                   kind: event.kind,
-                  externalTicketUrl: event.externalTicketUrl,
                 }}
               />
             ))}

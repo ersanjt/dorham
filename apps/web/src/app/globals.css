@@ -497,6 +497,14 @@ a { color: inherit; text-underline-offset: 0.18em; }
 }
 .form-card .form { margin-top: 0; max-width: none; }
 .event-card p { margin: 0 0 8px; }
+.event-card-city {
+  opacity: 0.96;
+  border-style: dashed;
+}
+.events-city-section h2 {
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  color: var(--muted);
+}
 .muted { color: var(--muted); }
 
 footer {

@@ -347,7 +347,6 @@ function AccountBody() {
                       hostName: event.host.displayName,
                       priceTry: event.priceTry,
                       kind: event.kind,
-                      externalTicketUrl: event.externalTicketUrl,
                     }}
                   />
                 ))}

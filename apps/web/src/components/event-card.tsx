@@ -13,13 +13,12 @@ export type EventCardData = {
   hostName?: string;
   priceTry?: number;
   kind?: "COMMUNITY" | "CITY_SHOW";
-  externalTicketUrl?: string | null;
 };
 
 export function EventCard({
   event,
   href,
-  cta = "جزئیات و ثبت حضور",
+  cta,
 }: {
   event: EventCardData;
   href?: string;
@@ -28,21 +27,26 @@ export function EventCard({
   const filled = capacityWidth(event.goingCount, event.capacity);
   const link = href ?? `/events/${event.id}`;
   const cityShow = event.kind === "CITY_SHOW";
+  const action = cta ?? (cityShow ? "هماهنگی با دوستان" : "جزئیات و ثبت حضور");
 
   return (
-    <article className="card event-card">
+    <article className={`card event-card${cityShow ? " event-card-city" : ""}`}>
       <div className="card-top">
         <span className="date-chip">{formatDayChip(event.startsAt)}</span>
         <span className="muted">
-          {cityShow ? "کنسرت شهر · " : ""}
+          {cityShow ? "تقویم شهر · " : ""}
           {event.venue ?? "استانبول"}
         </span>
       </div>
       <h3>{event.title}</h3>
-      {event.description ? <p className="muted">{event.description}</p> : null}
+      {cityShow ? (
+        <p className="muted">هماهنگی دوستان — نه فروش بلیط</p>
+      ) : event.description ? (
+        <p className="muted">{event.description}</p>
+      ) : null}
       <p className="meta">
         {cityShow
-          ? `${event.goingCount.toLocaleString("fa-IR")} علاقه‌مند`
+          ? `${event.goingCount.toLocaleString("fa-IR")} نفر علاقه‌مند به هماهنگی`
           : `${event.hostName ? `میزبان: ${event.hostName} · ` : ""}${event.goingCount}${
               event.capacity ? ` از ${event.capacity}` : ""
             } نفر${event.waitlistCount ? ` · ${event.waitlistCount} در انتظار` : ""}${
@@ -54,16 +58,9 @@ export function EventCard({
           <i style={{ width: `${filled}%` }} />
         </div>
       ) : null}
-      <div className="row" style={{ marginTop: 12, gap: 8, flexWrap: "wrap" }}>
-        <Link className="card-cta" href={link}>
-          {cityShow ? "جزئیات" : cta}
-        </Link>
-        {cityShow && event.externalTicketUrl ? (
-          <a className="btn ghost" href={event.externalTicketUrl} target="_blank" rel="noreferrer">
-            بلیط / منبع
-          </a>
-        ) : null}
-      </div>
+      <Link className="card-cta" href={link}>
+        {action}
+      </Link>
     </article>
   );
 }

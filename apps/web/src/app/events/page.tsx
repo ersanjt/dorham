@@ -8,9 +8,11 @@ import { resolveApiBase } from "../../lib/api-base";
 
 const API = resolveApiBase();
 
-async function loadEvents(when: "upcoming" | "past"): Promise<EventDto[]> {
+async function loadEvents(when: "upcoming" | "past", kind?: "COMMUNITY" | "CITY_SHOW"): Promise<EventDto[]> {
   try {
-    const res = await fetch(`${API}/v1/events?city=istanbul&when=${when}&limit=40`, { cache: "no-store" });
+    const q = new URLSearchParams({ city: "istanbul", when, limit: "40" });
+    if (kind) q.set("kind", kind);
+    const res = await fetch(`${API}/v1/events?${q}`, { cache: "no-store" });
     if (!res.ok) return [];
     const json = (await res.json()) as { data: EventDto[] };
     return json.data ?? [];
@@ -19,8 +21,8 @@ async function loadEvents(when: "upcoming" | "past"): Promise<EventDto[]> {
   }
 }
 
-function EventGrid({ events }: { events: EventDto[] }) {
-  if (events.length === 0) return <p className="muted">موردی نیست.</p>;
+function EventGrid({ events, empty }: { events: EventDto[]; empty: string }) {
+  if (events.length === 0) return <p className="muted">{empty}</p>;
   return (
     <div className="grid">
       {events.map((event) => (
@@ -38,9 +40,7 @@ function EventGrid({ events }: { events: EventDto[] }) {
             hostName: event.host.displayName,
             priceTry: event.priceTry,
             kind: event.kind,
-            externalTicketUrl: event.externalTicketUrl,
           }}
-          cta="جزئیات"
         />
       ))}
     </div>
@@ -48,37 +48,46 @@ function EventGrid({ events }: { events: EventDto[] }) {
 }
 
 export default async function EventsPage() {
-  const [upcoming, past] = await Promise.all([loadEvents("upcoming"), loadEvents("past")]);
-  const community = upcoming.filter((e) => e.kind !== "CITY_SHOW");
-  const cityShows = upcoming.filter((e) => e.kind === "CITY_SHOW");
+  const [community, cityShows, pastCommunity] = await Promise.all([
+    loadEvents("upcoming", "COMMUNITY"),
+    loadEvents("upcoming", "CITY_SHOW"),
+    loadEvents("past", "COMMUNITY"),
+  ]);
 
   return (
     <main className="wrap">
       <SiteHeader />
-      <PageIntro kicker="صفحهٔ اول دورهم" title="رویدادهای استانبول">
-        <p className="lead">
-          دورهمی‌های جامعه با RSVP و دمِ در — به‌علاوه تقویم کنسرت‌های شهر برای هماهنگی دوستان (بلیط جدا).
-        </p>
+      <PageIntro kicker="صفحهٔ اول دورهم" title="دورهمی‌های استانبول">
+        <p className="lead">اینجا برای جمع شدن است — RSVP، مهمان‌لیست، دمِ در. فروش بلیط کنسرت آرنا کار دورهم نیست.</p>
         <p className="muted">
-          <Link href="/events/new">ثبت دورهمی</Link> فقط برای میزبان.
+          <Link href="/events/new">ثبت دورهمی</Link> برای میزبان ·{" "}
+          <Link href="/venues">مکان‌های ایرانی</Link>
         </p>
       </PageIntro>
 
       <section className="stack" style={{ marginTop: 8 }}>
-        <h2>دورهمی‌های جامعه</h2>
-        <EventGrid events={community} />
+        <h2>جمع‌های جامعه</h2>
+        <p className="muted">میزبان دورهم، مکان واقعی، چک‌این با QR.</p>
+        <EventGrid events={community} empty="هنوز دورهمی منتشر نشده. میزبان می‌تواند یکی بسازد." />
       </section>
 
-      <section className="stack" style={{ marginTop: 32 }}>
-        <h2>کنسرت و شوهای شهر</h2>
-        <p className="muted">کشف و هماهنگی — دورهم فروشندهٔ بلیط آرنا نیست.</p>
-        <EventGrid events={cityShows} />
-      </section>
+      {cityShows.length > 0 ? (
+        <section className="stack events-city-section" style={{ marginTop: 40 }}>
+          <h2>تقویم شهر (هماهنگی)</h2>
+          <p className="muted">
+            کنسرت‌های عمومی شهر فقط برای هماهنگی دوستان است. CTA اصلی «علاقه‌مندم» داخل دورهم است — نه خروج به فروشگاه
+            بلیط.
+          </p>
+          <EventGrid events={cityShows} empty="" />
+        </section>
+      ) : null}
 
-      <section className="stack" style={{ marginTop: 32 }}>
-        <h2>گذشتهٔ اخیر</h2>
-        <EventGrid events={past} />
-      </section>
+      {pastCommunity.length > 0 ? (
+        <section className="stack" style={{ marginTop: 40 }}>
+          <h2>دورهمی‌های گذشته</h2>
+          <EventGrid events={pastCommunity} empty="" />
+        </section>
+      ) : null}
 
       <SiteFooter />
     </main>

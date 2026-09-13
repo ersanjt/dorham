@@ -11,17 +11,20 @@ export function EventActions({
   hostId,
   priceTry = 0,
   initialGuests = [],
+  kind = "COMMUNITY",
 }: {
   eventId: string;
   hostId: string;
   priceTry?: number;
   initialGuests?: EventGuest[];
+  kind?: "COMMUNITY" | "CITY_SHOW";
 }) {
   const [signedIn, setSignedIn] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
   const [guests, setGuests] = useState<EventGuest[]>(initialGuests);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const cityShow = kind === "CITY_SHOW";
 
   const isHost = Boolean(me && (me.id === hostId || me.role === "ADMIN" || me.role === "MODERATOR"));
   const mine = guests.find((guest) => guest.id === me?.id);
@@ -56,15 +59,15 @@ export function EventActions({
       <section style={{ marginTop: 28 }}>
         <div className="row">
           <Link className="btn" href={`/login?next=/events/${eventId}`}>
-            برای ثبت حضور وارد شو
+            {cityShow ? "برای اعلام علاقه وارد شو" : "برای ثبت حضور وارد شو"}
           </Link>
           <Link className="btn ghost" href={`/feed?event=${eventId}`}>
             نوشتن در فید شهر
           </Link>
         </div>
-        <h3>مهمان‌ها</h3>
+        <h3>{cityShow ? "علاقه‌مندان" : "مهمان‌ها"}</h3>
         {guests.length === 0 ? (
-          <p className="muted">هنوز کسی ثبت‌نام نکرده.</p>
+          <p className="muted">{cityShow ? "هنوز کسی علاقه‌مندی نزده." : "هنوز کسی ثبت‌نام نکرده."}</p>
         ) : (
           <div className="grid">
             {guests.map((guest) => (
@@ -74,7 +77,9 @@ export function EventActions({
                   <strong>
                     <Link href={`/people/${guest.id}`}>{guest.displayName}</Link>
                   </strong>
-                  <div className="muted">{guest.status === "GOING" ? "می‌آید" : "لیست انتظار"}</div>
+                  <div className="muted">
+                    {cityShow ? "علاقه‌مند" : guest.status === "GOING" ? "می‌آید" : "لیست انتظار"}
+                  </div>
                 </div>
               </div>
             ))}
@@ -86,14 +91,18 @@ export function EventActions({
 
   return (
     <section style={{ marginTop: 28 }}>
-      {mine?.status === "GOING" && mine.ticketStatus === "DUE" ? (
+      {mine?.status === "GOING" && mine.ticketStatus === "DUE" && !cityShow ? (
         <div className="banner">
           بلیت تو: {priceTry.toLocaleString("fa-IR")} لیر نقد دم در. وقتی وارد شوی، گرفته می‌شود.
         </div>
       ) : null}
-      {mine?.ticketStatus === "PAID_DOOR" ? <div className="banner ok">بلیت‌ات دم در گرفته شد.</div> : null}
+      {mine?.ticketStatus === "PAID_DOOR" && !cityShow ? <div className="banner ok">بلیت‌ات دم در گرفته شد.</div> : null}
       {mine?.status === "INTERESTED" ? (
-        <div className="banner">در لیست انتظاری. اگر جا باز شود، در همین صفحه وضعیتت عوض می‌شود.</div>
+        <div className="banner">
+          {cityShow
+            ? "علاقه‌مندی‌ات ثبت شد. دیگران می‌توانند برای هماهنگی ببینند."
+            : "در لیست انتظاری. اگر جا باز شود، در همین صفحه وضعیتت عوض می‌شود."}
+        </div>
       ) : null}
       {paused ? (
         <div className="banner err">
@@ -115,32 +124,34 @@ export function EventActions({
                 body: JSON.stringify({}),
               });
               setMessage(
-                data.waitlisted
-                  ? "ظرفیت پر بود؛ رفتی لیست انتظار."
-                  : data.ticketStatus === "DUE"
-                    ? `ثبت شد. بلیت ${priceTry.toLocaleString("fa-IR")} لیر را نقد دم در بده.`
-                    : "ثبت شد. می‌آیی.",
+                cityShow
+                  ? "علاقه‌مندی ثبت شد."
+                  : data.waitlisted
+                    ? "ظرفیت پر بود؛ رفتی لیست انتظار."
+                    : data.ticketStatus === "DUE"
+                      ? `ثبت شد. بلیت ${priceTry.toLocaleString("fa-IR")} لیر را نقد دم در بده.`
+                      : "ثبت شد. می‌آیی.",
               );
               await reloadGuests();
             } catch (err) {
-              setError(err instanceof ApiError ? err.message : "ثبت حضور نشد.");
+              setError(err instanceof ApiError ? err.message : "ثبت نشد.");
             }
           }}
         >
-          می‌آیم
+          {cityShow ? "علاقه‌مندم" : "می‌آیم"}
         </button>
         <button
           className="btn ghost"
           type="button"
           onClick={async () => {
             await api(`/events/${eventId}/rsvp`, { method: "DELETE", body: JSON.stringify({}) });
-            setMessage("لغو شد. اگر کسی در انتظار بود، جایش باز شد.");
+            setMessage(cityShow ? "علاقه‌مندی برداشته شد." : "لغو شد. اگر کسی در انتظار بود، جایش باز شد.");
             await reloadGuests();
           }}
         >
-          لغو حضور
+          {cityShow ? "لغو علاقه" : "لغو حضور"}
         </button>
-        {isHost ? (
+        {isHost && !cityShow ? (
           <>
             <Link className="btn" href={`/events/${eventId}/door`}>
               QR ورودی
