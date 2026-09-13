@@ -14,6 +14,7 @@ export type MobileEventCardData = {
   waitlistCount?: number;
   hostName?: string;
   priceTry?: number;
+  kind?: "COMMUNITY" | "CITY_SHOW";
 };
 
 export function EventCard({
@@ -23,7 +24,8 @@ export function EventCard({
   event: MobileEventCardData;
   onPress: () => void;
 }) {
-  const filled = capacityWidth(event.goingCount, event.capacity);
+  const cityShow = event.kind === "CITY_SHOW";
+  const filled = !cityShow ? capacityWidth(event.goingCount, event.capacity) : null;
 
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={event.title}>
@@ -46,21 +48,38 @@ export function EventCard({
             </AppText>
           </View>
           <AppText muted size="caption" style={{ flex: 1 }}>
+            {cityShow ? "تقویم شهر · " : ""}
             {event.venue ?? "استانبول"}
           </AppText>
         </View>
         <AppText bold size="title">
           {event.title}
         </AppText>
-        {event.description ? <AppText muted>{event.description}</AppText> : null}
+        {cityShow ? (
+          <AppText muted>هماهنگی دوستان — نه فروش بلیط</AppText>
+        ) : event.description ? (
+          <AppText muted numberOfLines={3}>
+            {event.description}
+          </AppText>
+        ) : null}
         <AppText muted size="caption">
-          {event.hostName ? `میزبان: ${event.hostName} · ` : ""}
-          {event.goingCount}
-          {event.capacity ? ` از ${event.capacity}` : ""} نفر
-          {event.waitlistCount ? ` · ${event.waitlistCount} در انتظار` : ""}
-          {event.priceTry ? ` · ${event.priceTry.toLocaleString("fa-IR")} لیر` : ""}
+          {cityShow
+            ? event.goingCount === 0
+              ? "هنوز کسی برای هماهنگی علامت نزده"
+              : `${event.goingCount.toLocaleString("fa-IR")} نفر علاقه‌مند به هماهنگی`
+            : `${event.hostName ? `میزبان: ${event.hostName} · ` : ""}${
+                event.goingCount === 0
+                  ? event.capacity
+                    ? `ظرفیت ${event.capacity.toLocaleString("fa-IR")} نفر · هنوز خالی`
+                    : "هنوز خالی"
+                  : `${event.goingCount.toLocaleString("fa-IR")}${
+                      event.capacity ? ` از ${event.capacity.toLocaleString("fa-IR")}` : ""
+                    } نفر`
+              }${event.waitlistCount ? ` · ${event.waitlistCount.toLocaleString("fa-IR")} در انتظار` : ""}${
+                event.priceTry ? ` · ${event.priceTry.toLocaleString("fa-IR")} لیر` : ""
+              }`}
         </AppText>
-        {filled != null ? (
+        {filled != null && event.goingCount > 0 ? (
           <View
             style={{
               height: 5,
@@ -84,6 +103,9 @@ export function EventCard({
             />
           </View>
         ) : null}
+        <AppText bold size="caption" style={{ color: color.clay, marginTop: 6 }}>
+          {cityShow ? "هماهنگی با دوستان" : "جزئیات و ثبت حضور"}
+        </AppText>
       </Card>
     </Pressable>
   );

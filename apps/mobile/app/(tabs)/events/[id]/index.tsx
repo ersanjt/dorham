@@ -37,15 +37,18 @@ export default function EventDetailScreen() {
     load().catch((err: unknown) => setError(err instanceof ApiError ? err.message : "رویداد خوانده نشد."));
   }, [id]);
 
-  const isHost = Boolean(me && event && (me.id === event.host.id || me.role === "ADMIN" || me.role === "MODERATOR"));
+  const cityShow = event?.kind === "CITY_SHOW";
+  const isHost = Boolean(
+    me && event && !cityShow && (me.id === event.host.id || me.role === "ADMIN" || me.role === "MODERATOR"),
+  );
   const mine = event?.myRsvp ?? guests.find((guest) => guest.id === me?.id);
   const mineStatus = mine && "status" in mine ? mine.status : undefined;
   const ticketStatus = mine && "ticketStatus" in mine ? mine.ticketStatus : undefined;
   const paused = me?.status === "PAUSED";
-  const filled = event ? capacityWidth(event.goingCount, event.capacity) : null;
+  const filled = event && !cityShow ? capacityWidth(event.goingCount, event.capacity) : null;
   const here = `/events/${id}`;
   const alreadyGoing = mineStatus === "GOING";
-  const waitlisted = mineStatus === "INTERESTED";
+  const interested = mineStatus === "INTERESTED";
 
   async function rsvp() {
     if (!isSignedIn()) {
@@ -59,11 +62,13 @@ export default function EventDetailScreen() {
     try {
       const data = await api<RsvpResult>(`/events/${id}/rsvp`, { method: "POST", body: JSON.stringify({}) });
       setNotice(
-        data.waitlisted
-          ? "ظرفیت پر بود؛ رفتی لیست انتظار."
-          : data.ticketStatus === "DUE" && event?.priceTry
-            ? `ثبت شد. ${event.priceTry.toLocaleString("fa-IR")} لیر را نقد دم در بده.`
-            : "ثبت شد. می‌آیی.",
+        cityShow
+          ? "علاقه‌مندی ثبت شد."
+          : data.waitlisted
+            ? "ظرفیت پر بود؛ رفتی لیست انتظار."
+            : data.ticketStatus === "DUE" && event?.priceTry
+              ? `ثبت شد. ${event.priceTry.toLocaleString("fa-IR")} لیر را نقد دم در بده.`
+              : "ثبت شد. می‌آیی.",
       );
       await load();
     } catch (err) {
@@ -74,7 +79,7 @@ export default function EventDetailScreen() {
   async function cancel() {
     try {
       await api(`/events/${id}/rsvp`, { method: "DELETE", body: JSON.stringify({}) });
-      setNotice("لغو شد.");
+      setNotice(cityShow ? "علاقه‌مندی برداشته شد." : "لغو شد.");
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "لغو نشد.");
@@ -100,28 +105,45 @@ export default function EventDetailScreen() {
   return (
     <Screen
       back
-      kicker={event ? `${event.venue ?? "استانبول"} · ${formatDayChip(event.startsAt)}` : undefined}
+      kicker={
+        event
+          ? `${cityShow ? "تقویم شهر" : event.venue ?? "استانبول"} · ${formatDayChip(event.startsAt)}`
+          : undefined
+      }
       title={event?.title ?? "رویداد"}
-      subtitle={event ? `میزبان: ${event.host.displayName}` : undefined}
+      subtitle={cityShow ? "هماهنگی دوستان ایرانی — نه فروش بلیط" : event ? `میزبان: ${event.host.displayName}` : undefined}
     >
       <Banner text={error} />
       <Banner text={notice} tone="ok" />
+      {cityShow ? (
+        <Banner text="این یک دورهمی میزبانی‌شده نیست — فقط تقویم شهر برای هماهنگی. بگو علاقه‌مندی تا دوستانت ببینند." />
+      ) : null}
       {paused ? (
         <Banner text="حساب متوقف است. ثبت حضور تازه بسته است؛ لغو هنوز ممکن است." />
       ) : null}
-      {waitlisted ? <Banner text="در لیست انتظاری. اگر جا باز شود، وضعیتت در همین صفحه عوض می‌شود." /> : null}
-      {alreadyGoing && ticketStatus === "DUE" && event?.priceTry ? (
+      {interested ? (
+        <Banner
+          text={
+            cityShow
+              ? "علاقه‌مندی‌ات ثبت شد. دیگران می‌توانند برای هماهنگی ببینند."
+              : "در لیست انتظاری. اگر جا باز شود، وضعیتت در همین صفحه عوض می‌شود."
+          }
+        />
+      ) : null}
+      {!cityShow && alreadyGoing && ticketStatus === "DUE" && event?.priceTry ? (
         <Banner text={`بلیت تو: ${event.priceTry.toLocaleString("fa-IR")} لیر نقد دم در.`} />
       ) : null}
-      {ticketStatus === "PAID_DOOR" ? <Banner text="بلیت‌ات دم در گرفته شد." tone="ok" /> : null}
-      {alreadyGoing && ticketStatus !== "DUE" && ticketStatus !== "PAID_DOOR" ? (
+      {!cityShow && ticketStatus === "PAID_DOOR" ? <Banner text="بلیت‌ات دم در گرفته شد." tone="ok" /> : null}
+      {!cityShow && alreadyGoing && ticketStatus !== "DUE" && ticketStatus !== "PAID_DOOR" ? (
         <Banner text="ثبت شدی. می‌آیی." tone="ok" />
       ) : null}
       {event ? (
         <>
-          <Pressable onPress={() => router.push(`/people/${event.host.id}`)}>
-            <AppText muted>میزبان: {event.host.displayName}</AppText>
-          </Pressable>
+          {!cityShow ? (
+            <Pressable onPress={() => router.push(`/people/${event.host.id}`)}>
+              <AppText muted>میزبان: {event.host.displayName}</AppText>
+            </Pressable>
+          ) : null}
           <AppText>{event.description}</AppText>
           {event.venueSlug ? (
             <Button
@@ -131,59 +153,72 @@ export default function EventDetailScreen() {
             />
           ) : null}
           {event.address ? <AppText muted>{event.address}</AppText> : null}
-          <Card>
-            <AppText bold>{event.priceTry ? formatPriceTry(event.priceTry) : "ورود رایگان"}</AppText>
-            {event.priceTry ? <AppText muted>نقد دم در. درگاه آنلاین بعداً.</AppText> : null}
-            <AppText bold>
-              {event.goingCount}
-              {event.capacity ? ` از ${event.capacity}` : ""} نفر می‌آیند
-            </AppText>
-            <AppText muted>
-              {event.capacity && event.goingCount >= event.capacity
-                ? "ظرفیت پر است. می‌توانی به لیست انتظار بروی."
-                : "هنوز جا هست."}
-              {event.waitlistCount ? ` · ${event.waitlistCount} در انتظار` : ""}
-            </AppText>
-            {filled != null ? (
-              <View
-                style={{
-                  height: 6,
-                  borderRadius: radius.pill,
-                  backgroundColor: color.paper,
-                  overflow: "hidden",
-                }}
-              >
+          {cityShow ? (
+            <Card>
+              <AppText bold>{event.goingCount.toLocaleString("fa-IR")} نفر علاقه‌مند به هماهنگی</AppText>
+              <AppText muted>این عدد فقط داخل دورهم است — چند نفر برای رفتن با دوستان علامت زده‌اند.</AppText>
+            </Card>
+          ) : (
+            <Card>
+              <AppText bold>{event.priceTry ? formatPriceTry(event.priceTry) : "ورود رایگان"}</AppText>
+              {event.priceTry ? <AppText muted>نقد دم در. درگاه آنلاین بعداً.</AppText> : null}
+              <AppText bold>
+                {event.goingCount}
+                {event.capacity ? ` از ${event.capacity}` : ""} نفر می‌آیند
+              </AppText>
+              <AppText muted>
+                {event.capacity && event.goingCount >= event.capacity
+                  ? "ظرفیت پر است. می‌توانی به لیست انتظار بروی."
+                  : "هنوز جا هست."}
+                {event.waitlistCount ? ` · ${event.waitlistCount} در انتظار` : ""}
+              </AppText>
+              {filled != null && event.goingCount > 0 ? (
                 <View
                   style={{
-                    width: `${Math.max(filled, 8)}%`,
-                    minWidth: 12,
-                    height: "100%",
-                    backgroundColor: color.clay,
+                    height: 6,
                     borderRadius: radius.pill,
+                    backgroundColor: color.paper,
+                    overflow: "hidden",
                   }}
-                />
-              </View>
-            ) : null}
-          </Card>
+                >
+                  <View
+                    style={{
+                      width: `${Math.max(filled, 8)}%`,
+                      minWidth: 12,
+                      height: "100%",
+                      backgroundColor: color.clay,
+                      borderRadius: radius.pill,
+                    }}
+                  />
+                </View>
+              ) : null}
+            </Card>
+          )}
         </>
       ) : null}
-      {!alreadyGoing && !waitlisted ? (
+      {!alreadyGoing && !interested ? (
         <Button
           label={
             !isSignedIn()
-              ? "ورود برای ثبت حضور"
-              : event?.priceTry
-                ? `می‌آیم · ${event.priceTry} لیر دم در`
-                : "می‌آیم"
+              ? cityShow
+                ? "ورود برای علاقه‌مندی"
+                : "ورود برای ثبت حضور"
+              : cityShow
+                ? "علاقه‌مندم"
+                : event?.priceTry
+                  ? `می‌آیم · ${event.priceTry} لیر دم در`
+                  : "می‌آیم"
           }
           onPress={rsvp}
           disabled={paused}
         />
       ) : null}
-      {waitlisted && !paused ? (
+      {interested && !paused && !cityShow ? (
         <Button label="در لیست انتظار هستی" disabled onPress={() => undefined} />
       ) : null}
-      {alreadyGoing || waitlisted ? <Button label="لغو حضور" variant="ghost" onPress={cancel} /> : null}
+      {alreadyGoing || interested ? (
+        <Button label={cityShow ? "لغو علاقه" : "لغو حضور"} variant="ghost" onPress={cancel} />
+      ) : null}
       {paused ? (
         <Button label="از سر گرفتن حساب" variant="ghost" onPress={() => router.push("/account")} />
       ) : null}
@@ -194,17 +229,15 @@ export default function EventDetailScreen() {
           onPress={() => Share.share({ message: eventInviteText(event) }).catch(() => undefined)}
         />
       ) : null}
-      {event ? (
+      {event && !cityShow ? (
         <Button
           label="نوشتن در فید شهر"
           variant="ghost"
           onPress={() => router.push(`/feed?event=${event.id}`)}
         />
       ) : null}
-      {isHost ? (
-        <Button label="در ورودی" onPress={() => router.push(`/events/${id}/door`)} />
-      ) : null}
-      {event && me && !isHost && !paused ? (
+      {isHost ? <Button label="در ورودی" onPress={() => router.push(`/events/${id}/door`)} /> : null}
+      {event && me && !isHost && !paused && !cityShow ? (
         <>
           <Button
             label="بلاک میزبان"
@@ -248,18 +281,24 @@ export default function EventDetailScreen() {
         </>
       ) : null}
       <AppText bold size="title">
-        مهمان‌ها
+        {cityShow ? "علاقه‌مندان" : "مهمان‌ها"}
       </AppText>
-      {guests.length === 0 ? <Empty text="هنوز کسی ثبت‌نام نکرده." /> : null}
+      {guests.length === 0 ? (
+        <Empty text={cityShow ? "هنوز کسی علاقه‌مندی نزده." : "هنوز کسی ثبت‌نام نکرده."} />
+      ) : null}
       {guests.map((guest) => (
         <Pressable key={guest.id} onPress={() => router.push(`/people/${guest.id}`)}>
           <Card>
             <AppText bold>{guest.displayName}</AppText>
             <AppText muted size="caption">
-              {guest.status === "GOING" ? "می‌آید" : "لیست انتظار"}
-              {guest.ticketStatus === "DUE" ? " · بلیت دم در" : ""}
-              {guest.ticketStatus === "PAID_DOOR" ? " · بلیت گرفته شد" : ""}
-              {guest.checkedInAt ? " · وارد شد" : ""}
+              {cityShow
+                ? "علاقه‌مند"
+                : guest.status === "GOING"
+                  ? "می‌آید"
+                  : "لیست انتظار"}
+              {!cityShow && guest.ticketStatus === "DUE" ? " · بلیت دم در" : ""}
+              {!cityShow && guest.ticketStatus === "PAID_DOOR" ? " · بلیت گرفته شد" : ""}
+              {!cityShow && guest.checkedInAt ? " · وارد شد" : ""}
             </AppText>
           </Card>
         </Pressable>

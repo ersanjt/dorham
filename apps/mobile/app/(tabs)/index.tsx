@@ -29,7 +29,7 @@ export default function CityScreen() {
     setError("");
     setLoading(true);
     Promise.all([
-      api<EventDto[]>("/events?city=istanbul&limit=3", { auth: false }),
+      api<EventDto[]>("/events?city=istanbul&kind=COMMUNITY&limit=4", { auth: false }),
       api<FeedPost[]>("/feed?city=istanbul&limit=2", { auth: false }),
     ])
       .then(([nextEvents, nextPosts]) => {
@@ -47,6 +47,7 @@ export default function CityScreen() {
   }, []);
 
   const next = events[0];
+  const more = events.slice(1);
 
   return (
     <Screen
@@ -98,8 +99,13 @@ export default function CityScreen() {
               </AppText>
               <AppText muted>{next.venue ? next.venue : "استانبول"}</AppText>
               <AppText muted size="caption">
-                {formatPriceTry(next.priceTry)} · {next.goingCount}
-                {next.capacity ? ` از ${next.capacity}` : ""} نفر
+                {next.goingCount === 0
+                  ? next.capacity
+                    ? `ظرفیت ${next.capacity.toLocaleString("fa-IR")} نفر · هنوز کسی ثبت نکرده`
+                    : "هنوز کسی ثبت نکرده"
+                  : `${formatPriceTry(next.priceTry)} · ${next.goingCount.toLocaleString("fa-IR")}${
+                      next.capacity ? ` از ${next.capacity.toLocaleString("fa-IR")}` : ""
+                    } نفر`}
               </AppText>
             </View>
           </View>
@@ -122,10 +128,10 @@ export default function CityScreen() {
       {!loading && events.length === 0 && !error ? (
         <EmptyArt text="هنوز رویدادی منتشر نشده. اولین جمع واقعی را از تب رویداد بساز." />
       ) : null}
-      {events.map((event) => (
+      {more.map((event) => (
         <EventCard
           key={event.id}
-          event={{ ...event, hostName: event.host.displayName }}
+          event={{ ...event, hostName: event.host.displayName, kind: event.kind }}
           onPress={() => router.push(`/events/${event.id}`)}
         />
       ))}

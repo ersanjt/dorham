@@ -23,12 +23,14 @@ export function resolveApiBase() {
     return configured;
   }
   if (host) return `http://${host}:4000`;
-  return "https://api.dorham.app";
+  return "https://www.dorham.app";
 }
 
+/** Turn API-relative media/map paths into absolute URLs the native Image can load. */
 export function publicMediaUrl(url: string | null | undefined) {
   if (!url) return null;
   const base = resolveApiBase();
+  if (url.startsWith("/")) return `${base}${url}`;
   return url
     .replace(/https?:\/\/(localhost|127\.0\.0\.1):4000/g, base)
     .replace(/https?:\/\/192\.168\.\d+\.\d+:4000/g, base);

@@ -5,6 +5,7 @@ import type { EventDto, VenueDto, VenueReview } from "@dorham/shared";
 import { EventCard } from "../../../components/event-card";
 import { AppText, Banner, Button, Card, Field, Loading, Screen } from "../../../components/ui";
 import { api, ApiError } from "../../../lib/api";
+import { publicMediaUrl } from "../../../lib/api-base";
 import { venueKindFa } from "../../../lib/format";
 import { loginHref } from "../../../lib/paths";
 import { isSignedIn } from "../../../lib/session";
@@ -27,7 +28,7 @@ export default function VenueDetailScreen() {
     api<VenueReview[]>(`/venues/${slug}/reviews`, { auth: false })
       .then(setReviews)
       .catch(() => setReviews([]));
-    api<EventDto[]>(`/events?city=istanbul&venueSlug=${encodeURIComponent(slug)}&limit=10`, { auth: false })
+    api<EventDto[]>(`/events?city=istanbul&kind=COMMUNITY&venueSlug=${encodeURIComponent(slug)}&limit=10`, { auth: false })
       .then(setEvents)
       .catch(() => setEvents([]));
   }, [slug]);
@@ -66,14 +67,16 @@ export default function VenueDetailScreen() {
     >
       <Banner text={error} />
       <Banner text={notice} tone="ok" />
-      {venue?.mapImageUrl ? (
+      {venue ? (
         <Card style={{ padding: 0, overflow: "hidden" }}>
-          <Image
-            source={{ uri: venue.mapImageUrl }}
-            accessibilityLabel={`نقشه ${venue.name}`}
-            style={{ width: "100%", height: 180, backgroundColor: color.paperDeep }}
-            resizeMode="cover"
-          />
+          {publicMediaUrl(venue.photos?.[0] || venue.mapImageUrl) ? (
+            <Image
+              source={{ uri: publicMediaUrl(venue.photos?.[0] || venue.mapImageUrl)! }}
+              accessibilityLabel={venue.name}
+              style={{ width: "100%", height: 180, backgroundColor: color.paperDeep }}
+              resizeMode="cover"
+            />
+          ) : null}
         </Card>
       ) : null}
       {venue ? (
