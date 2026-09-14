@@ -390,6 +390,11 @@ function AccountBody() {
                     <Link href="/admin">صف مدیریت</Link>
                   </li>
                 )}
+                {me.role === "ADMIN" ? (
+                  <li>
+                    <Link href="/admin/users">اعضا و نقش‌ها</Link>
+                  </li>
+                ) : null}
               </ul>
             </div>
           </div>

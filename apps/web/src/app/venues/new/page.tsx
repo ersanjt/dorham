@@ -13,15 +13,38 @@ export default function SubmitVenuePage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [menuPreview, setMenuPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isSignedIn()) router.replace("/login?next=/venues/new");
   }, [router]);
 
+  useEffect(() => {
+    return () => {
+      if (menuPreview) URL.revokeObjectURL(menuPreview);
+    };
+  }, [menuPreview]);
+
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
+    const formEl = e.currentTarget;
+    const form = new FormData(formEl);
     const website = String(form.get("website") ?? "").trim();
+    const menuFile = (formEl.elements.namedItem("menuImage") as HTMLInputElement)?.files?.[0];
+
+    let menuMediaId: string | undefined;
+    if (menuFile) {
+      try {
+        const body = new FormData();
+        body.append("file", menuFile);
+        const media = await api<{ id: string }>("/media?kind=VENUE_MENU", { method: "POST", body });
+        menuMediaId = media.id;
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : "آپلود منو نشد.");
+        return;
+      }
+    }
+
     const parsed = submitVenueBodySchema.safeParse({
       name: String(form.get("name") ?? ""),
       kind: String(form.get("kind") ?? "RESTAURANT"),
@@ -34,6 +57,7 @@ export default function SubmitVenuePage() {
       website: website || undefined,
       priceRange: String(form.get("priceRange") ?? "") || undefined,
       menuNotes: String(form.get("menuNotes") ?? "") || undefined,
+      menuMediaId,
     });
     if (!parsed.success) {
       setError("نام، آدرس، توضیح و لینک گوگل‌مپ را کامل کن.");
@@ -105,10 +129,33 @@ export default function SubmitVenuePage() {
             حدود قیمت
             <input name="priceRange" placeholder="۱۵۰–۳۰۰ لیر" />
           </label>
-          <label>
-            منو / غذای شاخص
-            <textarea name="menuNotes" rows={3} maxLength={500} />
-          </label>
+          <fieldset className="venue-menu-fieldset">
+            <legend>منو</legend>
+            <p className="muted" style={{ marginTop: 0 }}>
+              عکس واضح از منو را آپلود کن تا همه ببینند. توضیح کوتاه اختیاری است.
+            </p>
+            <label>
+              عکس منو
+              <input
+                name="menuImage"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (menuPreview) URL.revokeObjectURL(menuPreview);
+                  setMenuPreview(file ? URL.createObjectURL(file) : null);
+                }}
+              />
+            </label>
+            {menuPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="venue-menu-preview" src={menuPreview} alt="پیش‌نمایش منو" />
+            ) : null}
+            <label>
+              غذای شاخص / توضیح منو
+              <textarea name="menuNotes" rows={3} maxLength={500} placeholder="مثلاً چلوکباب، قرمه‌سبزی، ته‌دیگ" />
+            </label>
+          </fieldset>
           <label>
             تلفن
             <input name="phone" />
@@ -118,7 +165,7 @@ export default function SubmitVenuePage() {
             <input name="website" type="url" />
           </label>
           <button className="btn" type="submit" disabled={pending}>
-            {pending ? "..." : "انتشار مکان"}
+            {pending ? "در حال ثبت…" : "ثبت مکان"}
           </button>
         </form>
       </div>

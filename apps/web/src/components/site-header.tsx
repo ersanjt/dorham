@@ -23,11 +23,15 @@ export function SiteHeader() {
   return (
     <nav className="nav">
       <Link className="brand" href="/">
-        <span className="brand-latin">Dorham</span>
-        <span className="brand-sep" aria-hidden>
-          ·
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="brand-mark" src="/brand/empty-events.png" alt="" width={40} height={40} />
+        <span className="brand-wordmark">
+          <span className="brand-latin">Dorham</span>
+          <span className="brand-sep" aria-hidden>
+            ·
+          </span>
+          <span className="brand-fa">دورهم</span>
         </span>
-        <span className="brand-fa">دورهم</span>
       </Link>
       <div className="nav-links">
         <Link href="/events">رویدادها</Link>

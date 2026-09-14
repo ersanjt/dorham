@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import {
   createVenueHangPlanBodySchema,
   createVenueReviewBodySchema,
   listCityHangPlansQuerySchema,
   listVenuesQuerySchema,
+  patchVenueMenuBodySchema,
   submitVenueBodySchema,
   submitVenuePhotoBodySchema,
   venueCheckInBodySchema,
@@ -114,6 +115,17 @@ export class VenuesController {
     @Body(new ZodPipe(venueCheckInBodySchema)) body: ReturnType<typeof venueCheckInBodySchema.parse>,
   ) {
     return this.venues.checkInVisit(id, user, body);
+  }
+
+  @Patch(":id/menu")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  patchMenu(
+    @Param("id") id: string,
+    @CurrentUser() user: { id: string; role: string },
+    @Body(new ZodPipe(patchVenueMenuBodySchema)) body: ReturnType<typeof patchVenueMenuBodySchema.parse>,
+  ) {
+    return this.venues.patchMenu(id, user, body);
   }
 
   @Get(":id/door")

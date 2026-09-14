@@ -30,6 +30,15 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: "Dorham — دورهم",
   description: "Iranian community in Turkey. Your people, in this city.",
+  icons: {
+    icon: [{ url: "/brand/empty-events.png", type: "image/png" }],
+    apple: [{ url: "/brand/empty-events.png" }],
+  },
+  openGraph: {
+    title: "Dorham — دورهم",
+    description: "جامعهٔ ایرانی استانبول. دور هم، نه سوایپ.",
+    images: [{ url: "/brand/empty-events.png" }],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -90,7 +90,16 @@ export default function SubmitVenueScreen() {
       <Field label="لینک گوگل‌مپ" value={mapsUrl} onChangeText={setMapsUrl} autoCapitalize="none" />
       <Field label="توضیح" value={description} onChangeText={setDescription} multiline />
       <Field label="حدود قیمت" value={priceRange} onChangeText={setPriceRange} />
-      <Field label="منو" value={menuNotes} onChangeText={setMenuNotes} multiline />
+      <Field
+        label="غذای شاخص / توضیح منو"
+        value={menuNotes}
+        onChangeText={setMenuNotes}
+        multiline
+        placeholder="عکس منو را بعداً از وب اضافه کن"
+      />
+      <AppText muted style={{ marginBottom: space.md }}>
+        آپلود عکس منو روی وب (صفحهٔ مکان → صاحب‌کار) کامل‌تر است.
+      </AppText>
       <Button label={pending ? "…" : "انتشار مکان"} onPress={submit} disabled={pending} />
     </Screen>
   );

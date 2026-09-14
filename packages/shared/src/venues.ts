@@ -43,6 +43,8 @@ export const venueSchema = z.object({
   hours: z.string().nullable(),
   priceRange: z.string().nullable(),
   menuNotes: z.string().nullable(),
+  /** Signed URL for uploaded menu image, if any. */
+  menuImageUrl: z.string().nullable(),
   reviewCount: z.number().int().nonnegative(),
   description: z.string(),
 });
@@ -78,9 +80,21 @@ export const submitVenueBodySchema = z.object({
   website: z.string().trim().url().max(200).optional(),
   priceRange: z.string().trim().max(40).optional(),
   menuNotes: z.string().trim().max(500).optional(),
+  menuMediaId: z.string().min(8).max(64).optional(),
 });
 
 export type SubmitVenueBody = z.infer<typeof submitVenueBodySchema>;
+
+export const patchVenueMenuBodySchema = z
+  .object({
+    menuNotes: z.string().trim().max(500).nullable().optional(),
+    menuMediaId: z.string().min(8).max(64).nullable().optional(),
+  })
+  .refine((v) => v.menuNotes !== undefined || v.menuMediaId !== undefined, {
+    message: "Empty menu patch",
+  });
+
+export type PatchVenueMenuBody = z.infer<typeof patchVenueMenuBodySchema>;
 
 export const venueReviewSchema = z.object({
   id: z.string(),

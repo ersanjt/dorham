@@ -1,6 +1,10 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
-import { moderateVenueContentBodySchema, setUserRoleBodySchema } from "@dorham/shared";
+import {
+  listAdminUsersQuerySchema,
+  moderateVenueContentBodySchema,
+  setUserRoleBodySchema,
+} from "@dorham/shared";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
 import { CurrentUser } from "../../common/current-user";
 import { Roles, RolesGuard } from "../../common/roles";
@@ -70,6 +74,12 @@ export class AdminController {
   @Post("venues/:id/publish")
   publishVenue(@CurrentUser() user: { id: string }, @Param("id") id: string) {
     return this.venues.publish(id, user.id);
+  }
+
+  @Get("users")
+  @Roles("ADMIN")
+  listUsers(@Query(new ZodPipe(listAdminUsersQuerySchema)) query: ReturnType<typeof listAdminUsersQuerySchema.parse>) {
+    return this.admin.listUsers(query).then((data) => ({ data }));
   }
 
   @Post("users/:id/role")

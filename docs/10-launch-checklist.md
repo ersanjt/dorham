@@ -49,7 +49,7 @@ Rotate seed password `DorhamHost1` after first login.
 ## Founder ops (not automatable)
 
 1. Log in as admin → `/events/new` → publish first real Istanbul gathering.
-2. Promote other hosts: `/admin` → شناسه کاربر → میزبان.
+2. Promote hosts/mods: `/admin/users` → search member → set role (HOST / MODERATOR / ADMIN).
 3. Review venues: `/admin` → انتشار.
 4. Review handwritten verification: `/admin/verify`.
 5. Triage reports: `/admin`.

@@ -10,6 +10,7 @@ import {
   CreateVenueReviewBody,
   ListVenuesQuery,
   ModerateVenueContentBody,
+  PatchVenueMenuBody,
   SubmitVenueBody,
   SubmitVenuePhotoBody,
   VenueCheckInBody,
@@ -82,6 +83,9 @@ export class VenuesService {
   async submit(userId: string, body: SubmitVenueBody) {
     const account = await this.prisma.user.findUnique({ where: { id: userId }, select: { status: true } });
     assertActive(account?.status ?? "DELETED");
+    if (body.menuMediaId) {
+      await this.media.requireOwned(userId, body.menuMediaId, "VENUE_MENU");
+    }
     const slug = await this.uniqueSlug(body.name, body.area, body.kind);
     const row = await this.prisma.venue.create({
       data: {
@@ -98,6 +102,7 @@ export class VenuesService {
         website: body.website || null,
         priceRange: body.priceRange || null,
         menuNotes: body.menuNotes || null,
+        menuMediaId: body.menuMediaId || null,
         published: false,
         submitterId: userId,
         ownerId: userId,
@@ -374,6 +379,29 @@ export class VenuesService {
     await this.prisma.auditLog.create({
       data: { userId, action: "venue.hang_plan", entity: "VenueHangPlan", entityId: row.id },
     });
+    const peerIds = await this.prisma.venueHangPlan.findMany({
+      where: {
+        venueId: venue.id,
+        cancelledAt: null,
+        userId: { not: userId },
+        startsAt: { gte: dayStart, lt: dayEnd },
+      },
+      select: { userId: true },
+      take: 40,
+    });
+    const uniquePeers = [...new Set(peerIds.map((p) => p.userId))].slice(0, 12);
+    const who = row.user.profile?.displayName ?? "یک عضو";
+    await Promise.all(
+      uniquePeers.map((peerId) =>
+        this.notifications.push({
+          userId: peerId,
+          kind: "hang.peer",
+          title: "هم‌زمان در یک مکان",
+          body: `${who} هم برای «${row.venue.name}» برنامه گذاشته.`,
+          href: `/venues/${row.venue.slug}`,
+        }),
+      ),
+    );
     return { data: await this.hangDto(row) };
   }
 
@@ -410,6 +438,15 @@ export class VenuesService {
     await this.prisma.auditLog.create({
       data: { userId, action: "venue.visit_request", entity: "VenueVisit", entityId: row.id },
     });
+    if (venue.ownerId && venue.ownerId !== userId) {
+      await this.notifications.push({
+        userId: venue.ownerId,
+        kind: "visit.requested",
+        title: "درخواست حضور",
+        body: `کسی برای «${venue.name}» درخواست تأیید حضور داده.`,
+        href: `/venues/${venue.slug}`,
+      });
+    }
     return { data: this.visitDto(row) };
   }
 
@@ -467,7 +504,53 @@ export class VenuesService {
         meta: { guestId },
       },
     });
+    if (guestId !== actor.id) {
+      await this.notifications.push({
+        userId: guestId,
+        kind: "visit.verified",
+        title: "حضور تأیید شد",
+        body: `حضور تو در «${venue.name}» تأیید شد و روی پروفایلت می‌آید.`,
+        href: `/people/${guestId}`,
+      });
+    }
     return { data: this.visitDto(row) };
+  }
+
+  async patchMenu(idOrSlug: string, actor: { id: string; role: string }, body: PatchVenueMenuBody) {
+    const venue = await this.prisma.venue.findFirst({
+      where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
+    });
+    if (!venue) {
+      throw new NotFoundException({ code: "VENUE_NOT_FOUND", message: "Venue not found." });
+    }
+    const isOwner = venue.ownerId === actor.id || venue.submitterId === actor.id;
+    const isStaff = actor.role === "ADMIN" || actor.role === "MODERATOR";
+    if (!isOwner && !isStaff) {
+      throw new ForbiddenException({
+        code: "VENUE_VISIT_FORBIDDEN",
+        message: "Only the venue owner can update the menu.",
+      });
+    }
+    if (body.menuMediaId) {
+      await this.media.requireOwned(actor.id, body.menuMediaId, "VENUE_MENU");
+    }
+    const updated = await this.prisma.venue.update({
+      where: { id: venue.id },
+      data: {
+        ...(body.menuNotes !== undefined ? { menuNotes: body.menuNotes } : {}),
+        ...(body.menuMediaId !== undefined ? { menuMediaId: body.menuMediaId } : {}),
+      },
+      include: venueDtoInclude,
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        userId: actor.id,
+        action: "venue.menu_patch",
+        entity: "Venue",
+        entityId: venue.id,
+      },
+    });
+    return { data: await this.toDto(updated) };
   }
 
   async claimOwner(idOrSlug: string, userId: string) {
@@ -714,6 +797,7 @@ export class VenuesService {
     hours: string | null;
     priceRange: string | null;
     menuNotes: string | null;
+    menuMediaId?: string | null;
     description: string;
     photos?: unknown;
     communityPhotos?: Array<{ mediaId: string; caption: string | null }>;
@@ -729,6 +813,11 @@ export class VenuesService {
     const stored = Array.isArray(row.photos)
       ? (row.photos as unknown[]).filter((u): u is string => typeof u === "string" && /^https?:\/\//i.test(u))
       : [];
+
+    const menuImageUrl = row.menuMediaId ? this.media.signedUrl(row.menuMediaId, 7 * 24 * 60 * 60) : null;
+    if (menuImageUrl) {
+      gallery.push({ kind: "photo", src: menuImageUrl, label: "منو" });
+    }
 
     // Prefer real place photos (community-approved, then curated) over maps.
     for (const photo of row.communityPhotos ?? []) {
@@ -797,6 +886,7 @@ export class VenuesService {
       hours: row.hours,
       priceRange: row.priceRange,
       menuNotes: row.menuNotes,
+      menuImageUrl,
       reviewCount: row._count.reviews,
       description: row.description,
     };

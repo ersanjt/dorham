@@ -81,9 +81,9 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
             </p>
             <p className="person-bio">{person.bio?.trim() || "هنوز معرفی عمومی ننوشته — حضورش در شهر مهم‌تر است."}</p>
             {!verified ? (
-              <p className="muted person-trust-note">ایمیل و تأیید هویت در پروفایل عمومی نیست؛ فقط نشان تأییدشده دیده می‌شود.</p>
+              <p className="muted person-trust-note">تأیید دست‌نویس عمومی نیست؛ فقط اگر تأیید شده باشد نشان کوچک دیده می‌شود.</p>
             ) : (
-              <p className="muted person-trust-note">انسان تأییدشدهٔ دورهم · بدون سوایپ.</p>
+              <p className="muted person-trust-note">تأیید دست‌نویس دورهم (نه کارت ملی) · بدون سوایپ.</p>
             )}
           </div>
         </div>

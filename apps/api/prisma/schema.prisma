@@ -63,6 +63,7 @@ enum MediaKind {
   PROFILE
   VERIFICATION
   VENUE_PHOTO
+  VENUE_MENU
 }
 
 enum ModerationStatus {
@@ -236,6 +237,8 @@ model Venue {
   hours       String?
   priceRange  String?
   menuNotes   String?
+  /** Optional uploaded menu photo (JPEG/PNG/WebP). */
+  menuMediaId String?
   description String
   /** Public image URLs (https). Never invent stock photos in seed. */
   photos      Json      @default("[]")

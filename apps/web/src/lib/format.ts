@@ -53,7 +53,7 @@ export function formatPriceTry(amount: number) {
 export const verifyFa: Record<string, string> = {
   NONE: "تأیید نشده",
   PENDING: "در صف تأیید",
-  VERIFIED: "تأییدشده",
+  VERIFIED: "تأیید دست‌نویس",
   REJECTED: "رد شده",
 };
 

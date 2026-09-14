@@ -6,6 +6,7 @@ import { assertActive, assertNotDeleted, assertNotSuspended } from "../../common
 import { newOpaqueToken, secretsEqual } from "../../common/crypto";
 import { loadEnv } from "../../config/env";
 import { MediaService } from "../media/media.service";
+import { NotificationsService } from "../users/notifications.service";
 
 @Injectable()
 export class EventsService {
@@ -14,6 +15,7 @@ export class EventsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly media: MediaService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async list(query: ListEventsQuery) {
@@ -296,11 +298,22 @@ export class EventsService {
     const full = Boolean(event.capacity && event._count.rsvps >= event.capacity);
     const status = full ? "INTERESTED" : "GOING";
     const ticketStatus = !full && event.priceTry > 0 ? "DUE" : "NONE";
+    const wasNew = !existing;
     await this.prisma.eventRsvp.upsert({
       where: { eventId_userId: { eventId, userId } },
       create: { eventId, userId, status, ticketStatus },
       update: { status, ticketStatus },
     });
+    if (wasNew && event.hostId !== userId) {
+      const guest = await this.prisma.profile.findUnique({ where: { userId }, select: { displayName: true } });
+      await this.notifications.push({
+        userId: event.hostId,
+        kind: status === "GOING" ? "event.rsvp" : "event.waitlist",
+        title: status === "GOING" ? "مهمان تازه" : "لیست انتظار",
+        body: `${guest?.displayName ?? "یک عضو"} برای «${event.title}» ${status === "GOING" ? "می‌آید" : "در انتظار جا است"}.`,
+        href: `/events/${event.id}`,
+      });
+    }
     return { data: { ok: true as const, status, waitlisted: full, ticketStatus } };
   }
 
@@ -329,6 +342,17 @@ export class EventsService {
             status: "GOING",
             ticketStatus: (event?.priceTry ?? 0) > 0 ? "DUE" : "NONE",
           },
+        });
+        const promotedEvent = await this.prisma.event.findUnique({
+          where: { id: eventId },
+          select: { title: true },
+        });
+        await this.notifications.push({
+          userId: next.userId,
+          kind: "event.promoted",
+          title: "جا باز شد",
+          body: `برای «${promotedEvent?.title ?? "دورهمی"}» از لیست انتظار به مهمان‌ها آمدی.`,
+          href: `/events/${eventId}`,
         });
       }
     }

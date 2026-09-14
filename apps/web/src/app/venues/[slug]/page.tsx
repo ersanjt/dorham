@@ -9,6 +9,7 @@ import { VenueReviews } from "./reviews";
 import { VenueGallery } from "./gallery";
 import { VenueVisitActions } from "./visit-actions";
 import { VenueCommunity } from "./community";
+import { VenueMenuEditor } from "./menu-editor";
 import { resolveApiBase } from "../../../lib/api-base";
 import { AREA_LABEL, KIND_LABEL } from "../../../lib/venues";
 
@@ -91,8 +92,19 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
           ) : null}
           {venue.menuNotes ? (
             <div className="venue-fact">
-              <dt>منو</dt>
+              <dt>غذای شاخص</dt>
               <dd>{venue.menuNotes}</dd>
+            </div>
+          ) : null}
+          {venue.menuImageUrl ? (
+            <div className="venue-fact venue-fact-menu">
+              <dt>منو</dt>
+              <dd>
+                <a className="venue-menu-link" href={venue.menuImageUrl} target="_blank" rel="noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img className="venue-menu-image" src={venue.menuImageUrl} alt={`منوی ${venue.name}`} />
+                </a>
+              </dd>
             </div>
           ) : null}
           {venue.phone ? (
@@ -132,6 +144,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
       </section>
 
       <VenueVisitActions slug={venue.slug} />
+      <VenueMenuEditor slug={venue.slug} menuNotes={venue.menuNotes} menuImageUrl={venue.menuImageUrl} />
       <VenueCommunity slug={venue.slug} />
 
       <section className="stack" style={{ marginTop: 28 }}>

@@ -27,48 +27,82 @@ export function EventCard({
   const filled = capacityWidth(event.goingCount, event.capacity);
   const link = href ?? `/events/${event.id}`;
   const cityShow = event.kind === "CITY_SHOW";
-  const action = cta ?? (cityShow ? "هماهنگی با دوستان" : "جزئیات و ثبت حضور");
+  const action = cta ?? (cityShow ? "علاقه‌مندم" : "جزئیات و ثبت حضور");
+
+  const status = cityShow
+    ? event.goingCount === 0
+      ? "هنوز کسی علامت نزده"
+      : `${event.goingCount.toLocaleString("fa-IR")} نفر برای هماهنگی`
+    : event.goingCount === 0
+      ? event.capacity
+        ? `ظرفیت ${event.capacity.toLocaleString("fa-IR")} · هنوز خالی`
+        : "هنوز خالی"
+      : `${event.goingCount.toLocaleString("fa-IR")}${
+          event.capacity ? ` از ${event.capacity.toLocaleString("fa-IR")}` : ""
+        } نفر می‌آیند${
+          event.waitlistCount ? ` · ${event.waitlistCount.toLocaleString("fa-IR")} انتظار` : ""
+        }`;
 
   return (
-    <article className={`card event-card${cityShow ? " event-card-city" : ""}`}>
-      <div className="card-top">
-        <span className="date-chip">{formatDayChip(event.startsAt)}</span>
-        <span className="muted">
-          {cityShow ? "تقویم شهر · " : ""}
-          {event.venue ?? "استانبول"}
-        </span>
-      </div>
-      <h3>{event.title}</h3>
-      {cityShow ? (
-        <p className="muted">هماهنگی دوستان — نه فروش بلیط</p>
-      ) : event.description ? (
-        <p className="muted">{event.description}</p>
-      ) : null}
-      <p className="meta">
-        {cityShow
-          ? event.goingCount === 0
-            ? "هنوز کسی برای هماهنگی علامت نزده"
-            : `${event.goingCount.toLocaleString("fa-IR")} نفر علاقه‌مند به هماهنگی`
-          : `${event.hostName ? `میزبان: ${event.hostName} · ` : ""}${
-              event.goingCount === 0
-                ? event.capacity
-                  ? `ظرفیت ${event.capacity.toLocaleString("fa-IR")} نفر · هنوز خالی`
-                  : "هنوز خالی"
-                : `${event.goingCount.toLocaleString("fa-IR")}${
-                    event.capacity ? ` از ${event.capacity.toLocaleString("fa-IR")}` : ""
-                  } نفر`
-            }${event.waitlistCount ? ` · ${event.waitlistCount.toLocaleString("fa-IR")} در انتظار` : ""}${
-              event.priceTry ? ` · ${event.priceTry.toLocaleString("fa-IR")} لیر` : ""
-            }`}
-      </p>
-      {!cityShow && filled != null && event.goingCount > 0 ? (
-        <div className="capacity" aria-hidden>
-          <i style={{ width: `${filled}%` }} />
+    <article className={`event-card${cityShow ? " event-card-city" : ""}`}>
+      <header className="event-card-head">
+        <span className="event-kind">{cityShow ? "تقویم شهر" : "دورهمی"}</span>
+        <time className="event-when" dateTime={event.startsAt}>
+          {formatDayChip(event.startsAt)}
+        </time>
+      </header>
+
+      <div className="event-card-body">
+        <h3 className="event-title">
+          <Link href={link}>{event.title}</Link>
+        </h3>
+        <p className="event-venue">{event.venue ?? "استانبول"}</p>
+        {!cityShow && event.hostName ? <p className="event-host">میزبان · {event.hostName}</p> : null}
+        {!cityShow && event.description ? (
+          <p className="event-desc muted">{event.description}</p>
+        ) : null}
+        {cityShow ? <p className="event-note muted">هماهنگی دوستان — فروش بلیط اینجا نیست</p> : null}
+
+        <div className="event-card-foot">
+          <p className="event-status">{status}</p>
+          {!cityShow && event.priceTry ? (
+            <p className="event-price">{event.priceTry.toLocaleString("fa-IR")} لیر · دم در</p>
+          ) : null}
+          {!cityShow && filled != null && event.goingCount > 0 ? (
+            <div className="capacity" aria-hidden>
+              <i style={{ width: `${filled}%` }} />
+            </div>
+          ) : null}
+          <Link className={cityShow ? "event-cta ghost" : "event-cta"} href={link}>
+            {action}
+          </Link>
         </div>
-      ) : null}
-      <Link className="card-cta" href={link}>
-        {action}
-      </Link>
+      </div>
     </article>
+  );
+}
+
+/** Compact rows for city-show calendar — less noise than a grid of identical cards. */
+export function CityCalendarList({ events }: { events: EventCardData[] }) {
+  if (events.length === 0) return null;
+  return (
+    <ul className="city-calendar">
+      {events.map((event) => (
+        <li key={event.id}>
+          <Link className="city-calendar-row" href={`/events/${event.id}`}>
+            <time dateTime={event.startsAt}>{formatDayChip(event.startsAt)}</time>
+            <span className="city-calendar-main">
+              <strong>{event.title}</strong>
+              <span className="muted">{event.venue ?? "استانبول"}</span>
+            </span>
+            <span className="city-calendar-meta">
+              {event.goingCount > 0
+                ? `${event.goingCount.toLocaleString("fa-IR")} علاقه‌مند`
+                : "هماهنگی"}
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }

@@ -44,7 +44,6 @@ export default function AdminModerationPage() {
   const [reports, setReports] = useState<Reports | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [userId, setUserId] = useState("");
 
   async function load() {
     const [profile, pending, reviews, photos, reps] = await Promise.all([
@@ -85,7 +84,7 @@ export default function AdminModerationPage() {
     <main className="wrap">
       <SiteHeader />
       <PageIntro kicker="مدیریت" title="صف بررسی">
-        <p className="muted">مکان‌ها، نظرات، عکس‌ها، گزارش‌ها، و نقش میزبان.</p>
+        <p className="muted">مکان‌ها، نظرات، عکس‌ها، گزارش‌ها، و اعضا.</p>
       </PageIntro>
       {!staff ? (
         <div className="banner err">فقط مدیر و ناظر. این صفحه برای عموم نیست.</div>
@@ -107,6 +106,11 @@ export default function AdminModerationPage() {
             <Link className="admin-summary-chip" href="/admin/verify">
               تأیید دست‌نویس
             </Link>
+            {me.role === "ADMIN" ? (
+              <Link className="admin-summary-chip" href="/admin/users">
+                اعضا و نقش‌ها
+              </Link>
+            ) : null}
           </div>
 
           <section className="stack" id="venues-pending">
@@ -295,29 +299,11 @@ export default function AdminModerationPage() {
 
           {me.role === "ADMIN" ? (
             <section className="form-card" style={{ marginTop: 32 }}>
-              <h2>ارتقای نقش</h2>
-              <p className="muted">شناسهٔ کاربر را از صفحهٔ پروفایل کپی کن و نقش میزبان بده.</p>
-              <label>
-                شناسه کاربر
-                <input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="cuid" />
-              </label>
-              <button
-                className="btn"
-                type="button"
-                onClick={async () => {
-                  try {
-                    await api(`/admin/users/${userId}/role`, {
-                      method: "POST",
-                      body: JSON.stringify({ role: "HOST" }),
-                    });
-                    setMessage("نقش HOST تنظیم شد.");
-                  } catch (err) {
-                    setError(err instanceof ApiError ? err.message : "نشد.");
-                  }
-                }}
-              >
-                تبدیل به میزبان
-              </button>
+              <h2>اعضا و سطح دسترسی</h2>
+              <p className="muted">لیست همهٔ اعضا، آخرین ورود، و ارتقا به میزبان / ناظر / مدیر.</p>
+              <Link className="btn" href="/admin/users">
+                مدیریت اعضا
+              </Link>
               <p style={{ marginTop: 12 }}>
                 <Link href="/admin/verify">صف تأیید دست‌نویس</Link>
               </p>
