@@ -42,12 +42,14 @@ export default function ForgotPasswordPage() {
     <main className="wrap">
       <SiteHeader />
       <PageIntro kicker="رمز" title="بازیابی رمز">
-        <p className="muted">اگر حساب داشته باشی، لینک به ایمیلت می‌آید.</p>
+        <p className="muted">اگر حساب داشته باشی، لینک به ایمیلت می‌آید. اگر چیزی نرسید، پوشهٔ اسپم را چک کن یا بعداً دوباره امتحان کن.</p>
       </PageIntro>
       <div className="form-card">
         {done ? (
           <div className="stack">
-            <div className="banner ok">اگر حسابی با این ایمیل باشد، لینک بازیابی فرستاده شد.</div>
+            <div className="banner ok">
+              اگر حسابی با این ایمیل باشد، لینک بازیابی فرستاده شد. اگر تا چند دقیقه نرسید، اسپم را ببین یا بعداً دوباره بفرست.
+            </div>
             {devToken ? (
               <p className="muted">
                 حالت توسعه:{" "}

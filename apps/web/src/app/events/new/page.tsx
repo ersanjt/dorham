@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
-import { createEventBodySchema, type VenueDto } from "@dorham/shared";
+import { createEventBodySchema, type Me, type VenueDto } from "@dorham/shared";
 import { SiteHeader } from "../../../components/site-header";
 import { PageIntro } from "../../../components/page-intro";
 import { api, ApiError } from "../../../lib/api";
@@ -15,13 +16,27 @@ export default function NewEventPage() {
   const [pending, setPending] = useState(false);
   const [venues, setVenues] = useState<VenueDto[]>([]);
   const [venueSlug, setVenueSlug] = useState("");
+  const [me, setMe] = useState<Me | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isSignedIn()) router.replace("/login");
-    api<VenueDto[]>("/venues?city=istanbul&limit=80", { auth: false })
-      .then(setVenues)
-      .catch(() => setVenues([]));
+    if (!isSignedIn()) {
+      router.replace("/login?next=/events/new");
+      return;
+    }
+    Promise.all([
+      api<Me>("/users/me"),
+      api<VenueDto[]>("/venues?city=istanbul&limit=80", { auth: false }).catch(() => [] as VenueDto[]),
+    ])
+      .then(([profile, list]) => {
+        setMe(profile);
+        setVenues(list);
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : "بارگذاری نشد."))
+      .finally(() => setLoading(false));
   }, [router]);
+
+  const canHost = Boolean(me && (me.role === "HOST" || me.role === "MODERATOR" || me.role === "ADMIN"));
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -62,6 +77,13 @@ export default function NewEventPage() {
       <PageIntro kicker="میزبان" title="رویداد تازه">
         <p className="muted">فقط نقش میزبان، ناظر یا ادمین. مکان را از فهرست ایرانی‌های استانبول انتخاب کن.</p>
       </PageIntro>
+      {loading ? <p className="muted">در حال بارگذاری…</p> : null}
+      {!loading && !canHost ? (
+        <div className="banner err">
+          فقط میزبان می‌تواند دورهمی بسازد. از ادمین در <Link href="/account">حساب من</Link> بخواه نقش HOST بدهد.
+        </div>
+      ) : null}
+      {!loading && canHost ? (
       <div className="form-card">
         <form className="form wide" onSubmit={onSubmit}>
           {error ? <div className="banner err">{error}</div> : null}
@@ -113,6 +135,7 @@ export default function NewEventPage() {
           </button>
         </form>
       </div>
+      ) : null}
     </main>
   );
 }

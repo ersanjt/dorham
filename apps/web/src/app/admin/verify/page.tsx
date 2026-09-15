@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { VerificationQueueItem } from "@dorham/shared";
 import { AuthImage } from "../../../components/auth-image";
+import { PageIntro } from "../../../components/page-intro";
 import { SiteHeader } from "../../../components/site-header";
 import { api, ApiError } from "../../../lib/api";
 import { isSignedIn } from "../../../lib/session";
@@ -34,8 +36,17 @@ export default function AdminVerifyPage() {
   return (
     <main className="wrap">
       <SiteHeader />
-      <h1>صف تأیید دست‌نویس</h1>
-      <p className="muted">عکس‌ها فقط برای ناظر و ادمین. عمومی نمی‌شوند.</p>
+      <PageIntro kicker="مدیریت" title="صف تأیید دست‌نویس">
+        <p className="muted">عکس‌ها فقط برای ناظر و ادمین. عمومی نمی‌شوند.</p>
+        <div className="row" style={{ marginTop: 12 }}>
+          <Link className="btn ghost" href="/admin">
+            صف بررسی
+          </Link>
+          <Link className="btn ghost" href="/admin/users">
+            اعضا و نقش‌ها
+          </Link>
+        </div>
+      </PageIntro>
       {error ? <div className="banner err">{error}</div> : null}
       {items.length === 0 ? (
         <p className="muted">درخواستی در انتظار نیست.</p>

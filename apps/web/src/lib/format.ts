@@ -65,7 +65,7 @@ export const eventStatusFa: Record<string, string> = {
 };
 
 export function eventPageUrl(id: string) {
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const origin = (process.env.NEXT_PUBLIC_APP_URL || "https://dorham.app").replace(/\/$/, "");
   return `${origin}/events/${id}`;
 }
 

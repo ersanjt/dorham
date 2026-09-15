@@ -3,7 +3,7 @@ import { CITIES } from "./cities.js";
 import { reportReasonSchema } from "./trust.js";
 
 export const createPostBodySchema = z.object({
-  body: z.string().trim().min(10).max(2000),
+  body: z.string().trim().min(20).max(2000),
   city: z.enum(CITIES).default("istanbul"),
   eventId: z.string().min(8).max(64).optional(),
   venueSlug: z.string().trim().min(2).max(80).optional(),

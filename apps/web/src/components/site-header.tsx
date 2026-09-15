@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { NotificationsList } from "@dorham/shared";
 import { api } from "../lib/api";
 import { useSession } from "../lib/use-session";
@@ -10,7 +10,7 @@ export function SiteHeader() {
   const { signedIn, ready } = useSession();
   const [unread, setUnread] = useState(0);
 
-  useEffect(() => {
+  const refreshUnread = useCallback(() => {
     if (!signedIn) {
       setUnread(0);
       return;
@@ -19,6 +19,20 @@ export function SiteHeader() {
       .then((data) => setUnread(data.unreadCount))
       .catch(() => setUnread(0));
   }, [signedIn]);
+
+  useEffect(() => {
+    refreshUnread();
+    const onFocus = () => refreshUnread();
+    const onCustom = () => refreshUnread();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("dorham:notifications", onCustom);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("dorham:notifications", onCustom);
+    };
+  }, [refreshUnread]);
 
   return (
     <nav className="nav">

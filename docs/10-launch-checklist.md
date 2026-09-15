@@ -49,10 +49,10 @@ Rotate seed password `DorhamHost1` after first login.
 ## Founder ops (not automatable)
 
 1. Log in as admin → `/events/new` → publish first real Istanbul gathering.
-2. Promote hosts/mods: `/admin/users` → search member → set role (HOST / MODERATOR / ADMIN).
-3. Review venues: `/admin` → انتشار.
+2. Promote hosts/mods: `/admin/users` → search → set role.
+3. Review venues / UGC / reports: `/admin` (feed reports can hide the post).
 4. Review handwritten verification: `/admin/verify`.
-5. Triage reports: `/admin`.
+5. Hide junk feed posts from `/admin` or the post page.
 
 ## Product surfaces ready
 

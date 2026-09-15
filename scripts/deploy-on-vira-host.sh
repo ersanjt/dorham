@@ -42,7 +42,7 @@ if [[ ! -f apps/api/.env ]]; then
   cat > apps/api/.env <<EOF
 NODE_ENV=production
 APP_NAME=Dorham
-APP_URL=https://www.dorham.app
+APP_URL=https://dorham.app
 API_PUBLIC_URL=https://api.dorham.app
 API_PORT=${API_PORT}
 CORS_ORIGINS=https://dorham.app,https://www.dorham.app
@@ -68,7 +68,7 @@ fi
 # Mobile / external clients still use https://api.dorham.app once that hostname is on the tunnel.
 cat > apps/web/.env.production.local <<EOF
 API_INTERNAL_URL=http://127.0.0.1:4000
-NEXT_PUBLIC_APP_URL=https://www.dorham.app
+NEXT_PUBLIC_APP_URL=https://dorham.app
 EOF
 
 # shellcheck disable=SC1091
@@ -134,7 +134,7 @@ Environment=NODE_ENV=production
 Environment=PORT=${WEB_PORT}
 Environment=HOSTNAME=127.0.0.1
 Environment=API_INTERNAL_URL=http://127.0.0.1:${API_PORT}
-Environment=NEXT_PUBLIC_APP_URL=https://www.dorham.app
+Environment=NEXT_PUBLIC_APP_URL=https://dorham.app
 ExecStart=/usr/bin/npm run start -w @dorham/web -- -H 127.0.0.1 -p ${WEB_PORT}
 Restart=on-failure
 RestartSec=5

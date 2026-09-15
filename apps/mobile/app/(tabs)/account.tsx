@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
-import { Alert } from "react-native";
+import { Alert, Linking } from "react-native";
 import { useFocusEffect, router } from "expo-router";
-import type { EventDto, Me } from "@dorham/shared";
+import type { EventDto, Me, NotificationsList } from "@dorham/shared";
 import { EventCard } from "../../components/event-card";
 import { AppText, Badge, Banner, Button, Card, Field, Loading, Screen } from "../../components/ui";
 import { api, ApiError } from "../../lib/api";
@@ -11,6 +11,7 @@ import { clearSession, isSignedIn } from "../../lib/session";
 export default function AccountScreen() {
   const [me, setMe] = useState<Me | null>(null);
   const [mine, setMine] = useState<EventDto[]>([]);
+  const [notes, setNotes] = useState<NotificationsList | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [error, setError] = useState("");
@@ -25,12 +26,18 @@ export default function AccountScreen() {
       if (!ok) {
         setMe(null);
         setMine([]);
+        setNotes(null);
         return;
       }
-      Promise.all([api<Me>("/users/me"), api<EventDto[]>("/events/mine")])
-        .then(([profile, events]) => {
+      Promise.all([
+        api<Me>("/users/me"),
+        api<EventDto[]>("/events/mine"),
+        api<NotificationsList>("/users/me/notifications").catch(() => ({ unreadCount: 0, items: [] })),
+      ])
+        .then(([profile, events, inbox]) => {
           setMe(profile);
           setMine(events);
+          setNotes(inbox);
           setDisplayName(profile.displayName);
           setBio(profile.bio ?? "");
         })
@@ -186,6 +193,42 @@ export default function AccountScreen() {
       <Button label="پروفایل عمومی" variant="ghost" onPress={() => router.push(`/people/${me.id}`)} />
       <Button label="ثبت مکان" variant="ghost" onPress={() => router.push("/venues/new")} />
       {canHost ? <Button label="رویداد تازه" onPress={() => router.push("/events/new")} /> : null}
+      {notes && notes.items.length > 0 ? (
+        <Card>
+          <AppText bold size="title">
+            اعلان‌ها{notes.unreadCount > 0 ? ` (${notes.unreadCount})` : ""}
+          </AppText>
+          {notes.items.slice(0, 8).map((n) => (
+            <Button
+              key={n.id}
+              label={`${n.title}${n.readAt ? "" : " · جدید"}`}
+              variant="ghost"
+              onPress={() => {
+                if (!n.readAt) {
+                  void api(`/users/me/notifications/${n.id}/read`, { method: "POST", body: "{}" }).catch(() => undefined);
+                }
+                if (n.href?.startsWith("http")) {
+                  void Linking.openURL(n.href);
+                } else if (n.href) {
+                  router.push(n.href as never);
+                }
+              }}
+            />
+          ))}
+          {notes.unreadCount > 0 ? (
+            <Button
+              label="همه خوانده شد"
+              variant="ghost"
+              onPress={() => {
+                void api("/users/me/notifications/read", { method: "POST", body: "{}" })
+                  .then(() => api<NotificationsList>("/users/me/notifications"))
+                  .then(setNotes)
+                  .catch(() => undefined);
+              }}
+            />
+          ) : null}
+        </Card>
+      ) : null}
       {mine.length > 0 ? (
         <AppText bold size="title">
           جمعه‌های من

@@ -38,6 +38,8 @@ EXPO_PUBLIC_API_URL=https://api.dorham.app
 EXPO_PUBLIC_WEB_URL=https://dorham.app
 ```
 
+On the VPS `apps/web/.env.production.local` must set `NEXT_PUBLIC_APP_URL=https://dorham.app` before `next build` so Open Graph images are absolute (not localhost).
+
 ## Same VPS as Vira VPN (important)
 
 On `92.205.182.99`, **port 443 is owned by Xray** (`vira.service`). Proxied Cloudflare `A` records to that IP send HTTPS to Xray → `Invalid URL` / AkamaiGHost / **`NET::ERR_CERT_COMMON_NAME_INVALID`**.

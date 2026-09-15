@@ -88,7 +88,7 @@ export function FeedCompose() {
       {error ? <div className="banner err">{error}</div> : null}
       <label>
         برای استانبول بنویس
-        <textarea name="body" minLength={10} maxLength={2000} rows={4} required placeholder="خبر کافه، دورهم وسط هفته، پیشنهاد مکان…" />
+        <textarea name="body" minLength={20} maxLength={2000} rows={4} required placeholder="خبر کافه، دورهم وسط هفته، پیشنهاد مکان…" />
       </label>
       {events.length > 0 ? (
         <label>

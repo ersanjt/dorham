@@ -23,6 +23,7 @@ type Reports = {
     id: string;
     targetType: string;
     targetId: string;
+    postId?: string | null;
     reason: string;
     status: string;
     createdAt: string;
@@ -283,16 +284,42 @@ export default function AdminModerationPage() {
                   <p>
                     {r.targetType} · {r.reason}
                   </p>
-                  <button
-                    className="btn ghost"
-                    type="button"
-                    onClick={async () => {
-                      await api(`/admin/reports/feed/${r.id}/resolve`, { method: "POST", body: "{}" });
-                      await load();
-                    }}
-                  >
-                    رسیدگی شد
-                  </button>
+                  <div className="row">
+                    {r.postId || r.targetId ? (
+                      <Link className="btn ghost" href={`/feed/${r.postId || r.targetId}`}>
+                        مشاهده پست
+                      </Link>
+                    ) : null}
+                    <button
+                      className="btn danger"
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const postId = r.postId || r.targetId;
+                          if (postId) {
+                            await api(`/feed/${postId}`, { method: "DELETE" });
+                          }
+                          await api(`/admin/reports/feed/${r.id}/resolve`, { method: "POST", body: "{}" });
+                          setMessage("پست مخفی و گزارش بسته شد.");
+                          await load();
+                        } catch (err) {
+                          setError(err instanceof ApiError ? err.message : "مخفی نشد.");
+                        }
+                      }}
+                    >
+                      مخفی + رسیدگی
+                    </button>
+                    <button
+                      className="btn ghost"
+                      type="button"
+                      onClick={async () => {
+                        await api(`/admin/reports/feed/${r.id}/resolve`, { method: "POST", body: "{}" });
+                        await load();
+                      }}
+                    >
+                      فقط بستن گزارش
+                    </button>
+                  </div>
                 </article>
               ))}
           </section>

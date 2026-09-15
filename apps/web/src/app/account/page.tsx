@@ -100,6 +100,15 @@ function AccountBody() {
     return () => window.removeEventListener("hashchange", applyHash);
   }, []);
 
+  useEffect(() => {
+    const t = search.get("tab");
+    if (t === "edit" || t === "activity" || t === "inbox" || t === "overview" || t === "trust") {
+      setTab(t);
+    } else if (search.get("verify") === "1") {
+      setTab("trust");
+    }
+  }, [search]);
+
   const progress = useMemo(() => (me ? completeness(me, verification) : null), [me, verification]);
 
   async function saveProfile(e: FormEvent<HTMLFormElement>) {
@@ -688,6 +697,7 @@ function AccountBody() {
                 onClick={async () => {
                   await api("/users/me/notifications/read", { method: "POST", body: "{}" });
                   await reload();
+                  window.dispatchEvent(new Event("dorham:notifications"));
                 }}
               >
                 همه خوانده شد
@@ -705,7 +715,43 @@ function AccountBody() {
                   {n.href ? (
                     <>
                       {" "}
-                      <Link href={n.href}>باز کن</Link>
+                      <Link
+                        href={n.href}
+                        onClick={() => {
+                          if (!n.readAt) {
+                            void api(`/users/me/notifications/${n.id}/read`, {
+                              method: "POST",
+                              body: "{}",
+                            })
+                              .then(() => reload())
+                              .then(() => {
+                                window.dispatchEvent(new Event("dorham:notifications"));
+                              })
+                              .catch(() => undefined);
+                          }
+                        }}
+                      >
+                        باز کن
+                      </Link>
+                    </>
+                  ) : !n.readAt ? (
+                    <>
+                      {" "}
+                      <button
+                        className="btn ghost"
+                        type="button"
+                        style={{ padding: "2px 8px", fontSize: "0.85rem" }}
+                        onClick={async () => {
+                          await api(`/users/me/notifications/${n.id}/read`, {
+                            method: "POST",
+                            body: "{}",
+                          });
+                          await reload();
+                          window.dispatchEvent(new Event("dorham:notifications"));
+                        }}
+                      >
+                        خواندم
+                      </button>
                     </>
                   ) : null}
                 </li>
