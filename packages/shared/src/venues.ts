@@ -55,6 +55,7 @@ export const listVenuesQuerySchema = z.object({
   city: z.enum(CITIES).default("istanbul"),
   kind: venueKindSchema.optional(),
   area: z.string().trim().min(2).max(40).optional(),
+  q: z.string().trim().max(80).optional(),
   limit: z.coerce.number().int().min(1).max(80).default(80),
 });
 

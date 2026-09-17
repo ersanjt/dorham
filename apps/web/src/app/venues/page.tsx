@@ -9,9 +9,10 @@ import { AREA_LABEL, KIND_LABEL } from "../../lib/venues";
 
 const API = resolveApiBase();
 
-async function loadVenues(kind?: string): Promise<VenueDto[]> {
+async function loadVenues(kind?: string, q?: string): Promise<VenueDto[]> {
   const query = new URLSearchParams({ city: "istanbul", limit: "80" });
   if (kind) query.set("kind", kind);
+  if (q) query.set("q", q);
   try {
     const res = await fetch(`${API}/v1/venues?${query}`, { cache: "no-store" });
     if (!res.ok) return [];
@@ -25,13 +26,14 @@ async function loadVenues(kind?: string): Promise<VenueDto[]> {
 export default async function VenuesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ kind?: string; submitted?: string }>;
+  searchParams: Promise<{ kind?: string; submitted?: string; q?: string }>;
 }) {
-  const { kind, submitted } = await searchParams;
+  const { kind, submitted, q } = await searchParams;
+  const query = q?.trim() ?? "";
   const selected = (["RESTAURANT", "CAFE", "MARKET", "CULTURAL"] as VenueKind[]).includes(kind as VenueKind)
     ? (kind as VenueKind)
     : undefined;
-  const venues = await loadVenues(selected);
+  const venues = await loadVenues(selected, query || undefined);
 
   return (
     <main className="wrap">
@@ -45,17 +47,29 @@ export default async function VenuesPage({
       {submitted === "1" ? (
         <div className="banner ok">مکان ثبت شد و بعد از بررسی تیم منتشر می‌شود.</div>
       ) : null}
-      <div className="row">
-        <Link className="btn" href="/venues/new">
+      <form className="venue-search" action="/venues" method="get">
+        {selected ? <input type="hidden" name="kind" value={selected} /> : null}
+        <label>
+          جستجو
+          <input name="q" defaultValue={query} placeholder="نام، محله، غذا، آدرس" />
+        </label>
+        <button className="btn" type="submit">
+          پیدا کن
+        </button>
+        <Link className="btn ghost" href="/venues/new">
           ثبت مکان من
         </Link>
-      </div>
+      </form>
       <div className="chip-row">
-        <Link className={`pill ${selected ? "" : "solid"}`} href="/venues">
+        <Link className={`pill ${selected ? "" : "solid"}`} href={query ? `/venues?q=${encodeURIComponent(query)}` : "/venues"}>
           همه
         </Link>
         {(Object.keys(KIND_LABEL) as VenueKind[]).map((item) => (
-          <Link key={item} className={`pill ${selected === item ? "solid" : ""}`} href={`/venues?kind=${item}`}>
+          <Link
+            key={item}
+            className={`pill ${selected === item ? "solid" : ""}`}
+            href={`/venues?kind=${item}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
+          >
             {KIND_LABEL[item]}
           </Link>
         ))}
@@ -65,6 +79,7 @@ export default async function VenuesPage({
         <div className="empty-art card" style={{ marginTop: 16 }}>
           <p className="muted">
             هنوز مکانی در این فیلتر نیست. می‌توانی مکان ایرانی واقعی ثبت کنی تا بعد از بررسی منتشر شود.
+            {query ? ` هیچ نتیجه‌ای برای «${query}» نبود.` : ""}
           </p>
           <div className="row" style={{ marginTop: 12 }}>
             <Link className="btn" href="/venues/new">
@@ -97,7 +112,10 @@ export default async function VenuesPage({
                 <h3>{venue.name}</h3>
                 <p className="muted venue-desc">{venue.description}</p>
                 <div className="venue-card-foot">
-                  {venue.priceRange ? <p className="meta">{venue.priceRange}</p> : null}
+                  <div className="row">
+                    {venue.priceRange ? <span className="meta">{venue.priceRange}</span> : null}
+                    {venue.menuImageUrl ? <span className="date-chip">منو</span> : null}
+                  </div>
                   <p className="meta venue-address">{venue.address}</p>
                   <p className="meta">{venue.reviewCount.toLocaleString("fa-IR")} نظر</p>
                   <div className="row">

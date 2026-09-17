@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { FeedPost } from "@dorham/shared";
-import { formatWhen } from "../lib/format";
+import { formatWhen, verifyFa } from "../lib/format";
 
 export function FeedPostCard({ post }: { post: FeedPost }) {
   return (
@@ -12,7 +12,7 @@ export function FeedPostCard({ post }: { post: FeedPost }) {
         {post.author.verificationStatus === "VERIFIED" ? (
           <>
             {" "}
-            <span className="verify-badge">تأییدشده</span>
+            <span className="verify-badge">{verifyFa.VERIFIED}</span>
           </>
         ) : null}
         {" · "}

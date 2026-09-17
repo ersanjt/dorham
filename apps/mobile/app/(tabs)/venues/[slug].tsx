@@ -84,14 +84,17 @@ export default function VenueDetailScreen() {
         <Card>
           <AppText>{venue.description}</AppText>
           <AppText muted>{venue.address}</AppText>
-          {venue.lat != null && venue.lng != null ? (
-            <AppText muted size="caption">
-              مختصات: {venue.lat.toFixed(5)}, {venue.lng.toFixed(5)}
-            </AppText>
-          ) : null}
           {venue.hours ? <AppText muted>ساعت: {venue.hours}</AppText> : null}
           {venue.priceRange ? <AppText muted>قیمت: {venue.priceRange}</AppText> : null}
-          {venue.menuNotes ? <AppText muted>منو: {venue.menuNotes}</AppText> : null}
+          {venue.menuNotes ? <AppText muted>غذای شاخص: {venue.menuNotes}</AppText> : null}
+          {venue.menuImageUrl ? (
+            <Image
+              source={{ uri: publicMediaUrl(venue.menuImageUrl) ?? venue.menuImageUrl }}
+              accessibilityLabel={`منوی ${venue.name}`}
+              style={{ width: "100%", height: 280, backgroundColor: color.paperDeep, borderRadius: 12 }}
+              resizeMode="contain"
+            />
+          ) : null}
           <AppText muted>{venue.reviewCount} نظر</AppText>
         </Card>
       ) : null}

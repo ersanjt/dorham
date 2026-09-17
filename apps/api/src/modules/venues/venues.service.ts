@@ -53,6 +53,16 @@ export class VenuesService {
     };
     if (query.kind) where.kind = query.kind;
     if (query.area) where.area = query.area;
+    if (query.q) {
+      const q = query.q;
+      where.OR = [
+        { name: { contains: q, mode: "insensitive" } },
+        { area: { contains: q, mode: "insensitive" } },
+        { address: { contains: q, mode: "insensitive" } },
+        { description: { contains: q, mode: "insensitive" } },
+        { menuNotes: { contains: q, mode: "insensitive" } },
+      ];
+    }
 
     const rows = await this.prisma.venue.findMany({
       where,

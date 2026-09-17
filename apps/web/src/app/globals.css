@@ -1021,6 +1021,13 @@ input:focus, textarea:focus, select:focus {
   color: var(--clay);
   flex-shrink: 0;
 }
+.admin-user-photo {
+  width: 44px !important;
+  height: 44px;
+  border-radius: 50% !important;
+  object-fit: cover;
+  flex-shrink: 0;
+}
 .admin-user-name-row {
   display: flex;
   flex-wrap: wrap;
@@ -1079,10 +1086,20 @@ input:focus, textarea:focus, select:focus {
   background: var(--paper);
   margin: 10px 0;
 }
+.venue-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: end;
+  margin: 8px 0 16px;
+}
+.venue-search label {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
 @media (max-width: 720px) {
-  .admin-users-filters {
-    grid-template-columns: 1fr;
-  }
+  .venue-search { grid-template-columns: 1fr; }
 }
 .stack { display: grid; gap: 16px; margin-top: 28px; }
 .post-body {

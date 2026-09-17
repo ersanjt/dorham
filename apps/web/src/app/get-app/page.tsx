@@ -24,7 +24,7 @@ export default function GetAppPage() {
         <ol className="prose" style={{ paddingInlineStart: "1.2rem", lineHeight: 1.9 }}>
           <li>
             برو به{" "}
-            <Link href="https://www.dorham.app/register">www.dorham.app/register</Link>
+            <Link href="/register">dorham.app/register</Link>
           </li>
           <li>ایمیل را تأیید کن (لینک از صندوق ورودی)</li>
           <li>رویداد این هفته را RSVP کن یا در مکان‌ها هماهنگی بگذار</li>
@@ -65,7 +65,7 @@ export default function GetAppPage() {
             iOS و Android بعد از اولین جمعهٔ واقعی و وقتی <code>api.dorham.app</code> سالم باشد منتشر می‌شوند. تا آن
             موقع از وب استفاده کن؛ دکمهٔ دانلود ساختگی نشان نمی‌دهیم.
           </p>
-          <p className="muted">اگر کسی لینک استور خواست: بگو «فعلاً فقط وب — www.dorham.app».</p>
+          <p className="muted">اگر کسی لینک استور خواست: بگو «فعلاً فقط وب — dorham.app».</p>
         </article>
       )}
 

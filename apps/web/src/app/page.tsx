@@ -55,6 +55,7 @@ export default async function HomePage() {
   const [events, posts, hangPlans] = await Promise.all([loadEvents(), loadFeed(), loadHangPlans()]);
   const next = events[0];
   const more = events.slice(1);
+  const cityNotes = posts.filter((post) => post.body.trim().length >= 40);
 
   return (
     <main className="wrap">
@@ -159,7 +160,7 @@ export default async function HomePage() {
             <p className="kicker">هماهنگی</p>
             <h2>کی کجاست؟</h2>
           </div>
-          <p className="muted">برنامهٔ حضور در کافه و رستوران — ببین و بپیوند.</p>
+          <p className="muted">برنامهٔ حضور در کافه و رستوران — ببین و بپیوند. زندهٔ GPS نیست.</p>
           <ul className="home-hang-list">
             {hangPlans.map((plan) => {
               const photo = publicMediaUrl(plan.user.photoUrl);
@@ -178,7 +179,8 @@ export default async function HomePage() {
                       <strong>{plan.user.displayName}</strong>
                       <span className="muted">
                         {" "}
-                        · {INTENT_FA[plan.intent] ?? plan.intent} در {plan.venueName} · {formatDayChip(plan.startsAt)}
+                        · {INTENT_FA[plan.intent] ?? plan.intent} در {plan.venueName}
+                        {plan.venueArea ? ` · ${plan.venueArea}` : ""} · {formatDayChip(plan.startsAt)}
                       </span>
                     </span>
                   </Link>
@@ -194,14 +196,14 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      {posts.length > 0 ? (
+      {cityNotes.length > 0 ? (
         <section>
           <div className="section-head">
             <p className="kicker">خبر شهر</p>
             <h2>حرف‌های این هفته</h2>
           </div>
           <div className="stack">
-            {posts.map((post) => (
+            {cityNotes.map((post) => (
               <FeedPostCard key={post.id} post={post} />
             ))}
           </div>

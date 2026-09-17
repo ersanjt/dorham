@@ -38,5 +38,5 @@ export function publicMediaUrl(url: string | null | undefined) {
 
 export function publicWebBase() {
   const extra = Constants.expoConfig?.extra as { webUrl?: string } | undefined;
-  return (process.env.EXPO_PUBLIC_WEB_URL ?? extra?.webUrl ?? "https://www.dorham.app").replace(/\/$/, "");
+  return (process.env.EXPO_PUBLIC_WEB_URL ?? extra?.webUrl ?? "https://dorham.app").replace(/\/$/, "");
 }
