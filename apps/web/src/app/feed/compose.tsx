@@ -21,7 +21,7 @@ export function FeedCompose() {
   useEffect(() => {
     const ok = isSignedIn();
     setSignedIn(ok);
-    api<EventDto[]>("/events?city=istanbul&limit=8", { auth: false })
+    api<EventDto[]>("/events?city=istanbul&kind=COMMUNITY&limit=8", { auth: false })
       .then(setEvents)
       .catch(() => undefined);
     if (!ok) return;
@@ -88,7 +88,14 @@ export function FeedCompose() {
       {error ? <div className="banner err">{error}</div> : null}
       <label>
         برای استانبول بنویس
-        <textarea name="body" minLength={20} maxLength={2000} rows={4} required placeholder="خبر کافه، دورهم وسط هفته، پیشنهاد مکان…" />
+        <textarea
+          name="body"
+          minLength={20}
+          maxLength={2000}
+          rows={4}
+          required
+          placeholder="مثلاً: سه‌شنبه ساعت ۱۹ سفیر آکسارای خلوت بود؛ جوجه خوب، میز برای ۴ نفر راحت جا شد."
+        />
       </label>
       {events.length > 0 ? (
         <label>

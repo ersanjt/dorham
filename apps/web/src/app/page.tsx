@@ -20,7 +20,7 @@ const INTENT_FA: Record<string, string> = {
 
 async function loadFeed(): Promise<FeedPost[]> {
   try {
-    const res = await fetch(`${API}/v1/feed?city=istanbul&limit=2`, { cache: "no-store" });
+    const res = await fetch(`${API}/v1/feed?city=istanbul&limit=4`, { cache: "no-store" });
     if (!res.ok) return [];
     const json = (await res.json()) as { data: FeedPost[] };
     return json.data ?? [];
@@ -71,7 +71,7 @@ export default async function HomePage() {
   ]);
   const next = events[0];
   const more = events.slice(1);
-  const cityNotes = posts.filter((post) => post.body.trim().length >= 40);
+  const cityNotes = posts.filter((post) => post.body.trim().length >= 40).slice(0, 3);
   const showCityCalendar = events.length === 0 && cityShows.length > 0;
 
   return (

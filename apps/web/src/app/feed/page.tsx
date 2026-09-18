@@ -27,7 +27,9 @@ export default async function FeedPage() {
     <main className="wrap">
       <SiteHeader />
       <PageIntro kicker="خبر شهر" title="فید استانبول">
-        <p className="muted">وسط هفته، پیشنهاد مکان، حرف بعد از دورهم. سوایپ نیست.</p>
+        <p className="muted">
+          پیشنهاد مکان، حرف بعد از دورهم، هماهنگی قبل از کنسرت. حداقل چند جملهٔ واقعی — سوایپ و اسپم جایی ندارد.
+        </p>
       </PageIntro>
       <div className="form-card">
         <Suspense fallback={<p className="muted">در حال بارگذاری فرم…</p>}>

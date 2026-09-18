@@ -44,15 +44,16 @@ export class FeedService {
     const rows = await this.prisma.post.findMany({
       where,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      take: query.limit + 1,
+      take: Math.min((query.limit + 1) * 3, 80),
       include: {
         author: { include: authorInclude },
         _count: { select: { comments: true } },
       },
     });
 
-    const page = rows.slice(0, query.limit);
-    const next = rows[query.limit];
+    const usable = rows.filter((row) => row.body.trim().length >= 20);
+    const page = usable.slice(0, query.limit);
+    const next = usable[query.limit];
     return {
       data: await Promise.all(page.map((row) => this.toPostDto(row))),
       page: {

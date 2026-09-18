@@ -2,12 +2,13 @@ import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../src/common/crypto";
 import { ISTANBUL_VENUES } from "./venues-data";
 import { ISTANBUL_SEED_EVENTS } from "./seed-events-data";
+import { ISTANBUL_CITY_NOTES } from "./seed-city-notes";
 
 const prisma = new PrismaClient();
 
 /**
- * Seed = real venues + admin + city calendar facts + a few Dorham community gathers.
- * CITY_SHOW is discovery (outbound tickets). COMMUNITY is Dorham RSVP/door.
+ * Seed = real venues + admin + city calendar facts + editorial city notes.
+ * Never invent Dorham COMMUNITY gathers unless SEED_DEMO_EVENTS=1 (dev only).
  */
 async function main() {
   const email = "host@dorham.app";
@@ -21,13 +22,13 @@ async function main() {
         upsert: {
           create: {
             displayName: "سارا · میزبان استانبول",
-            bio: "میزبان نمونهٔ دورهم در استانبول.",
+            bio: "میزبان نمونهٔ دورهم در استانبول — رویداد واقعی، مکان ایرانی، مهمان‌لیست.",
             city: "istanbul",
             country: "TR",
           },
           update: {
             displayName: "سارا · میزبان استانبول",
-            bio: "میزبان نمونهٔ دورهم در استانبول.",
+            bio: "میزبان نمونهٔ دورهم در استانبول — رویداد واقعی، مکان ایرانی، مهمان‌لیست.",
           },
         },
       },
@@ -41,7 +42,7 @@ async function main() {
       profile: {
         create: {
           displayName: "سارا · میزبان استانبول",
-          bio: "میزبان نمونهٔ دورهم در استانبول.",
+          bio: "میزبان نمونهٔ دورهم در استانبول — رویداد واقعی، مکان ایرانی، مهمان‌لیست.",
           city: "istanbul",
           country: "TR",
         },
@@ -98,15 +99,15 @@ async function main() {
     data: { ownerId: admin.id },
   });
 
-  /** Soft-launch: never invent Dorham COMMUNITY gathers unless explicitly opted in. */
+  /** Soft-launch: cancel any leftover seeded demo COMMUNITY rows. */
   const allowDemoCommunity = process.env.SEED_DEMO_EVENTS === "1";
-  const communityDemo = ISTANBUL_SEED_EVENTS.filter((ev) => ev.kind === "COMMUNITY");
-  const calendarShows = ISTANBUL_SEED_EVENTS.filter((ev) => ev.kind !== "COMMUNITY");
-
   if (!allowDemoCommunity) {
     const cancelled = await prisma.event.updateMany({
       where: {
-        externalKey: { in: communityDemo.map((ev) => ev.externalKey) },
+        OR: [
+          { externalKey: { startsWith: "community:" } },
+          { externalKey: { startsWith: "past:community" } },
+        ],
         status: "PUBLISHED",
       },
       data: { status: "CANCELLED" },
@@ -116,9 +117,23 @@ async function main() {
     }
   }
 
-  const toUpsert = allowDemoCommunity ? ISTANBUL_SEED_EVENTS : calendarShows;
+  /** Drop low-signal city shows we no longer keep in seed. */
+  await prisma.event.updateMany({
+    where: {
+      externalKey: {
+        in: [
+          "city:kpop-forever-2026-12-05",
+          "city:mathame-2026-08-22",
+          "city:sama-abdulhadi-2026-08-28",
+          "city:anyma-2026-09-12",
+        ],
+      },
+      status: "PUBLISHED",
+    },
+    data: { status: "CANCELLED" },
+  });
 
-  for (const ev of toUpsert) {
+  for (const ev of ISTANBUL_SEED_EVENTS) {
     await prisma.event.upsert({
       where: { externalKey: ev.externalKey },
       update: {
@@ -156,6 +171,63 @@ async function main() {
       },
     });
   }
+
+  /** Hide keyboard-mash / too-short feed junk. */
+  const published = await prisma.post.findMany({
+    where: { city: "istanbul", status: "PUBLISHED" },
+    select: { id: true, body: true },
+  });
+  let hidden = 0;
+  for (const post of published) {
+    if (isJunkFeedBody(post.body)) {
+      await prisma.post.update({ where: { id: post.id }, data: { status: "HIDDEN" } });
+      hidden += 1;
+    }
+  }
+  if (hidden > 0) console.log(`Hidden ${hidden} junk feed post(s).`);
+
+  /** Upsert editorial city notes (stable marker prefix). */
+  for (const note of ISTANBUL_CITY_NOTES) {
+    const existing = await prisma.post.findFirst({
+      where: { authorId: admin.id, city: "istanbul", body: { startsWith: note.marker } },
+      select: { id: true },
+    });
+    if (existing) {
+      await prisma.post.update({
+        where: { id: existing.id },
+        data: { body: note.body, venueSlug: note.venueSlug ?? null, status: "PUBLISHED", eventId: null },
+      });
+    } else {
+      await prisma.post.create({
+        data: {
+          authorId: admin.id,
+          city: "istanbul",
+          body: note.body,
+          venueSlug: note.venueSlug ?? null,
+          status: "PUBLISHED",
+        },
+      });
+    }
+  }
+}
+
+function isJunkFeedBody(body: string): boolean {
+  const t = body.trim();
+  if (t.length < 20) return true;
+  if (t.startsWith("[دورهم ·")) return false;
+  const letters = t.replace(/\s+/g, "");
+  const unique = new Set([...letters]).size;
+  if (letters.length >= 16 && unique / letters.length < 0.35) return true;
+  // Repeated keyboard mash patterns (e.g. شسی شسی)
+  if (/(.)\1{4,}/.test(letters)) return true;
+  const tokens = t.split(/\s+/).filter(Boolean);
+  if (tokens.length >= 4) {
+    const freq = new Map<string, number>();
+    for (const tok of tokens) freq.set(tok, (freq.get(tok) ?? 0) + 1);
+    const max = Math.max(...freq.values());
+    if (max >= 3 && max / tokens.length >= 0.5) return true;
+  }
+  return false;
 }
 
 main()

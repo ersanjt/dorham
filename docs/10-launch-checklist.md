@@ -44,7 +44,18 @@ bash scripts/deploy-on-vira-host.sh
 sudo systemctl restart dorham-api dorham-web
 ```
 
-Rotate seed password `DorhamHost1` after first login.
+## Content seed (after deploy)
+
+On the VPS, refresh venues + city calendar + editorial feed notes (does **not** invent COMMUNITY events):
+
+```bash
+cd /home/virapanel/dorham
+npm run prisma:seed -w @dorham/api
+# or: npx prisma db seed --schema apps/api/prisma/schema.prisma
+sudo systemctl restart dorham-api dorham-web
+```
+
+Real Friday gathers stay founder-published via `/events/new`.
 
 ## Founder ops (not automatable)
 

@@ -73,7 +73,9 @@ export const ISTANBUL_VENUES: VenueSeed[] = [
     phone: "+90 212 511 27 37",
     website: "https://www.asumanrestaurant.com",
     hours: "۱۲:۰۰–۲۱:۰۰",
-    description: "از قدیمی‌های آکسارای (از ۲۰۰۹). غذای خانگی ایرانی روبه‌روی مدرسه اوروچ‌قاضی.",
+    priceRange: "₺₺",
+    menuNotes: "چلوکباب، جوجه‌کباب، خورش خانگی، دوغ",
+    description: "از قدیمی‌های آکسارای (از ۲۰۰۹). غذای خانگی ایرانی روبه‌روی مدرسه اوروچ‌قاضی — مناسب دورهمی شام.",
   },
   {
     slug: "nayeb-findikzade",
@@ -86,7 +88,9 @@ export const ISTANBUL_VENUES: VenueSeed[] = [
     lng: 28.940486,
     phone: "+90 212 587 68 46",
     hours: "۱۰:۰۰–۲۴:۰۰",
-    description: "نایب در میدان فندق‌زاده. کافه-رستوران ایرانی روی Millet Caddesi.",
+    priceRange: "₺₺",
+    menuNotes: "کباب، چای، عصرانه ایرانی",
+    description: "نایب در میدان فندق‌زاده. کافه-رستوران ایرانی روی Millet Caddesi — بین آکسارای و فاتح.",
   },
   {
     slug: "reyhun-taksim",
@@ -100,6 +104,8 @@ export const ISTANBUL_VENUES: VenueSeed[] = [
     phone: "+90 212 245 15 00",
     website: "https://www.reyhun.net",
     hours: "۱۲:۰۰–۲۳:۰۰",
+    priceRange: "₺₺₺",
+    menuNotes: "چلوکباب، خورش، سالاد ایرانی",
     description: "از ۲۰۱۴ کنار گالاتاسرای. برای دورهمی بعد از استقلال، نه فقط گردشگر.",
   },
   {
@@ -192,6 +198,8 @@ export const ISTANBUL_VENUES: VenueSeed[] = [
     phone: "+90 535 412 40 05",
     website: "https://golabrestaurant.com",
     hours: "۱۰:۰۰–۰۰:۰۰",
+    priceRange: "₺₺₺",
+    menuNotes: "چلوکباب، ماهی، منظره مارینا",
     description: "کنار آب در مارینای آتاکوی. برای دورهمی عصر جمعه با منظره، نه سوایپ.",
   },
   {
@@ -220,7 +228,8 @@ export const ISTANBUL_VENUES: VenueSeed[] = [
     lng: 29.02828,
     phone: "+90 541 245 12 39",
     hours: "تا ۲۰:۰۰",
-    description: "نمایندگی نشر چشمه. کافه-کتاب فارسی برای مطالعه و جمع فرهنگی کوتاه.",
+    menuNotes: "چای، قهوه، کتاب فارسی و ترکیه",
+    description: "نمایندگی نشر چشمه. کافه-کتاب فارسی برای مطالعه و جمع فرهنگی کوتاه — نه رستوران شام.",
   },
   {
     slug: "gilan-acibadem",
@@ -415,6 +424,7 @@ export const ISTANBUL_VENUES: VenueSeed[] = [
     lat: 41.01295,
     lng: 28.95425,
     hours: "هر روز جز یکشنبه",
+    menuNotes: "زرشک، سبزی خشک، نان لواش، ادویه، برنج ایرانی",
     description: "سوپرمارکت ایرانی کنار آسمان. زرشک، سبزی خشک، نان — جای تصادف با هموطن.",
   },
   {
