@@ -40,6 +40,7 @@ export function VenueCommunity({ slug }: { slug: string }) {
   const [notice, setNotice] = useState("");
   const [joining, setJoining] = useState<string | null>(null);
   const [showPhoto, setShowPhoto] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState(false);
 
   async function loadPlans() {
     const data = await api<VenueHangPlanDto[]>(`/venues/${slug}/plans`);
@@ -108,12 +109,14 @@ export function VenueCommunity({ slug }: { slug: string }) {
     e.preventDefault();
     setError("");
     setNotice("");
+    setPendingPlan(true);
     const form = new FormData(e.currentTarget);
     const local = String(form.get("startsAt") ?? "");
     const intent = String(form.get("intent") ?? "OTHER");
     const note = String(form.get("note") ?? "").trim();
     if (!local) {
       setError("زمان را انتخاب کن.");
+      setPendingPlan(false);
       return;
     }
     try {
@@ -130,6 +133,8 @@ export function VenueCommunity({ slug }: { slug: string }) {
       await loadPlans();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "برنامه ثبت نشد.");
+    } finally {
+      setPendingPlan(false);
     }
   }
 
@@ -260,8 +265,8 @@ export function VenueCommunity({ slug }: { slug: string }) {
             یادداشت (اختیاری)
             <input name="note" maxLength={120} placeholder="مثلاً میز برای ۴ نفر" />
           </label>
-          <button className="btn" type="submit">
-            ثبت برنامه
+          <button className="btn" type="submit" disabled={pendingPlan}>
+            {pendingPlan ? "در حال ثبت…" : "ثبت برنامه"}
           </button>
         </form>
       ) : (

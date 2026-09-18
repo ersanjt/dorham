@@ -22,7 +22,7 @@ async function loadFeed(): Promise<FeedPost[]> {
 }
 
 export default async function FeedPage() {
-  const posts = await loadFeed();
+  const posts = (await loadFeed()).filter((post) => post.body.trim().length >= 20);
   return (
     <main className="wrap">
       <SiteHeader />

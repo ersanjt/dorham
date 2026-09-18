@@ -40,6 +40,17 @@ async function loadEvents(): Promise<EventDto[]> {
   }
 }
 
+async function loadCityShows(): Promise<EventDto[]> {
+  try {
+    const res = await fetch(`${API}/v1/events?city=istanbul&kind=CITY_SHOW&limit=4`, { cache: "no-store" });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { data: EventDto[] };
+    return json.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
 async function loadHangPlans(): Promise<VenueHangPlanDto[]> {
   try {
     const res = await fetch(`${API}/v1/venues/hang-plans?city=istanbul&limit=8`, { cache: "no-store" });
@@ -52,10 +63,16 @@ async function loadHangPlans(): Promise<VenueHangPlanDto[]> {
 }
 
 export default async function HomePage() {
-  const [events, posts, hangPlans] = await Promise.all([loadEvents(), loadFeed(), loadHangPlans()]);
+  const [events, cityShows, posts, hangPlans] = await Promise.all([
+    loadEvents(),
+    loadCityShows(),
+    loadFeed(),
+    loadHangPlans(),
+  ]);
   const next = events[0];
   const more = events.slice(1);
   const cityNotes = posts.filter((post) => post.body.trim().length >= 40);
+  const showCityCalendar = events.length === 0 && cityShows.length > 0;
 
   return (
     <main className="wrap">
@@ -72,8 +89,8 @@ export default async function HomePage() {
           <img src="/brand/hero.png" alt="" />
         </div>
         <div className="row">
-          <Link className="btn" href={next ? `/events/${next.id}` : "/events"}>
-            {next ? "رویداد بعدی" : "رویدادهای شهر"}
+          <Link className="btn" href={next ? `/events/${next.id}` : showCityCalendar ? "/events#city-calendar" : "/events"}>
+            {next ? "رویداد بعدی" : showCityCalendar ? "تقویم شهر" : "رویدادهای شهر"}
           </Link>
           <Link className="btn ghost" href="/venues">
             مکان‌ها و هماهنگی
@@ -114,22 +131,58 @@ export default async function HomePage() {
           </article>
         ) : null}
         {events.length === 0 ? (
-          <div className="empty-art card">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/empty-events.png" alt="" />
-            <p className="muted">
-              هنوز رویدادی برای این هفته ثبت نشده. دورهم رویداد جعلی نمی‌سازد — تا آن موقع از مکان‌ها و هماهنگی
-              حضور شروع کن.
-            </p>
-            <div className="row" style={{ marginTop: 12 }}>
-              <Link className="btn" href="/venues">
-                مکان‌های ایرانی
-              </Link>
-              <Link className="btn ghost" href="/events/new">
-                میزبانی رویداد
-              </Link>
+          showCityCalendar ? (
+            <div>
+              <p className="muted" style={{ marginBottom: 16 }}>
+                هنوز رویداد انجمن ثبت نشده. تا آن موقع این‌ها از تقویم شهر هستند — دورهم رویداد جعلی نمی‌سازد.
+              </p>
+              <div className="grid">
+                {cityShows.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={{
+                      id: event.id,
+                      title: event.title,
+                      description: event.description,
+                      venue: event.venue,
+                      startsAt: event.startsAt,
+                      goingCount: event.goingCount,
+                      capacity: event.capacity,
+                      waitlistCount: event.waitlistCount,
+                      hostName: event.host.displayName,
+                      priceTry: event.priceTry,
+                      kind: event.kind,
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="row" style={{ marginTop: 16 }}>
+                <Link className="btn" href="/events#city-calendar">
+                  همه تقویم شهر
+                </Link>
+                <Link className="btn ghost" href="/events/new">
+                  میزبانی رویداد انجمن
+                </Link>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="empty-art card">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/empty-events.png" alt="" />
+              <p className="muted">
+                هنوز رویدادی برای این هفته ثبت نشده. دورهم رویداد جعلی نمی‌سازد — تا آن موقع از مکان‌ها و هماهنگی
+                حضور شروع کن.
+              </p>
+              <div className="row" style={{ marginTop: 12 }}>
+                <Link className="btn" href="/venues">
+                  مکان‌های ایرانی
+                </Link>
+                <Link className="btn ghost" href="/events/new">
+                  میزبانی رویداد
+                </Link>
+              </div>
+            </div>
+          )
         ) : more.length > 0 ? (
           <div className="grid">
             {more.map((event) => (

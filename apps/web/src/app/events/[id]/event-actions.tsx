@@ -273,44 +273,47 @@ export function EventActions({
       {message ? <div className="banner ok">{message}</div> : null}
       {error ? <div className="banner err">{error}</div> : null}
       <div className="row">
-        <button
-          className="btn"
-          type="button"
-          disabled={paused}
-          onClick={async () => {
-            try {
-              const data = await api<RsvpResult>(`/events/${eventId}/rsvp`, {
-                method: "POST",
-                body: JSON.stringify({}),
-              });
-              setMessage(
-                cityShow
-                  ? "علاقه‌مندی ثبت شد."
-                  : data.waitlisted
-                    ? "ظرفیت پر بود؛ رفتی لیست انتظار."
-                    : data.ticketStatus === "DUE"
-                      ? `ثبت شد. بلیت ${priceTry.toLocaleString("fa-IR")} لیر را نقد دم در بده.`
-                      : "ثبت شد. می‌آیی.",
-              );
+        {!mine ? (
+          <button
+            className="btn"
+            type="button"
+            disabled={paused}
+            onClick={async () => {
+              try {
+                const data = await api<RsvpResult>(`/events/${eventId}/rsvp`, {
+                  method: "POST",
+                  body: JSON.stringify({}),
+                });
+                setMessage(
+                  cityShow
+                    ? "علاقه‌مندی ثبت شد."
+                    : data.waitlisted
+                      ? "ظرفیت پر بود؛ رفتی لیست انتظار."
+                      : data.ticketStatus === "DUE"
+                        ? `ثبت شد. بلیت ${priceTry.toLocaleString("fa-IR")} لیر را نقد دم در بده.`
+                        : "ثبت شد. می‌آیی.",
+                );
+                await reloadGuests();
+              } catch (err) {
+                setError(err instanceof ApiError ? err.message : "ثبت نشد.");
+              }
+            }}
+          >
+            {cityShow ? "علاقه‌مندم" : "می‌آیم"}
+          </button>
+        ) : (
+          <button
+            className="btn ghost"
+            type="button"
+            onClick={async () => {
+              await api(`/events/${eventId}/rsvp`, { method: "DELETE", body: JSON.stringify({}) });
+              setMessage(cityShow ? "علاقه‌مندی برداشته شد." : "لغو شد. اگر کسی در انتظار بود، جایش باز شد.");
               await reloadGuests();
-            } catch (err) {
-              setError(err instanceof ApiError ? err.message : "ثبت نشد.");
-            }
-          }}
-        >
-          {cityShow ? "علاقه‌مندم" : "می‌آیم"}
-        </button>
-        <button
-          className="btn ghost"
-          type="button"
-          onClick={async () => {
-            await api(`/events/${eventId}/rsvp`, { method: "DELETE", body: JSON.stringify({}) });
-            setMessage(cityShow ? "علاقه‌مندی برداشته شد." : "لغو شد. اگر کسی در انتظار بود، جایش باز شد.");
-            await reloadGuests();
-          }}
-        >
-          {cityShow ? "لغو علاقه" : "لغو حضور"}
-        </button>
+            }}
+          >
+            {cityShow ? "لغو علاقه" : "لغو حضور"}
+          </button>
+        )}
         {isHost && !cityShow ? (
           <>
             <Link className="btn" href={`/events/${eventId}/door`}>
@@ -337,7 +340,7 @@ export function EventActions({
         <Link className="btn ghost" href={`/feed?event=${eventId}`}>
           نوشتن در فید شهر
         </Link>
-        {!paused ? (
+        {!paused && me && me.id !== hostId ? (
           <>
             <button
               className="btn ghost"

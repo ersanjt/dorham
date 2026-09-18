@@ -349,7 +349,7 @@ export class VenuesService {
     if (!(startsAt > now) || startsAt > max) {
       throw new BadRequestException({
         code: "HANG_PLAN_INVALID",
-        message: "Pick a time between now and 14 days ahead.",
+        message: "زمان را بین الان و ۱۴ روز آینده انتخاب کن.",
       });
     }
     const dayStart = new Date(startsAt);
