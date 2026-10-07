@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { EventDto, VenueDto, VenueReview } from "@dorham/shared";
+import type { Metadata } from "next";
 import { EventCard } from "../../../components/event-card";
 import { PageIntro } from "../../../components/page-intro";
 import { SiteFooter } from "../../../components/site-footer";
@@ -11,13 +12,17 @@ import { VenueVisitActions } from "./visit-actions";
 import { VenueCommunity } from "./community";
 import { VenueMenuEditor } from "./menu-editor";
 import { resolveApiBase } from "../../../lib/api-base";
-import { AREA_LABEL, KIND_LABEL } from "../../../lib/venues";
+import { catalogInit } from "../../../lib/catalog-fetch";
+import { t } from "../../../lib/copy";
+import { formatCount } from "../../../lib/format";
+import { getLocale } from "../../../lib/locale-server";
+import { venueAreaLabel, venueKindLabel } from "../../../lib/venues";
 
 const API = resolveApiBase();
 
 async function loadVenue(slug: string): Promise<VenueDto | null> {
   try {
-    const res = await fetch(`${API}/v1/venues/${slug}`, { cache: "no-store" });
+    const res = await fetch(`${API}/v1/venues/${slug}`, catalogInit());
     if (!res.ok) return null;
     const json = (await res.json()) as { data: VenueDto };
     return json.data;
@@ -39,9 +44,7 @@ async function loadReviews(slug: string): Promise<VenueReview[]> {
 
 async function loadEvents(slug: string): Promise<EventDto[]> {
   try {
-    const res = await fetch(`${API}/v1/events?city=istanbul&venueSlug=${encodeURIComponent(slug)}&limit=10`, {
-      cache: "no-store",
-    });
+    const res = await fetch(`${API}/v1/events?city=istanbul&venueSlug=${encodeURIComponent(slug)}&limit=10`, catalogInit());
     if (!res.ok) return [];
     const json = (await res.json()) as { data: EventDto[] };
     return json.data ?? [];
@@ -50,8 +53,30 @@ async function loadEvents(slug: string): Promise<EventDto[]> {
   }
 }
 
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const venue = await loadVenue(slug);
+  if (!venue) return { title: "Dorham — دورهم" };
+  const description = venue.description.replace(/\s+/g, " ").trim().slice(0, 160);
+  const origin = (process.env.NEXT_PUBLIC_APP_URL || "https://dorham.app").replace(/\/$/, "");
+  const url = `${origin}/venues/${venue.slug}`;
+  return {
+    title: `${venue.name} — Dorham`,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: venue.name,
+      description,
+      url,
+      type: "article",
+    },
+  };
+}
+
 export default async function VenuePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const locale = await getLocale();
+  const copy = t(locale);
   const [venue, reviews, events] = await Promise.all([loadVenue(slug), loadReviews(slug), loadEvents(slug)]);
   if (!venue) notFound();
 
@@ -59,57 +84,60 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
     venue.gallery?.length > 0
       ? venue.gallery
       : venue.mapImageUrl
-        ? [{ kind: "map" as const, src: venue.mapsEmbedUrl ?? venue.mapImageUrl, label: "نقشه" }]
+        ? [{ kind: "map" as const, src: venue.mapsEmbedUrl ?? venue.mapImageUrl, label: copy.venues.map }]
         : [];
 
   return (
     <main className="wrap">
       <SiteHeader />
-      <PageIntro kicker={`${KIND_LABEL[venue.kind]} · ${AREA_LABEL[venue.area] ?? venue.area}`} title={venue.name}>
+      <PageIntro
+        kicker={`${venueKindLabel(venue.kind, locale)} · ${venueAreaLabel(venue.area, locale)}`}
+        title={venue.name}
+      >
         <p className="lead">{venue.description}</p>
       </PageIntro>
 
       <VenueGallery items={gallery} name={venue.name} />
 
-      <section className="venue-panel" aria-label="اطلاعات مکان">
-        <h2 className="venue-panel-title">جزئیات</h2>
+      <section className="venue-panel" aria-label={copy.venues.factsAria}>
+        <h2 className="venue-panel-title">{copy.venues.details}</h2>
         <dl className="venue-facts">
           <div className="venue-fact">
-            <dt>آدرس</dt>
+            <dt>{copy.venues.address}</dt>
             <dd>{venue.address}</dd>
           </div>
           {venue.hours ? (
             <div className="venue-fact">
-              <dt>ساعت کار</dt>
+              <dt>{copy.venues.hours}</dt>
               <dd>{venue.hours}</dd>
             </div>
           ) : null}
           {venue.priceRange ? (
             <div className="venue-fact">
-              <dt>حدود قیمت</dt>
+              <dt>{copy.venues.price}</dt>
               <dd>{venue.priceRange}</dd>
             </div>
           ) : null}
           {venue.menuNotes ? (
             <div className="venue-fact">
-              <dt>غذای شاخص</dt>
+              <dt>{copy.venues.signature}</dt>
               <dd>{venue.menuNotes}</dd>
             </div>
           ) : null}
           {venue.menuImageUrl ? (
             <div className="venue-fact venue-fact-menu">
-              <dt>منو</dt>
+              <dt>{copy.venues.menu}</dt>
               <dd>
                 <a className="venue-menu-link" href={venue.menuImageUrl} target="_blank" rel="noreferrer">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img className="venue-menu-image" src={venue.menuImageUrl} alt={`منوی ${venue.name}`} />
+                  <img className="venue-menu-image" src={venue.menuImageUrl} alt={copy.venues.menuAlt(venue.name)} />
                 </a>
               </dd>
             </div>
           ) : null}
           {venue.phone ? (
             <div className="venue-fact">
-              <dt>تلفن</dt>
+              <dt>{copy.venues.phone}</dt>
               <dd>
                 <a href={`tel:${venue.phone}`}>{venue.phone}</a>
               </dd>
@@ -117,7 +145,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
           ) : null}
           {venue.website ? (
             <div className="venue-fact">
-              <dt>وب‌سایت</dt>
+              <dt>{copy.venues.website}</dt>
               <dd>
                 <a href={venue.website} target="_blank" rel="noreferrer">
                   {venue.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
@@ -126,19 +154,19 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
             </div>
           ) : null}
           <div className="venue-fact">
-            <dt>نظرها</dt>
-            <dd>{venue.reviewCount.toLocaleString("fa-IR")} نظر ثبت‌شده</dd>
+            <dt>{copy.venues.reviewsLabel}</dt>
+            <dd>{copy.venues.reviewsRecorded(formatCount(venue.reviewCount, locale))}</dd>
           </div>
         </dl>
         <div className="row venue-panel-actions">
           <a className="btn" href={venue.mapsUrl} target="_blank" rel="noreferrer">
-            باز کردن در گوگل‌مپ
+            {copy.venues.openMaps}
           </a>
           <Link className="btn ghost" href={`/feed?venue=${venue.slug}`}>
-            نوشتن در فید شهر
+            {copy.venues.writeFeed}
           </Link>
           <Link className="btn ghost" href="/venues">
-            همه مکان‌ها
+            {copy.venues.allPlaces}
           </Link>
         </div>
       </section>
@@ -148,10 +176,10 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
       <VenueCommunity slug={venue.slug} />
 
       <section className="stack" style={{ marginTop: 28 }}>
-        <h2>رویدادها در این مکان</h2>
-        {events.length === 0 ? <p className="muted">هنوز رویدادی برای اینجا اعلام نشده.</p> : null}
+        <h2>{copy.venues.eventsHere}</h2>
+        {events.length === 0 ? <p className="muted">{copy.venues.noEvents}</p> : null}
         {events.map((event) => (
-          <EventCard key={event.id} event={{ ...event, hostName: event.host.displayName }} />
+          <EventCard key={event.id} event={{ ...event, hostName: event.host.displayName }} locale={locale} />
         ))}
       </section>
       <VenueReviews slug={venue.slug} initial={reviews} />

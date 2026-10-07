@@ -68,3 +68,5 @@ Only if phase 2–3 work and women ask.
 - Admin console app (use Prisma Studio + SQL until phase 2)
 - Microservices
 - Machine-learning match
+
+Operating layer for the 90-day Istanbul MVP (lanes, software vs IRL): `docs/11-mvp-execution.md`.

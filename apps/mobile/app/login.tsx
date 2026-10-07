@@ -64,6 +64,7 @@ export default function LoginScreen() {
         variant="ghost"
         onPress={() => router.push(`/register?next=${encodeURIComponent(next)}`)}
       />
+      <Button label="رمز را فراموش کردم" variant="ghost" onPress={() => router.push("/forgot-password")} />
     </Screen>
   );
 }

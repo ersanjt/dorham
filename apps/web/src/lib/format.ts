@@ -1,16 +1,24 @@
-/** Persian copy, Gregorian calendar, Istanbul clock — never Jalali. */
-const DATE_LOCALE = "fa-IR-u-ca-gregory";
+import { t } from "./copy";
+import type { UiLocale } from "./locale";
+import { dateTag } from "./locale";
+
+/** Gregorian calendar, Istanbul clock — never Jalali. Persian or English digits by UI locale. */
 const TIME_ZONE = "Europe/Istanbul";
 
-export function formatDayChip(iso: string) {
+function numberTag(locale: UiLocale = "fa") {
+  return locale === "en" ? "en-GB" : "fa-IR";
+}
+
+export function formatDayChip(iso: string, locale: UiLocale = "fa") {
   const date = new Date(iso);
-  const weekday = date.toLocaleDateString(DATE_LOCALE, { weekday: "short", timeZone: TIME_ZONE });
-  const dayMonth = date.toLocaleDateString(DATE_LOCALE, {
+  const tag = dateTag(locale);
+  const weekday = date.toLocaleDateString(tag, { weekday: "short", timeZone: TIME_ZONE });
+  const dayMonth = date.toLocaleDateString(tag, {
     day: "numeric",
     month: "short",
     timeZone: TIME_ZONE,
   });
-  const time = date.toLocaleTimeString(DATE_LOCALE, {
+  const time = date.toLocaleTimeString(tag, {
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: "h23",
@@ -19,8 +27,8 @@ export function formatDayChip(iso: string) {
   return `${weekday} ${dayMonth} · ${time}`;
 }
 
-export function formatWhen(iso: string) {
-  return new Date(iso).toLocaleString(DATE_LOCALE, {
+export function formatWhen(iso: string, locale: UiLocale = "fa") {
+  return new Date(iso).toLocaleString(dateTag(locale), {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -31,9 +39,9 @@ export function formatWhen(iso: string) {
   });
 }
 
-/** Member-since line: Persian digits, Gregorian month/year (never Jalali). */
-export function formatMemberSince(iso: string) {
-  return new Date(iso).toLocaleDateString(DATE_LOCALE, {
+/** Member-since line: Gregorian month/year (never Jalali). */
+export function formatMemberSince(iso: string, locale: UiLocale = "fa") {
+  return new Date(iso).toLocaleDateString(dateTag(locale), {
     year: "numeric",
     month: "long",
     timeZone: TIME_ZONE,
@@ -45,9 +53,10 @@ export function capacityWidth(going: number, capacity: number | null | undefined
   return Math.min(100, Math.round((going / capacity) * 100));
 }
 
-export function formatPriceTry(amount: number) {
-  if (!amount) return "رایگان";
-  return `${amount.toLocaleString("fa-IR")} لیر · دم در`;
+export function formatPriceTry(amount: number, locale: UiLocale = "fa") {
+  if (!amount) return locale === "en" ? "Free" : "رایگان";
+  const n = amount.toLocaleString(numberTag(locale));
+  return locale === "en" ? `${n} TRY · at the door` : `${n} لیر · دم در`;
 }
 
 export const verifyFa: Record<string, string> = {
@@ -56,6 +65,21 @@ export const verifyFa: Record<string, string> = {
   VERIFIED: "تأیید دست‌نویس",
   REJECTED: "رد شده",
 };
+
+export function formatCount(n: number, locale: UiLocale = "fa") {
+  return n.toLocaleString(numberTag(locale));
+}
+
+export function eventStatusLabel(status: string, locale: UiLocale = "fa") {
+  const labels = t(locale).event;
+  const map: Record<string, string> = {
+    DRAFT: labels.draft,
+    PUBLISHED: labels.published,
+    CANCELLED: labels.cancelled,
+    ENDED: labels.ended,
+  };
+  return map[status] ?? status;
+}
 
 export const eventStatusFa: Record<string, string> = {
   DRAFT: "پیش‌نویس",
@@ -69,20 +93,64 @@ export function eventPageUrl(id: string) {
   return `${origin}/events/${id}`;
 }
 
-export function eventInviteText(event: {
+export function eventJsonLd(event: {
   id: string;
   title: string;
+  description: string;
   startsAt: string;
   venue: string | null;
+  address?: string | null;
   priceTry: number;
+  kind: "COMMUNITY" | "CITY_SHOW";
+  status: string;
 }) {
-  const price = event.priceTry ? `${event.priceTry.toLocaleString("fa-IR")} لیر نقد دم در` : "ورود رایگان";
+  const origin = (process.env.NEXT_PUBLIC_APP_URL || "https://dorham.app").replace(/\/$/, "");
+  const payload: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: event.title,
+    description: event.description.replace(/\s+/g, " ").trim().slice(0, 300),
+    startDate: event.startsAt,
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    eventStatus:
+      event.status === "CANCELLED" ? "https://schema.org/EventCancelled" : "https://schema.org/EventScheduled",
+    location: {
+      "@type": "Place",
+      name: event.venue ?? "Istanbul",
+      address: event.address ?? "Istanbul, Türkiye",
+    },
+    organizer: { "@type": "Organization", name: "Dorham", url: origin },
+    url: eventPageUrl(event.id),
+  };
+  if (event.kind !== "CITY_SHOW") {
+    payload.offers = {
+      "@type": "Offer",
+      price: event.priceTry,
+      priceCurrency: "TRY",
+      availability: "https://schema.org/InStock",
+    };
+  }
+  return payload;
+}
+
+export function eventInviteText(
+  event: {
+    id: string;
+    title: string;
+    startsAt: string;
+    venue: string | null;
+    priceTry: number;
+  },
+  locale: UiLocale = "fa",
+) {
+  const share = t(locale).share;
+  const price = event.priceTry ? share.cash(formatCount(event.priceTry, locale)) : share.free;
   return [
     event.title,
-    `${formatDayChip(event.startsAt)}${event.venue ? ` · ${event.venue}` : ""}`,
+    `${formatDayChip(event.startsAt, locale)}${event.venue ? ` · ${event.venue}` : ""}`,
     price,
     "",
-    "لیست مهمان واقعی. سوایپ نیست.",
+    share.closer,
     eventPageUrl(event.id),
   ].join("\n");
 }

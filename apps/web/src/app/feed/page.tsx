@@ -6,6 +6,8 @@ import { PageIntro } from "../../components/page-intro";
 import { FeedPostCard } from "../../components/feed-post";
 import type { FeedPost } from "@dorham/shared";
 import { resolveApiBase } from "../../lib/api-base";
+import { t } from "../../lib/copy";
+import { getLocale } from "../../lib/locale-server";
 import { FeedCompose } from "./compose";
 
 const API = resolveApiBase();
@@ -22,32 +24,32 @@ async function loadFeed(): Promise<FeedPost[]> {
 }
 
 export default async function FeedPage() {
+  const locale = await getLocale();
+  const copy = t(locale);
   const posts = (await loadFeed()).filter((post) => post.body.trim().length >= 20);
   return (
     <main className="wrap">
       <SiteHeader />
-      <PageIntro kicker="خبر شهر" title="فید استانبول">
-        <p className="muted">
-          پیشنهاد مکان، حرف بعد از دورهم، هماهنگی قبل از کنسرت. حداقل چند جملهٔ واقعی — سوایپ و اسپم جایی ندارد.
-        </p>
+      <PageIntro kicker={copy.feed.kicker} title={copy.feed.title}>
+        <p className="muted">{copy.feed.lead}</p>
       </PageIntro>
       <div className="form-card">
-        <Suspense fallback={<p className="muted">در حال بارگذاری فرم…</p>}>
+        <Suspense fallback={<p className="muted">{copy.feed.loading}</p>}>
           <FeedCompose />
         </Suspense>
       </div>
       {posts.length === 0 ? (
         <div className="feed-empty card">
-          <p className="muted">هنوز پستی نیست. فید برای حرف وسط هفته و بعد از دورهم است — نه سوایپ.</p>
+          <p className="muted">{copy.feed.empty}</p>
           <div className="feed-prompt-row">
             <Link className="pill solid" href="/venues">
-              پیشنهاد مکان ایرانی
+              {copy.feed.suggest}
             </Link>
             <Link className="pill" href="/events">
-              بعد از رویداد بنویس
+              {copy.feed.afterEvent}
             </Link>
             <Link className="pill" href="/account?tab=trust">
-              اول تأیید هویت
+              {copy.feed.verifyFirst}
             </Link>
           </div>
         </div>

@@ -38,7 +38,7 @@ export class MapsController {
   private readonly env = loadEnv();
 
   @Get("static")
-  @Header("Cache-Control", "public, max-age=86400")
+  @Header("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
   @Header("X-Content-Type-Options", "nosniff")
   async staticMap(
     @Query("lat") latRaw: string | undefined,
@@ -66,7 +66,7 @@ export class MapsController {
   }
 
   @Get("streetview")
-  @Header("Cache-Control", "public, max-age=86400")
+  @Header("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
   @Header("X-Content-Type-Options", "nosniff")
   async streetView(
     @Query("lat") latRaw: string | undefined,

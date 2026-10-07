@@ -209,7 +209,7 @@ export function VenueHangPlans({ slug }: { slug: string }) {
         ) : (
           <>
             <Field
-              label="زمان (YYYY-MM-DDTHH:mm)"
+              label="زمان (میلادی، مثل 2026-09-21T13:00)"
               value={startsAt}
               onChangeText={setStartsAt}
               autoCapitalize="none"

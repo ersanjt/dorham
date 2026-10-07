@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Image, Linking } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import type { EventDto, VenueDto, VenueReview } from "@dorham/shared";
+import type { EventDto, VenueDto, VenueReview, VenueVisitDto } from "@dorham/shared";
 import { EventCard } from "../../../components/event-card";
 import { VenueHangPlans } from "../../../components/venue-hang-plans";
-import { AppText, Banner, Button, Card, Field, Loading, Screen } from "../../../components/ui";
+import { AppText, Banner, Button, Card, ErrorState, Field, Loading, Screen } from "../../../components/ui";
 import { api, ApiError } from "../../../lib/api";
 import { publicMediaUrl } from "../../../lib/api-base";
 import { venueKindFa } from "../../../lib/format";
@@ -21,8 +21,9 @@ export default function VenueDetailScreen() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  useEffect(() => {
+  function load() {
     if (!slug) return;
+    setError("");
     api<VenueDto>(`/venues/${slug}`, { auth: false })
       .then(setVenue)
       .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "مکان خوانده نشد."));
@@ -32,6 +33,10 @@ export default function VenueDetailScreen() {
     api<EventDto[]>(`/events?city=istanbul&kind=COMMUNITY&venueSlug=${encodeURIComponent(slug)}&limit=10`, { auth: false })
       .then(setEvents)
       .catch(() => setEvents([]));
+  }
+
+  useEffect(() => {
+    load();
   }, [slug]);
 
   async function publish() {
@@ -56,6 +61,14 @@ export default function VenueDetailScreen() {
     return (
       <Screen back title="مکان">
         <Loading />
+      </Screen>
+    );
+  }
+
+  if (!venue && error) {
+    return (
+      <Screen back title="مکان">
+        <ErrorState text={error} onRetry={load} />
       </Screen>
     );
   }
@@ -99,6 +112,31 @@ export default function VenueDetailScreen() {
         </Card>
       ) : null}
       {venue ? <Button label="باز کردن در گوگل‌مپ" onPress={() => Linking.openURL(venue.mapsUrl)} /> : null}
+      {slug ? (
+        isSignedIn() ? (
+          <Button
+            label="درخواست تأیید حضور"
+            variant="ghost"
+            onPress={() => {
+              api<VenueVisitDto>(`/venues/${slug}/visits`, { method: "POST", body: "{}" })
+                .then((visit) =>
+                  setNotice(
+                    visit.status === "VERIFIED"
+                      ? "حضورت قبلاً تأیید شده."
+                      : "درخواست ثبت شد. صاحب مکان با QR یا لینک دم‌در تأیید می‌کند.",
+                  ),
+                )
+                .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "درخواست نشد."));
+            }}
+          />
+        ) : (
+          <Button
+            label="ورود برای ثبت حضور"
+            variant="ghost"
+            onPress={() => router.push(loginHref(`/venues/${slug}`))}
+          />
+        )
+      ) : null}
       {venue ? (
         <Button
           label="نوشتن در فید شهر"
@@ -121,6 +159,7 @@ export default function VenueDetailScreen() {
       <AppText bold size="title">
         تجربه‌ها
       </AppText>
+      {reviews.length === 0 ? <AppText muted>هنوز تجربه‌ای ثبت نشده.</AppText> : null}
       {reviews.map((row) => (
         <Card key={row.id}>
           <AppText muted size="caption">

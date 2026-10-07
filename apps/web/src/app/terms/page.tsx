@@ -1,40 +1,38 @@
+import Link from "next/link";
 import { PageIntro } from "../../components/page-intro";
 import { SiteFooter } from "../../components/site-footer";
 import { SiteHeader } from "../../components/site-header";
+import { t } from "../../lib/copy";
+import { getLocale } from "../../lib/locale-server";
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const copy = t(await getLocale()).terms;
   return (
     <main className="wrap">
       <SiteHeader />
-      <PageIntro kicker="قواعد" title="قوانین استفاده">
-        <p className="muted">جامعه برای آدم واقعی در ترکیه · آخرین به‌روزرسانی سپتامبر ۲۰۲۶</p>
+      <PageIntro kicker={copy.kicker} title={copy.title}>
+        <p className="muted">{copy.updated}</p>
       </PageIntro>
       <article className="card stack">
-        <h2>عضویت</h2>
-        <p>۱۸ سال به بالا. یک حساب برای هر نفر. ربات، اسکرپ، هویت جعلی و آزار ممنوع است.</p>
+        <h2>{copy.joinTitle}</h2>
+        <p>{copy.join}</p>
 
-        <h2>جامعه، نه سوایپ</h2>
-        <p>
-          دورهم محصول جامعه برای ایرانی‌های ساکن ترکیه است (اول استانبول). صفحهٔ اول شهر و رویداد است.
-          Boost، Super Like، لایک پولی و شبکهٔ سوایپ در این محصول نیست.
-        </p>
+        <h2>{copy.communityTitle}</h2>
+        <p>{copy.community}</p>
 
-        <h2>رویداد و بلیت</h2>
-        <p>
-          ثبت حضور یعنی پذیرش مهمان‌لیست واقعی. اگر رویداد قیمت داشته باشد، پرداخت فعلاً نقد دم در است مگر
-          خلاف آن اعلام شود. میزبان می‌تواند ورود را با QR یا دستی ثبت کند.
-        </p>
+        <h2>{copy.eventTitle}</h2>
+        <p>{copy.event}</p>
 
-        <h2>مکان‌ها و فید</h2>
-        <p>ثبت مکان پس از بررسی منتشر می‌شود. پست و نظر باید محترمانه باشد؛ گزارش‌ها بررسی می‌شود.</p>
+        <h2>{copy.placesTitle}</h2>
+        <p>{copy.places}</p>
 
-        <h2>تعلیق</h2>
-        <p>تیم می‌تواند حساب را برای نقض قواعد تعلیق یا حذف کند. تصمیم نهایی با میزبان/مدیر است.</p>
+        <h2>{copy.suspendTitle}</h2>
+        <p>{copy.suspend}</p>
 
-        <h2>تماس</h2>
+        <h2>{copy.contactTitle}</h2>
         <p>
           <a href="mailto:hello@dorham.app">hello@dorham.app</a> ·{" "}
-          <a href="/safety">صفحهٔ امنیت</a>
+          <Link href="/safety">{copy.safety}</Link>
         </p>
       </article>
       <SiteFooter />

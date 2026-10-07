@@ -27,3 +27,5 @@ People open it to see what is happening in their city this week, to go to a publ
 ## Decision filter
 
 If a feature does not help someone **meet a real person in this city**, it waits.
+
+90-day operating plan (MVP lanes, software vs IRL): `docs/11-mvp-execution.md`.

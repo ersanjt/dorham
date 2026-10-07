@@ -103,6 +103,11 @@ export default function RegisterScreen() {
         onPress={submit}
         disabled={pending || !adult || !accepted}
       />
+      <Button
+        label="حساب دارم"
+        variant="ghost"
+        onPress={() => router.push(`/login?next=${encodeURIComponent(next)}`)}
+      />
     </Screen>
   );
 }

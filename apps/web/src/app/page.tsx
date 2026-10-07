@@ -5,18 +5,14 @@ import { FeedPostCard } from "../components/feed-post";
 import { ShareEvent } from "../components/share-event";
 import { SiteFooter } from "../components/site-footer";
 import { SiteHeader } from "../components/site-header";
+import { t } from "../lib/copy";
 import { eventInviteText, eventPageUrl, formatDayChip, formatPriceTry } from "../lib/format";
 import { resolveApiBase } from "../lib/api-base";
+import { catalogInit } from "../lib/catalog-fetch";
+import { getLocale } from "../lib/locale-server";
 import { publicMediaUrl } from "../lib/media-url";
 
 const API = resolveApiBase();
-
-const INTENT_FA: Record<string, string> = {
-  LUNCH: "ناهار",
-  DINNER: "شام",
-  COFFEE: "قهوه",
-  OTHER: "دورهم",
-};
 
 async function loadFeed(): Promise<FeedPost[]> {
   try {
@@ -31,7 +27,7 @@ async function loadFeed(): Promise<FeedPost[]> {
 
 async function loadEvents(): Promise<EventDto[]> {
   try {
-    const res = await fetch(`${API}/v1/events?city=istanbul&kind=COMMUNITY&limit=4`, { cache: "no-store" });
+    const res = await fetch(`${API}/v1/events?city=istanbul&kind=COMMUNITY&limit=4`, catalogInit());
     if (!res.ok) return [];
     const json = (await res.json()) as { data: EventDto[] };
     return json.data ?? [];
@@ -42,7 +38,7 @@ async function loadEvents(): Promise<EventDto[]> {
 
 async function loadCityShows(): Promise<EventDto[]> {
   try {
-    const res = await fetch(`${API}/v1/events?city=istanbul&kind=CITY_SHOW&limit=4`, { cache: "no-store" });
+    const res = await fetch(`${API}/v1/events?city=istanbul&kind=CITY_SHOW&limit=4`, catalogInit());
     if (!res.ok) return [];
     const json = (await res.json()) as { data: EventDto[] };
     return json.data ?? [];
@@ -53,7 +49,7 @@ async function loadCityShows(): Promise<EventDto[]> {
 
 async function loadHangPlans(): Promise<VenueHangPlanDto[]> {
   try {
-    const res = await fetch(`${API}/v1/venues/hang-plans?city=istanbul&limit=8`, { cache: "no-store" });
+    const res = await fetch(`${API}/v1/venues/hang-plans?city=istanbul&limit=8`, catalogInit());
     if (!res.ok) return [];
     const json = (await res.json()) as { data: VenueHangPlanDto[] };
     return json.data ?? [];
@@ -63,6 +59,9 @@ async function loadHangPlans(): Promise<VenueHangPlanDto[]> {
 }
 
 export default async function HomePage() {
+  const locale = await getLocale();
+  const copy = t(locale);
+  const digits = locale === "en" ? "en-GB" : "fa-IR";
   const [events, cityShows, posts, hangPlans] = await Promise.all([
     loadEvents(),
     loadCityShows(),
@@ -79,54 +78,53 @@ export default async function HomePage() {
       <SiteHeader />
 
       <section className="hero">
-        <p className="kicker">جامعهٔ ایرانی · استانبول</p>
-        <h1>دورهم، توی همین شهر</h1>
-        <p className="lead">
-          جایی که ایرانی‌های استانبول برای رویداد، کافه و آدم واقعی برمی‌گردند — نه برای سوایپ بی‌پایان.
-        </p>
+        <p className="kicker">{copy.home.kicker}</p>
+        <h1>{copy.home.title}</h1>
+        <p className="lead">{copy.home.lead}</p>
         <div className="hero-visual">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/hero.png" alt="" />
         </div>
         <div className="row">
           <Link className="btn" href={next ? `/events/${next.id}` : showCityCalendar ? "/events#city-calendar" : "/events"}>
-            {next ? "رویداد بعدی" : showCityCalendar ? "تقویم شهر" : "رویدادهای شهر"}
+            {next ? copy.home.nextEvent : showCityCalendar ? copy.home.cityCalendar : copy.home.cityEvents}
           </Link>
           <Link className="btn ghost" href="/venues">
-            مکان‌ها و هماهنگی
+            {copy.home.venuesCta}
           </Link>
         </div>
       </section>
 
       <section id="events">
         <div className="section-head">
-          <p className="kicker">حلقهٔ برگشت</p>
-          <h2>این هفته در استانبول</h2>
+          <p className="kicker">{copy.home.weekKicker}</p>
+          <h2>{copy.home.weekTitle}</h2>
         </div>
         {next ? (
           <article className="card" style={{ marginBottom: 24 }}>
-            <p className="kicker">رویداد بعدی</p>
+            <p className="kicker">{copy.home.nextEvent}</p>
             <h3 style={{ marginTop: 0 }}>{next.title}</h3>
             <p className="muted">
-              {formatDayChip(next.startsAt)}
+              {formatDayChip(next.startsAt, locale)}
               {next.venue ? ` · ${next.venue}` : ""}
               {" · "}
-              {formatPriceTry(next.priceTry)}
+              {formatPriceTry(next.priceTry, locale)}
             </p>
             <p className="muted">
               {next.goingCount === 0
                 ? next.capacity
-                  ? `ظرفیت ${next.capacity.toLocaleString("fa-IR")} نفر · هنوز کسی ثبت نکرده`
-                  : "هنوز کسی ثبت نکرده"
-                : `${next.goingCount.toLocaleString("fa-IR")}${
-                    next.capacity ? ` از ${next.capacity.toLocaleString("fa-IR")}` : ""
-                  } نفر می‌آیند`}
+                  ? copy.home.goingNoneCap(next.capacity.toLocaleString(digits))
+                  : copy.home.goingNone
+                : copy.home.going(
+                    next.goingCount.toLocaleString(digits),
+                    next.capacity ? next.capacity.toLocaleString(digits) : undefined,
+                  )}
             </p>
             <div className="row">
               <Link className="btn" href={`/events/${next.id}`}>
-                جزئیات و ثبت حضور
+                {copy.home.details}
               </Link>
-              <ShareEvent title={next.title} text={eventInviteText(next)} url={eventPageUrl(next.id)} />
+              <ShareEvent title={next.title} text={eventInviteText(next, locale)} url={eventPageUrl(next.id)} />
             </div>
           </article>
         ) : null}
@@ -134,7 +132,7 @@ export default async function HomePage() {
           showCityCalendar ? (
             <div>
               <p className="muted" style={{ marginBottom: 16 }}>
-                هنوز رویداد انجمن ثبت نشده. تا آن موقع این‌ها از تقویم شهر هستند — دورهم رویداد جعلی نمی‌سازد.
+                {copy.home.noCommunity}
               </p>
               <div className="grid">
                 {cityShows.map((event) => (
@@ -153,15 +151,16 @@ export default async function HomePage() {
                       priceTry: event.priceTry,
                       kind: event.kind,
                     }}
+                    locale={locale}
                   />
                 ))}
               </div>
               <div className="row" style={{ marginTop: 16 }}>
                 <Link className="btn" href="/events#city-calendar">
-                  همه تقویم شهر
+                  {copy.home.allCityCal}
                 </Link>
                 <Link className="btn ghost" href="/events/new">
-                  میزبانی رویداد انجمن
+                  {copy.home.hostCommunity}
                 </Link>
               </div>
             </div>
@@ -169,16 +168,13 @@ export default async function HomePage() {
             <div className="empty-art card">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/brand/empty-events.png" alt="" />
-              <p className="muted">
-                هنوز رویدادی برای این هفته ثبت نشده. دورهم رویداد جعلی نمی‌سازد — تا آن موقع از مکان‌ها و هماهنگی
-                حضور شروع کن.
-              </p>
+              <p className="muted">{copy.home.emptyWeek}</p>
               <div className="row" style={{ marginTop: 12 }}>
                 <Link className="btn" href="/venues">
-                  مکان‌های ایرانی
+                  {copy.home.iranianPlaces}
                 </Link>
                 <Link className="btn ghost" href="/events/new">
-                  میزبانی رویداد
+                  {copy.home.hostEvent}
                 </Link>
               </div>
             </div>
@@ -199,9 +195,10 @@ export default async function HomePage() {
                   waitlistCount: event.waitlistCount,
                   hostName: event.host.displayName,
                   priceTry: event.priceTry,
-                  kind: event.kind,
-                }}
-              />
+                      kind: event.kind,
+                    }}
+                    locale={locale}
+                  />
             ))}
           </div>
         ) : null}
@@ -210,10 +207,10 @@ export default async function HomePage() {
       {hangPlans.length > 0 ? (
         <section className="home-hangs">
           <div className="section-head">
-            <p className="kicker">هماهنگی</p>
-            <h2>کی کجاست؟</h2>
+            <p className="kicker">{copy.home.hangKicker}</p>
+            <h2>{copy.home.hangTitle}</h2>
           </div>
-          <p className="muted">برنامهٔ حضور در کافه و رستوران — ببین و بپیوند. زندهٔ GPS نیست.</p>
+          <p className="muted">{copy.home.hangLead}</p>
           <ul className="home-hang-list">
             {hangPlans.map((plan) => {
               const photo = publicMediaUrl(plan.user.photoUrl);
@@ -232,8 +229,9 @@ export default async function HomePage() {
                       <strong>{plan.user.displayName}</strong>
                       <span className="muted">
                         {" "}
-                        · {INTENT_FA[plan.intent] ?? plan.intent} در {plan.venueName}
-                        {plan.venueArea ? ` · ${plan.venueArea}` : ""} · {formatDayChip(plan.startsAt)}
+                        · {copy.intent[plan.intent as keyof typeof copy.intent] ?? plan.intent} {copy.home.hangAt}{" "}
+                        {plan.venueName}
+                        {plan.venueArea ? ` · ${plan.venueArea}` : ""} · {formatDayChip(plan.startsAt, locale)}
                       </span>
                     </span>
                   </Link>
@@ -243,7 +241,7 @@ export default async function HomePage() {
           </ul>
           <p style={{ marginTop: 12 }}>
             <Link className="card-cta" href="/venues">
-              همه مکان‌ها
+              {copy.home.allVenues}
             </Link>
           </p>
         </section>
@@ -252,8 +250,8 @@ export default async function HomePage() {
       {cityNotes.length > 0 ? (
         <section>
           <div className="section-head">
-            <p className="kicker">خبر شهر</p>
-            <h2>حرف‌های این هفته</h2>
+            <p className="kicker">{copy.home.notesKicker}</p>
+            <h2>{copy.home.notesTitle}</h2>
           </div>
           <div className="stack">
             {cityNotes.map((post) => (
@@ -262,7 +260,7 @@ export default async function HomePage() {
           </div>
           <p style={{ marginTop: 16 }}>
             <Link className="card-cta" href="/feed">
-              فید کامل شهر
+              {copy.home.fullFeed}
             </Link>
           </p>
         </section>
@@ -270,21 +268,21 @@ export default async function HomePage() {
 
       <section className="home-why">
         <div className="section-head">
-          <p className="kicker">چرا دورهم</p>
-          <h2>سه دلیل برگشتن</h2>
+          <p className="kicker">{copy.home.whyKicker}</p>
+          <h2>{copy.home.whyTitle}</h2>
         </div>
         <div className="home-why-grid">
           <article>
-            <h3>رویداد شهری</h3>
-            <p className="muted">جمعه و بهانه‌های حضوری. مهمان‌لیست واقعی، نه کارت سوایپ.</p>
+            <h3>{copy.home.whyEventTitle}</h3>
+            <p className="muted">{copy.home.whyEvent}</p>
           </article>
           <article>
-            <h3>هماهنگی مکان</h3>
-            <p className="muted">بگو کی می‌آیی کافه؛ بقیه ببینند و بپیوندند.</p>
+            <h3>{copy.home.whyHangTitle}</h3>
+            <p className="muted">{copy.home.whyHang}</p>
           </article>
           <article>
-            <h3>آدم تأییدشده</h3>
-            <p className="muted">عکس دست‌نویس و نشان زعفرانی. اعتماد برای ماندن زنان و خانواده‌ها.</p>
+            <h3>{copy.home.whyVerifyTitle}</h3>
+            <p className="muted">{copy.home.whyVerify}</p>
           </article>
         </div>
       </section>

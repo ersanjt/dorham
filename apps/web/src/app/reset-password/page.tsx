@@ -6,9 +6,11 @@ import { FormEvent, Suspense, useState } from "react";
 import { resetPasswordBodySchema } from "@dorham/shared";
 import { PageIntro } from "../../components/page-intro";
 import { SiteHeader } from "../../components/site-header";
+import { useCopy } from "../../components/locale-provider";
 import { api, ApiError } from "../../lib/api";
 
 function ResetForm() {
+  const copy = useCopy();
   const router = useRouter();
   const search = useSearchParams();
   const token = search.get("token") ?? "";
@@ -24,7 +26,7 @@ function ResetForm() {
       password: String(form.get("password") ?? ""),
     });
     if (!parsed.success) {
-      setError("رمز حداقل ۱۰ کاراکتر با حرف و عدد. لینک را از ایمیل باز کن.");
+      setError(copy.auth.resetBad);
       return;
     }
     setPending(true);
@@ -36,7 +38,7 @@ function ResetForm() {
       });
       router.push("/login");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "تغییر رمز نشد.");
+      setError(err instanceof ApiError ? err.message : copy.auth.resetFail);
     } finally {
       setPending(false);
     }
@@ -45,22 +47,22 @@ function ResetForm() {
   return (
     <main className="wrap">
       <SiteHeader />
-      <PageIntro kicker="رمز" title="رمز تازه">
-        <p className="muted">بعد از تغییر، دوباره وارد شو.</p>
+      <PageIntro kicker={copy.auth.resetKicker} title={copy.auth.resetTitle}>
+        <p className="muted">{copy.auth.resetLead}</p>
       </PageIntro>
       <div className="form-card">
         <form className="form" onSubmit={onSubmit}>
           {error ? <div className="banner err">{error}</div> : null}
-          {!token ? <div className="banner err">لینک ناقص است. از ایمیل بازیابی باز کن.</div> : null}
+          {!token ? <div className="banner err">{copy.auth.resetMissing}</div> : null}
           <label>
-            رمز تازه
+            {copy.auth.newPassword}
             <input name="password" type="password" autoComplete="new-password" minLength={10} required />
           </label>
           <button className="btn" type="submit" disabled={pending || !token}>
-            {pending ? "..." : "ذخیره رمز"}
+            {pending ? "..." : copy.auth.savePassword}
           </button>
           <p className="muted">
-            <Link href="/login">ورود</Link>
+            <Link href="/login">{copy.auth.submitLogin}</Link>
           </p>
         </form>
       </div>
@@ -70,7 +72,7 @@ function ResetForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<main className="wrap">در حال بارگذاری...</main>}>
+    <Suspense fallback={<main className="wrap">…</main>}>
       <ResetForm />
     </Suspense>
   );

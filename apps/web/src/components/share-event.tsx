@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useCopy } from "./locale-provider";
 
 export function ShareEvent({ title, text, url }: { title: string; text: string; url?: string }) {
+  const copy = useCopy();
   const [notice, setNotice] = useState("");
 
   async function share() {
@@ -17,16 +19,16 @@ export function ShareEvent({ title, text, url }: { title: string; text: string; 
     }
     try {
       await navigator.clipboard.writeText(text);
-      setNotice("متن دعوت کپی شد. بفرست تلگرام یا اینستا.");
+      setNotice(copy.share.copied);
     } catch {
-      setNotice("کپی نشد. لینک را دستی بفرست.");
+      setNotice(copy.share.copyFail);
     }
   }
 
   return (
     <div>
       <button className="btn ghost" type="button" onClick={share}>
-        فرستادن دعوت
+        {copy.share.send}
       </button>
       {notice ? <p className="meta">{notice}</p> : null}
     </div>

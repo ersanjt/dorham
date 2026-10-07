@@ -3,11 +3,13 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import type { EventDto, FeedPost, Me } from "@dorham/shared";
+import { useCopy } from "../../components/locale-provider";
 import { api, ApiError } from "../../lib/api";
 import { canPost } from "../../lib/can-post";
 import { isSignedIn } from "../../lib/session";
 
 export function FeedCompose() {
+  const feed = useCopy().feed;
   const router = useRouter();
   const search = useSearchParams();
   const [me, setMe] = useState<Me | null>(null);
@@ -36,7 +38,9 @@ export function FeedCompose() {
       : "/feed";
     return (
       <p className="muted">
-        برای نوشتن در فید شهر <a className="card-cta" href={`/login?next=${encodeURIComponent(next)}`}>وارد شو</a>. فقط میزبان و عضو تأییدشده پست می‌گذارند.
+        {feed.guestBefore}
+        <a className="card-cta" href={`/login?next=${encodeURIComponent(next)}`}>{feed.guestCta}</a>
+        {feed.guestAfter}
       </p>
     );
   }

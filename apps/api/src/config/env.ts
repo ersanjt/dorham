@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { loadDotenvFiles } from "./load-dotenv";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -25,6 +26,7 @@ const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 export function loadEnv(): Env {
+  loadDotenvFiles();
   const parsed = envSchema.safeParse(process.env);
   if (!parsed.success) {
     throw new Error(`Invalid environment: ${parsed.error.message}`);

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useCopy } from "./locale-provider";
 
 export type VenueCoverKind = "photo" | "street" | "map";
 
@@ -14,12 +15,6 @@ function classifyCover(src: string | null | undefined, mapImageUrl: string | nul
   }
   return "photo";
 }
-
-const TAG: Record<VenueCoverKind, string> = {
-  photo: "عکس مکان",
-  street: "نمای خیابان",
-  map: "نقشه",
-};
 
 export function VenueCover({
   href,
@@ -34,9 +29,17 @@ export function VenueCover({
   src: string | null | undefined;
   mapImageUrl: string | null | undefined;
 }) {
+  const copy = useCopy();
   const [failed, setFailed] = useState(false);
   const kind = classifyCover(src, mapImageUrl);
   const showImage = Boolean(src) && !failed;
+  const tag = showImage
+    ? kind === "photo"
+      ? copy.venues.coverPhoto
+      : kind === "street"
+        ? copy.venues.coverStreet
+        : copy.venues.coverMap
+    : copy.venues.coverMap;
 
   return (
     <Link className="venue-map-link" href={href} aria-label={name}>
@@ -45,8 +48,11 @@ export function VenueCover({
         <img
           className="venue-map"
           src={src!}
-          alt={kind === "map" ? `نقشه ${name}` : name}
+          alt={kind === "map" ? copy.venues.mapAlt(name) : name}
+          width={640}
+          height={360}
           loading="lazy"
+          decoding="async"
           onError={() => setFailed(true)}
         />
       ) : (
@@ -56,7 +62,7 @@ export function VenueCover({
         </div>
       )}
       {showImage && kind === "map" ? <span className="venue-map-pin" aria-hidden /> : null}
-      <span className="venue-cover-tag">{TAG[showImage ? kind : "map"]}</span>
+      <span className="venue-cover-tag">{tag}</span>
     </Link>
   );
 }

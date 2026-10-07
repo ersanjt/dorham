@@ -3,7 +3,7 @@ import { Alert, Image } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import type { EventDto, Me, PublicUser } from "@dorham/shared";
 import { EventCard } from "../../components/event-card";
-import { AppText, Banner, Button, Card, Loading, Screen } from "../../components/ui";
+import { AppText, Banner, Button, Card, ErrorState, Loading, Screen } from "../../components/ui";
 import { api, ApiError } from "../../lib/api";
 import { publicMediaUrl } from "../../lib/api-base";
 import { verifyFa } from "../../lib/format";
@@ -18,8 +18,9 @@ export default function PersonScreen() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  useEffect(() => {
+  function load() {
     if (!id) return;
+    setError("");
     api<PublicUser>(`/users/${id}`, { auth: false })
       .then(setPerson)
       .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "پروفایل خوانده نشد."));
@@ -31,6 +32,10 @@ export default function PersonScreen() {
         .then(setMe)
         .catch(() => setMe(null));
     }
+  }
+
+  useEffect(() => {
+    load();
   }, [id]);
 
   function blockUser() {
@@ -78,6 +83,14 @@ export default function PersonScreen() {
     return (
       <Screen back title="عضو">
         <Loading />
+      </Screen>
+    );
+  }
+
+  if (!person && error) {
+    return (
+      <Screen back title="عضو">
+        <ErrorState text={error} onRetry={load} />
       </Screen>
     );
   }

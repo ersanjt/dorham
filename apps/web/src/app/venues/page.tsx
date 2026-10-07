@@ -5,7 +5,11 @@ import { SiteFooter } from "../../components/site-footer";
 import { SiteHeader } from "../../components/site-header";
 import { VenueCover } from "../../components/venue-cover";
 import { resolveApiBase } from "../../lib/api-base";
-import { AREA_LABEL, KIND_LABEL } from "../../lib/venues";
+import { catalogInit } from "../../lib/catalog-fetch";
+import { t } from "../../lib/copy";
+import { formatCount } from "../../lib/format";
+import { getLocale } from "../../lib/locale-server";
+import { venueAreaLabel, venueKindLabel } from "../../lib/venues";
 
 const API = resolveApiBase();
 
@@ -14,7 +18,7 @@ async function loadVenues(kind?: string, q?: string): Promise<VenueDto[]> {
   if (kind) query.set("kind", kind);
   if (q) query.set("q", q);
   try {
-    const res = await fetch(`${API}/v1/venues?${query}`, { cache: "no-store" });
+    const res = await fetch(`${API}/v1/venues?${query}`, catalogInit());
     if (!res.ok) return [];
     const json = (await res.json()) as { data: VenueDto[] };
     return json.data ?? [];
@@ -29,109 +33,105 @@ export default async function VenuesPage({
   searchParams: Promise<{ kind?: string; submitted?: string; q?: string }>;
 }) {
   const { kind, submitted, q } = await searchParams;
+  const locale = await getLocale();
+  const copy = t(locale);
+  const kinds = ["RESTAURANT", "CAFE", "MARKET", "CULTURAL"] as VenueKind[];
   const query = q?.trim() ?? "";
-  const selected = (["RESTAURANT", "CAFE", "MARKET", "CULTURAL"] as VenueKind[]).includes(kind as VenueKind)
-    ? (kind as VenueKind)
-    : undefined;
+  const selected = kinds.includes(kind as VenueKind) ? (kind as VenueKind) : undefined;
   const venues = await loadVenues(selected, query || undefined);
 
   return (
     <main className="wrap">
       <SiteHeader />
-      <PageIntro kicker="نقشهٔ خوردنی" title="مکان‌های ایرانی استانبول">
-        <p className="lead">
-          اول آکسارای و نامق‌کمال، بعد کادیکوی، تکسیم، شیشلی و غرب شهر. آدرس و نقشه واقعی؛ از هر صفحه می‌توانی برنامهٔ
-          حضور بگذاری یا عکس/نظر بفرستی.
-        </p>
+      <PageIntro kicker={copy.venues.kicker} title={copy.venues.title}>
+        <p className="lead">{copy.venues.lead}</p>
       </PageIntro>
-      {submitted === "1" ? (
-        <div className="banner ok">مکان ثبت شد و بعد از بررسی تیم منتشر می‌شود.</div>
-      ) : null}
+      {submitted === "1" ? <div className="banner ok">{copy.venues.submitted}</div> : null}
       <form className="venue-search" action="/venues" method="get">
         {selected ? <input type="hidden" name="kind" value={selected} /> : null}
         <label>
-          جستجو
-          <input name="q" defaultValue={query} placeholder="نام، محله، غذا، آدرس" />
+          {copy.venues.search}
+          <input name="q" defaultValue={query} placeholder={copy.venues.placeholder} />
         </label>
         <button className="btn" type="submit">
-          پیدا کن
+          {copy.venues.find}
         </button>
         <Link className="btn ghost" href="/venues/new">
-          ثبت مکان من
+          {copy.venues.addMine}
         </Link>
       </form>
       <div className="chip-row">
         <Link className={`pill ${selected ? "" : "solid"}`} href={query ? `/venues?q=${encodeURIComponent(query)}` : "/venues"}>
-          همه
+          {copy.venues.all}
         </Link>
-        {(Object.keys(KIND_LABEL) as VenueKind[]).map((item) => (
+        {kinds.map((item) => (
           <Link
             key={item}
             className={`pill ${selected === item ? "solid" : ""}`}
             href={`/venues?kind=${item}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
           >
-            {KIND_LABEL[item]}
+            {venueKindLabel(item, locale)}
           </Link>
         ))}
       </div>
-      <p className="meta">{venues.length.toLocaleString("fa-IR")} مکان</p>
+      <p className="meta">{copy.venues.count(formatCount(venues.length, locale))}</p>
       {venues.length === 0 ? (
         <div className="empty-art card" style={{ marginTop: 16 }}>
           <p className="muted">
-            هنوز مکانی در این فیلتر نیست. می‌توانی مکان ایرانی واقعی ثبت کنی تا بعد از بررسی منتشر شود.
-            {query ? ` هیچ نتیجه‌ای برای «${query}» نبود.` : ""}
+            {copy.venues.empty}
+            {query ? copy.venues.noQuery(query) : ""}
           </p>
           <div className="row" style={{ marginTop: 12 }}>
             <Link className="btn" href="/venues/new">
-              ثبت مکان
+              {copy.venues.add}
             </Link>
             <Link className="btn ghost" href="/events">
-              رویدادهای شهر
+              {copy.venues.events}
             </Link>
           </div>
         </div>
       ) : (
-      <div className="venues-grid">
-        {venues.map((venue) => {
-          const cover = venue.photos?.[0] || venue.mapImageUrl;
-          const areaLabel = AREA_LABEL[venue.area] ?? venue.area;
-          return (
-            <article className="card venue-card" key={venue.id}>
-              <VenueCover
-                href={`/venues/${venue.slug}`}
-                name={venue.name}
-                areaLabel={areaLabel}
-                src={cover}
-                mapImageUrl={venue.mapImageUrl}
-              />
-              <div className="venue-card-body">
-                <div className="card-top">
-                  <span className="date-chip">{KIND_LABEL[venue.kind]}</span>
-                  <span className="muted">{areaLabel}</span>
-                </div>
-                <h3>{venue.name}</h3>
-                <p className="muted venue-desc">{venue.description}</p>
-                <div className="venue-card-foot">
-                  <div className="row">
-                    {venue.priceRange ? <span className="meta">{venue.priceRange}</span> : null}
-                    {venue.menuImageUrl ? <span className="date-chip">منو</span> : null}
+        <div className="venues-grid">
+          {venues.map((venue) => {
+            const cover = venue.photos?.[0] || venue.mapImageUrl;
+            const areaLabel = venueAreaLabel(venue.area, locale);
+            return (
+              <article className="card venue-card" key={venue.id}>
+                <VenueCover
+                  href={`/venues/${venue.slug}`}
+                  name={venue.name}
+                  areaLabel={areaLabel}
+                  src={cover}
+                  mapImageUrl={venue.mapImageUrl}
+                />
+                <div className="venue-card-body">
+                  <div className="card-top">
+                    <span className="date-chip">{venueKindLabel(venue.kind, locale)}</span>
+                    <span className="muted">{areaLabel}</span>
                   </div>
-                  <p className="meta venue-address">{venue.address}</p>
-                  <p className="meta">{venue.reviewCount.toLocaleString("fa-IR")} نظر</p>
-                  <div className="row">
-                    <Link className="card-cta" href={`/venues/${venue.slug}`}>
-                      جزئیات
-                    </Link>
-                    <a className="card-cta" href={venue.mapsUrl} target="_blank" rel="noreferrer">
-                      گوگل‌مپ
-                    </a>
+                  <h3>{venue.name}</h3>
+                  <p className="muted venue-desc">{venue.description}</p>
+                  <div className="venue-card-foot">
+                    <div className="row">
+                      {venue.priceRange ? <span className="meta">{venue.priceRange}</span> : null}
+                      {venue.menuImageUrl ? <span className="date-chip">{copy.venues.menu}</span> : null}
+                    </div>
+                    <p className="meta venue-address">{venue.address}</p>
+                    <p className="meta">{copy.venues.reviews(formatCount(venue.reviewCount, locale))}</p>
+                    <div className="row">
+                      <Link className="card-cta" href={`/venues/${venue.slug}`}>
+                        {copy.venues.details}
+                      </Link>
+                      <a className="card-cta" href={venue.mapsUrl} target="_blank" rel="noreferrer">
+                        {copy.venues.maps}
+                      </a>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </article>
-          );
-        })}
-      </div>
+              </article>
+            );
+          })}
+        </div>
       )}
       <SiteFooter />
     </main>

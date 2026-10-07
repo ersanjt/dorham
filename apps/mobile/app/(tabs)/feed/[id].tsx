@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import type { FeedComment, FeedPost, Me } from "@dorham/shared";
-import { AppText, AuthorMeta, Banner, Button, Card, Field, Loading, Screen } from "../../../components/ui";
+import { AppText, AuthorMeta, Banner, Button, Card, ErrorState, Field, Loading, Screen } from "../../../components/ui";
 import { api, ApiError } from "../../../lib/api";
 import { formatWhen } from "../../../lib/format";
 import { loginHref } from "../../../lib/paths";
@@ -17,8 +17,9 @@ export default function FeedPostScreen() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  useEffect(() => {
+  function load() {
     if (!id) return;
+    setError("");
     Promise.all([
       api<FeedPost>(`/feed/${id}`, { auth: false }),
       api<FeedComment[]>(`/feed/${id}/comments`, { auth: false }),
@@ -33,6 +34,10 @@ export default function FeedPostScreen() {
         .then(setMe)
         .catch(() => setMe(null));
     }
+  }
+
+  useEffect(() => {
+    load();
   }, [id]);
 
   async function comment() {
@@ -91,6 +96,14 @@ export default function FeedPostScreen() {
     return (
       <Screen back title="فید">
         <Loading />
+      </Screen>
+    );
+  }
+
+  if (!post && error) {
+    return (
+      <Screen back title="فید">
+        <ErrorState text={error} onRetry={load} />
       </Screen>
     );
   }

@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { EventGuest, Me, RsvpResult } from "@dorham/shared";
+import { useCopy, useUiLocale } from "../../../components/locale-provider";
 import { api, ApiError } from "../../../lib/api";
+import { formatCount } from "../../../lib/format";
 import { publicMediaUrl } from "../../../lib/media-url";
 import { isSignedIn } from "../../../lib/session";
 
@@ -22,6 +24,7 @@ function GuestRow({
   onCheckedIn: (name: string) => void;
   onError: (msg: string) => void;
 }) {
+  const copy = useCopy();
   const photo = publicMediaUrl(guest.photoUrl);
   return (
     <li className="guest-row">
@@ -36,17 +39,17 @@ function GuestRow({
         )}
         <span className="guest-row-meta">
           <strong>{guest.displayName}</strong>
-          {guest.verificationStatus === "VERIFIED" ? <span className="verify-badge">تأییدشده</span> : null}
+          {guest.verificationStatus === "VERIFIED" ? <span className="verify-badge">{copy.rsvp.verified}</span> : null}
           <span className="muted">
             {cityShow
-              ? "علاقه‌مند"
+              ? copy.rsvp.interested
               : guest.status === "GOING"
                 ? guest.checkedInAt
-                  ? "وارد شد"
-                  : "می‌آید"
-                : "لیست انتظار"}
-            {!cityShow && guest.ticketStatus === "DUE" ? " · بلیت دم در" : ""}
-            {!cityShow && guest.ticketStatus === "PAID_DOOR" ? " · بلیت گرفته شد" : ""}
+                  ? copy.rsvp.arrived
+                  : copy.rsvp.going
+                : copy.rsvp.waiting}
+            {!cityShow && guest.ticketStatus === "DUE" ? copy.rsvp.due : ""}
+            {!cityShow && guest.ticketStatus === "PAID_DOOR" ? copy.rsvp.paid : ""}
           </span>
         </span>
       </Link>
@@ -62,11 +65,11 @@ function GuestRow({
               });
               onCheckedIn(guest.displayName);
             } catch (err) {
-              onError(err instanceof ApiError ? err.message : "چک‌این نشد.");
+              onError(err instanceof ApiError ? err.message : copy.rsvp.checkinFail);
             }
           }}
         >
-          ورود
+          {copy.rsvp.checkin}
         </button>
       ) : null}
     </li>
@@ -90,6 +93,8 @@ function GuestSections({
   setMessage: (s: string) => void;
   setError: (s: string) => void;
 }) {
+  const copy = useCopy();
+  const locale = useUiLocale();
   const going = useMemo(() => guests.filter((g) => g.status === "GOING"), [guests]);
   const wait = useMemo(() => guests.filter((g) => g.status === "INTERESTED"), [guests]);
   const checkedIn = going.filter((g) => g.checkedInAt).length;
@@ -97,15 +102,13 @@ function GuestSections({
   if (guests.length === 0) {
     return (
       <div className="guest-empty">
-        <p className="muted">
-          {cityShow ? "هنوز کسی علاقه‌مندی نزده." : "هنوز کسی ثبت‌نام نکرده. اولین نفر باش یا دعوت کن."}
-        </p>
+        <p className="muted">{cityShow ? copy.rsvp.emptyFans : copy.rsvp.emptyGuests}</p>
         <div className="row">
           <Link className="btn ghost" href="/venues">
-            هماهنگی در مکان‌ها
+            {copy.rsvp.venues}
           </Link>
           <Link className="btn ghost" href="/feed">
-            فید شهر
+            {copy.rsvp.feed}
           </Link>
         </div>
       </div>
@@ -116,17 +119,17 @@ function GuestSections({
     <div className="guest-sections">
       {!cityShow ? (
         <p className="meta guest-summary">
-          {going.length.toLocaleString("fa-IR")} می‌آیند
-          {wait.length > 0 ? ` · ${wait.length.toLocaleString("fa-IR")} در انتظار` : ""}
-          {checkedIn > 0 ? ` · ${checkedIn.toLocaleString("fa-IR")} وارد شده` : ""}
+          {copy.rsvp.goingN(formatCount(going.length, locale))}
+          {wait.length > 0 ? copy.rsvp.waitN(formatCount(wait.length, locale)) : ""}
+          {checkedIn > 0 ? copy.rsvp.inN(formatCount(checkedIn, locale)) : ""}
         </p>
       ) : (
-        <p className="meta guest-summary">{wait.length.toLocaleString("fa-IR")} علاقه‌مند</p>
+        <p className="meta guest-summary">{copy.rsvp.fansN(formatCount(wait.length, locale))}</p>
       )}
 
       {(cityShow ? wait : going).length > 0 ? (
         <>
-          <h4>{cityShow ? "علاقه‌مندان" : "می‌آیند"}</h4>
+          <h4>{cityShow ? copy.rsvp.fans : copy.rsvp.coming}</h4>
           <ul className="guest-list">
             {(cityShow ? wait : going).map((guest) => (
               <GuestRow
@@ -136,7 +139,7 @@ function GuestSections({
                 isHost={isHost}
                 eventId={eventId}
                 onCheckedIn={async (name) => {
-                  setMessage(`${name} وارد شد.`);
+                  setMessage(copy.rsvp.arrivedName(name));
                   await onReload();
                 }}
                 onError={setError}
@@ -148,7 +151,7 @@ function GuestSections({
 
       {!cityShow && wait.length > 0 ? (
         <>
-          <h4>لیست انتظار</h4>
+          <h4>{copy.rsvp.waitlist}</h4>
           <ul className="guest-list">
             {wait.map((guest) => (
               <GuestRow
@@ -158,7 +161,7 @@ function GuestSections({
                 isHost={isHost}
                 eventId={eventId}
                 onCheckedIn={async (name) => {
-                  setMessage(`${name} وارد شد.`);
+                  setMessage(copy.rsvp.arrivedName(name));
                   await onReload();
                 }}
                 onError={setError}
@@ -184,12 +187,15 @@ export function EventActions({
   initialGuests?: EventGuest[];
   kind?: "COMMUNITY" | "CITY_SHOW";
 }) {
+  const copy = useCopy();
+  const locale = useUiLocale();
   const [signedIn, setSignedIn] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
   const [guests, setGuests] = useState<EventGuest[]>(initialGuests);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const cityShow = kind === "CITY_SHOW";
+  const priceN = formatCount(priceTry, locale);
 
   const isHost = Boolean(me && (me.id === hostId || me.role === "ADMIN" || me.role === "MODERATOR"));
   const mine = guests.find((guest) => guest.id === me?.id);
@@ -224,13 +230,13 @@ export function EventActions({
       <section className="event-actions" style={{ marginTop: 28 }}>
         <div className="row">
           <Link className="btn" href={`/login?next=/events/${eventId}`}>
-            {cityShow ? "برای اعلام علاقه وارد شو" : "برای ثبت حضور وارد شو"}
+            {cityShow ? copy.rsvp.loginInterest : copy.rsvp.loginGoing}
           </Link>
           <Link className="btn ghost" href={`/feed?event=${eventId}`}>
-            نوشتن در فید شهر
+            {copy.rsvp.writeFeed}
           </Link>
         </div>
-        <h3>{cityShow ? "علاقه‌مندان" : "مهمان‌ها"}</h3>
+        <h3>{cityShow ? copy.rsvp.fans : copy.rsvp.guests}</h3>
         <GuestSections
           guests={guests}
           cityShow={cityShow}
@@ -247,27 +253,16 @@ export function EventActions({
   return (
     <section className="event-actions" style={{ marginTop: 28 }}>
       {mine?.status === "GOING" && mine.ticketStatus === "DUE" && !cityShow ? (
-        <div className="banner">
-          بلیت تو: {priceTry.toLocaleString("fa-IR")} لیر نقد دم در. وقتی وارد شوی، گرفته می‌شود.
-        </div>
+        <div className="banner">{copy.rsvp.ticketDue(priceN)}</div>
       ) : null}
-      {mine?.ticketStatus === "PAID_DOOR" && !cityShow ? <div className="banner ok">بلیت‌ات دم در گرفته شد.</div> : null}
+      {mine?.ticketStatus === "PAID_DOOR" && !cityShow ? <div className="banner ok">{copy.rsvp.ticketPaid}</div> : null}
       {mine?.status === "INTERESTED" ? (
-        <div className="banner">
-          {cityShow
-            ? "علاقه‌مندی‌ات ثبت شد. دیگران می‌توانند برای هماهنگی ببینند."
-            : "در لیست انتظاری. اگر جا باز شود، در همین صفحه وضعیتت عوض می‌شود."}
-        </div>
+        <div className="banner">{cityShow ? copy.rsvp.marked : copy.rsvp.waitlisted}</div>
       ) : null}
-      {mine?.status === "GOING" && !cityShow ? (
-        <div className="banner ok">
-          ثبت شدی. پروفایل مهمان‌ها را ببین — و برای هفتهٔ بعد، مکان‌ها را برای هماهنگی چک کن.
-        </div>
-      ) : null}
+      {mine?.status === "GOING" && !cityShow ? <div className="banner ok">{copy.rsvp.confirmed}</div> : null}
       {paused ? (
         <div className="banner err">
-          حساب متوقف است. ثبت حضور تازه بسته است؛ می‌توانی لغو کنی.{" "}
-          <Link href="/account">از سر گرفتن</Link>
+          {copy.rsvp.paused} <Link href="/account">{copy.rsvp.resume}</Link>
         </div>
       ) : null}
       {message ? <div className="banner ok">{message}</div> : null}
@@ -286,20 +281,20 @@ export function EventActions({
                 });
                 setMessage(
                   cityShow
-                    ? "علاقه‌مندی ثبت شد."
+                    ? copy.rsvp.markedOk
                     : data.waitlisted
-                      ? "ظرفیت پر بود؛ رفتی لیست انتظار."
+                      ? copy.rsvp.waitOk
                       : data.ticketStatus === "DUE"
-                        ? `ثبت شد. بلیت ${priceTry.toLocaleString("fa-IR")} لیر را نقد دم در بده.`
-                        : "ثبت شد. می‌آیی.",
+                        ? copy.rsvp.goingDue(priceN)
+                        : copy.rsvp.goingOk,
                 );
                 await reloadGuests();
               } catch (err) {
-                setError(err instanceof ApiError ? err.message : "ثبت نشد.");
+                setError(err instanceof ApiError ? err.message : copy.rsvp.rsvpFail);
               }
             }}
           >
-            {cityShow ? "علاقه‌مندم" : "می‌آیم"}
+            {cityShow ? copy.rsvp.imIn : copy.rsvp.imGoing}
           </button>
         ) : (
           <button
@@ -307,38 +302,38 @@ export function EventActions({
             type="button"
             onClick={async () => {
               await api(`/events/${eventId}/rsvp`, { method: "DELETE", body: JSON.stringify({}) });
-              setMessage(cityShow ? "علاقه‌مندی برداشته شد." : "لغو شد. اگر کسی در انتظار بود، جایش باز شد.");
+              setMessage(cityShow ? copy.rsvp.unmarked : copy.rsvp.cancelled);
               await reloadGuests();
             }}
           >
-            {cityShow ? "لغو علاقه" : "لغو حضور"}
+            {cityShow ? copy.rsvp.cancelInterest : copy.rsvp.cancelGoing}
           </button>
         )}
         {isHost && !cityShow ? (
           <>
             <Link className="btn" href={`/events/${eventId}/door`}>
-              QR ورودی
+              {copy.rsvp.doorQr}
             </Link>
             <button
               className="btn ghost"
               type="button"
               onClick={async () => {
-                if (!confirm("رویداد لغو شود؟ مهمان‌ها دیگر آن را به‌عنوان فعال نمی‌بینند.")) return;
+                if (!confirm(copy.rsvp.cancelConfirm)) return;
                 try {
                   await api(`/events/${eventId}/cancel`, { method: "POST", body: "{}" });
-                  setMessage("رویداد لغو شد.");
+                  setMessage(copy.rsvp.eventCancelled);
                   window.location.reload();
                 } catch (err) {
-                  setError(err instanceof ApiError ? err.message : "لغو نشد.");
+                  setError(err instanceof ApiError ? err.message : copy.rsvp.cancelFail);
                 }
               }}
             >
-              لغو رویداد
+              {copy.rsvp.cancelEvent}
             </button>
           </>
         ) : null}
         <Link className="btn ghost" href={`/feed?event=${eventId}`}>
-          نوشتن در فید شهر
+          {copy.rsvp.writeFeed}
         </Link>
         {!paused && me && me.id !== hostId ? (
           <>
@@ -348,13 +343,13 @@ export function EventActions({
               onClick={async () => {
                 try {
                   await api(`/users/${hostId}/block`, { method: "POST" });
-                  setMessage("میزبان بلاک شد.");
+                  setMessage(copy.rsvp.blockedHost);
                 } catch (err) {
-                  setError(err instanceof ApiError ? err.message : "بلاک نشد.");
+                  setError(err instanceof ApiError ? err.message : copy.safety.blockFail);
                 }
               }}
             >
-              بلاک میزبان
+              {copy.rsvp.blockHost}
             </button>
             <button
               className="btn ghost"
@@ -365,19 +360,19 @@ export function EventActions({
                     method: "POST",
                     body: JSON.stringify({ targetId: hostId, reason: "other", details: "event host" }),
                   });
-                  setMessage("گزارش ثبت شد.");
+                  setMessage(copy.rsvp.reported);
                 } catch (err) {
-                  setError(err instanceof ApiError ? err.message : "گزارش نشد.");
+                  setError(err instanceof ApiError ? err.message : copy.safety.reportFail);
                 }
               }}
             >
-              گزارش
+              {copy.rsvp.report}
             </button>
           </>
         ) : null}
       </div>
 
-      <h3>{cityShow ? "علاقه‌مندان" : "مهمان‌ها"}</h3>
+      <h3>{cityShow ? copy.rsvp.fans : copy.rsvp.guests}</h3>
       <GuestSections
         guests={guests}
         cityShow={cityShow}

@@ -82,6 +82,25 @@ a { color: inherit; text-underline-offset: 0.18em; }
 }
 .nav-links a:not(.btn):hover { color: var(--clay); }
 
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.lang-toggle button {
+  font: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--muted);
+}
+.lang-toggle button.active { color: var(--clay); }
+.lang-toggle button:hover { color: var(--ink); }
+
 .brand {
   display: inline-flex;
   align-items: center;
@@ -1592,6 +1611,7 @@ input:focus, textarea:focus, select:focus {
   padding: 16px;
   background: var(--paper);
 }
+.profile-panel > .profile-trust-card { margin-top: 16px; }
 .profile-trust-card h3 { margin: 0 0 8px; font-size: 1.15rem; }
 .profile-danger {
   margin-top: 22px;
@@ -1768,6 +1788,43 @@ input:focus, textarea:focus, select:focus {
   border-radius: 12px;
   width: 100%;
   box-sizing: border-box;
+}
+
+.person-safety {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.person-report {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+}
+.person-report label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+.person-report select {
+  font: inherit;
+  min-width: 12rem;
+}
+.block-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.block-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 
 /* Home hang strip + why */

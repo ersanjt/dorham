@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Pressable, Share, View } from "react-native";
 import { router } from "expo-router";
-import type { EventDto, FeedPost } from "@dorham/shared";
+import type { EventDto, FeedPost, VenueHangPlanDto } from "@dorham/shared";
 import { EventCard } from "../../components/event-card";
 import { EmptyArt, HeroBanner } from "../../components/hero-art";
 import {
@@ -19,9 +19,17 @@ import { api, ApiError } from "../../lib/api";
 import { eventInviteText, formatDayChip, formatPriceTry, formatWhen } from "../../lib/format";
 import { color, radius, space } from "../../lib/theme";
 
+const INTENT_FA: Record<string, string> = {
+  LUNCH: "ناهار",
+  DINNER: "شام",
+  COFFEE: "قهوه",
+  OTHER: "دورهم",
+};
+
 export default function CityScreen() {
   const [events, setEvents] = useState<EventDto[]>([]);
   const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [hangPlans, setHangPlans] = useState<VenueHangPlanDto[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -31,10 +39,12 @@ export default function CityScreen() {
     Promise.all([
       api<EventDto[]>("/events?city=istanbul&kind=COMMUNITY&limit=4", { auth: false }),
       api<FeedPost[]>("/feed?city=istanbul&limit=2", { auth: false }),
+      api<VenueHangPlanDto[]>("/venues/hang-plans?city=istanbul&limit=8", { auth: false }).catch(() => []),
     ])
-      .then(([nextEvents, nextPosts]) => {
+      .then(([nextEvents, nextPosts, nextHangs]) => {
         setEvents(nextEvents);
         setPosts(nextPosts);
+        setHangPlans(nextHangs);
       })
       .catch((err: unknown) =>
         setError(err instanceof ApiError ? err.message : "شهر خوانده نشد. API یا اینترنت را چک کن."),
@@ -135,6 +145,30 @@ export default function CityScreen() {
           onPress={() => router.push(`/events/${event.id}`)}
         />
       ))}
+
+      {!loading && !error ? (
+        <>
+          <SectionTitle>کی کجاست؟</SectionTitle>
+          <AppText muted size="caption">
+            برنامهٔ حضور در کافه — زندهٔ GPS نیست.
+          </AppText>
+          {hangPlans.length === 0 ? (
+            <EmptyArt text="هنوز برنامه‌ای اعلام نشده. از صفحهٔ مکان بگو کی می‌آیی." />
+          ) : (
+            hangPlans.map((plan) => (
+              <Pressable key={plan.id} onPress={() => router.push(`/venues/${plan.venueSlug}`)}>
+                <Card>
+                  <AppText bold>{plan.user.displayName}</AppText>
+                  <AppText muted>
+                    {INTENT_FA[plan.intent] ?? plan.intent} در {plan.venueName}
+                    {plan.venueArea ? ` · ${plan.venueArea}` : ""} · {formatDayChip(plan.startsAt)}
+                  </AppText>
+                </Card>
+              </Pressable>
+            ))
+          )}
+        </>
+      ) : null}
 
       <SectionTitle>حرف‌های این هفته</SectionTitle>
       {!loading && posts.length === 0 && !error ? (

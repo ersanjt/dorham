@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Markazi_Text, Vazirmatn } from "next/font/google";
+import { LocaleProvider } from "../components/locale-provider";
+import { getLocale } from "../lib/locale-server";
 import "./globals.css";
 
 const vazirmatn = Vazirmatn({
@@ -54,10 +56,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
   return (
-    <html lang="fa" dir="rtl" className={`${vazirmatn.variable} ${markazi.variable} ${fraunces.variable}`}>
-      <body className={vazirmatn.className}>{children}</body>
+    <html
+      lang={locale === "en" ? "en" : "fa"}
+      dir={locale === "en" ? "ltr" : "rtl"}
+      className={`${vazirmatn.variable} ${markazi.variable} ${fraunces.variable}`}
+    >
+      <body className={vazirmatn.className}>
+        <LocaleProvider locale={locale}>{children}</LocaleProvider>
+      </body>
     </html>
   );
 }

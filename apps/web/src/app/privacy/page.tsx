@@ -1,43 +1,41 @@
 import { PageIntro } from "../../components/page-intro";
 import { SiteFooter } from "../../components/site-footer";
 import { SiteHeader } from "../../components/site-header";
+import { t } from "../../lib/copy";
+import { getLocale } from "../../lib/locale-server";
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const copy = t(await getLocale()).privacy;
   return (
     <main className="wrap">
       <SiteHeader />
-      <PageIntro kicker="حریم" title="حریم خصوصی">
-        <p className="muted">آخرین به‌روزرسانی: شهریور ۱۴۰۴ · سپتامبر ۲۰۲۶</p>
+      <PageIntro kicker={copy.kicker} title={copy.title}>
+        <p className="muted">{copy.updated}</p>
       </PageIntro>
       <article className="card stack">
-        <h2>چه داده‌ای جمع می‌کنیم</h2>
-        <p>
-          برای حساب: ایمیل، رمز (هش‌شده)، نام نمایشی، شهر (پیش‌فرض استانبول)، و در صورت تمایل عکس پروفایل.
-        </p>
-        <p>برای رویداد: RSVP، وضعیت بلیت نقد دم‌در، و زمان چک‌این اگر میزبان ورود را ثبت کند.</p>
-        <p>برای اعتماد: گزارش‌ها، بلاک‌ها، و عکس تأیید دست‌نویس فقط برای صف بررسی میزبان/مدیر.</p>
+        <h2>{copy.collectTitle}</h2>
+        <p>{copy.collectAccount}</p>
+        <p>{copy.collectEvent}</p>
+        <p>{copy.collectTrust}</p>
 
-        <h2>چه چیزی عمومی نیست</h2>
-        <p>ایمیل، تلفن، مختصات دقیق خانه، و عکس تأیید دست‌نویس روی پروفایل عمومی یا فید نشان داده نمی‌شود.</p>
+        <h2>{copy.hiddenTitle}</h2>
+        <p>{copy.hidden}</p>
 
-        <h2>کجا نگه می‌داریم</h2>
-        <p>
-          داده روی سرورهایی در ترکیه / اتحادیه اروپا تحت کنترل تیم دورهم ذخیره می‌شود. رسانه فعلاً روی دیسک
-          همان سرور است؛ بعداً ممکن است به Cloudflare R2 منتقل شود.
-        </p>
+        <h2>{copy.storeTitle}</h2>
+        <p>{copy.store}</p>
 
-        <h2>حقوق تو</h2>
-        <p>می‌توانی حساب را موقتاً متوقف یا برای همیشه حذف کنی (حساب من). حذف، دادهٔ حساب را از دسترس خارج می‌کند.</p>
+        <h2>{copy.rightsTitle}</h2>
+        <p>{copy.rights}</p>
         <p>
-          تماس:{" "}
+          {copy.contact}{" "}
           <a href="mailto:privacy@dorham.app">privacy@dorham.app</a>
         </p>
 
-        <h2>ردیابی و تبلیغات</h2>
-        <p>تبلیغ شخص ثالث، ATT، و شناسهٔ تبلیغاتی نداریم. آنالیتیکس تبلیغاتی نداریم.</p>
+        <h2>{copy.adsTitle}</h2>
+        <p>{copy.ads}</p>
 
-        <h2>بازار</h2>
-        <p>محصول برای ایرانی‌های ساکن ترکیه است. ایران بازار لانچ نیست.</p>
+        <h2>{copy.marketTitle}</h2>
+        <p>{copy.market}</p>
       </article>
       <SiteFooter />
     </main>

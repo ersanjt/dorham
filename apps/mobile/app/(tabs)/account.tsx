@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
 import { Alert, Linking } from "react-native";
 import { useFocusEffect, router } from "expo-router";
-import type { EventDto, Me, NotificationsList } from "@dorham/shared";
+import type { BlockDto, EventDto, Me, NotificationsList } from "@dorham/shared";
 import { EventCard } from "../../components/event-card";
-import { AppText, Badge, Banner, Button, Card, Field, Loading, Screen } from "../../components/ui";
+import { AppText, Badge, Banner, Button, Card, ErrorState, Field, Loading, Screen } from "../../components/ui";
 import { api, ApiError } from "../../lib/api";
 import { verifyFa } from "../../lib/format";
 import { clearSession, isSignedIn } from "../../lib/session";
@@ -12,6 +12,7 @@ export default function AccountScreen() {
   const [me, setMe] = useState<Me | null>(null);
   const [mine, setMine] = useState<EventDto[]>([]);
   const [notes, setNotes] = useState<NotificationsList | null>(null);
+  const [blocks, setBlocks] = useState<BlockDto[]>([]);
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [error, setError] = useState("");
@@ -19,31 +20,36 @@ export default function AccountScreen() {
   const [signedIn, setSignedIn] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      const ok = isSignedIn();
-      setSignedIn(ok);
-      if (!ok) {
-        setMe(null);
-        setMine([]);
-        setNotes(null);
-        return;
-      }
-      Promise.all([
-        api<Me>("/users/me"),
-        api<EventDto[]>("/events/mine"),
-        api<NotificationsList>("/users/me/notifications").catch(() => ({ unreadCount: 0, items: [] })),
-      ])
-        .then(([profile, events, inbox]) => {
-          setMe(profile);
-          setMine(events);
-          setNotes(inbox);
-          setDisplayName(profile.displayName);
-          setBio(profile.bio ?? "");
-        })
-        .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "حساب خوانده نشد."));
-    }, []),
-  );
+  const load = useCallback(() => {
+    const ok = isSignedIn();
+    setSignedIn(ok);
+    if (!ok) {
+      setMe(null);
+      setMine([]);
+      setNotes(null);
+      setBlocks([]);
+      setError("");
+      return;
+    }
+    setError("");
+    Promise.all([
+      api<Me>("/users/me"),
+      api<EventDto[]>("/events/mine"),
+      api<NotificationsList>("/users/me/notifications").catch(() => ({ unreadCount: 0, items: [] })),
+      api<BlockDto[]>("/users/me/blocks").catch(() => []),
+    ])
+      .then(([profile, events, inbox, blocked]) => {
+        setMe(profile);
+        setMine(events);
+        setNotes(inbox);
+        setBlocks(blocked);
+        setDisplayName(profile.displayName);
+        setBio(profile.bio ?? "");
+      })
+      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "حساب خوانده نشد."));
+  }, []);
+
+  useFocusEffect(load);
 
   async function saveProfile() {
     setSaving(true);
@@ -111,10 +117,17 @@ export default function AccountScreen() {
     );
   }
 
+  if (!me && error) {
+    return (
+      <Screen kicker="پروفایل" title="حساب من">
+        <ErrorState text={error} onRetry={load} />
+      </Screen>
+    );
+  }
+
   if (!me) {
     return (
       <Screen kicker="پروفایل" title="حساب من">
-        <Banner text={error} />
         <Loading />
       </Screen>
     );
@@ -241,6 +254,28 @@ export default function AccountScreen() {
           onPress={() => router.push(`/events/${event.id}`)}
         />
       ))}
+      {blocks.length > 0 ? (
+        <Card>
+          <AppText bold size="title">
+            افراد بلاک‌شده
+          </AppText>
+          <AppText muted size="caption">
+            بلاک دوطرفه است: در فید و رویداد همدیگر را نمی‌بینید.
+          </AppText>
+          {blocks.map((row) => (
+            <Button
+              key={row.id}
+              label={`${row.displayName} · رفع بلاک`}
+              variant="ghost"
+              onPress={() => {
+                api(`/users/${row.blockedId}/block`, { method: "DELETE" })
+                  .then(() => setBlocks((prev) => prev.filter((b) => b.id !== row.id)))
+                  .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "رفع بلاک نشد."));
+              }}
+            />
+          ))}
+        </Card>
+      ) : null}
       <Button label="امنیت و قواعد" variant="ghost" onPress={() => router.push("/safety")} />
       <Button label="حریم خصوصی" variant="ghost" onPress={() => router.push("/privacy")} />
       <Button label="قوانین" variant="ghost" onPress={() => router.push("/terms")} />
@@ -259,6 +294,7 @@ export default function AccountScreen() {
               await clearSession();
               setMe(null);
               setMine([]);
+              setBlocks([]);
               setSignedIn(false);
             });
         }}

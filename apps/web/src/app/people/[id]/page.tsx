@@ -1,26 +1,24 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { EventDto, PublicUser } from "@dorham/shared";
+import type { Metadata } from "next";
 import { EventCard } from "../../../components/event-card";
+import { PersonSafety } from "../../../components/person-safety";
 import { SiteFooter } from "../../../components/site-footer";
 import { SiteHeader } from "../../../components/site-header";
 import { resolveApiBase } from "../../../lib/api-base";
-import { formatDayChip, formatMemberSince, verifyFa } from "../../../lib/format";
+import { catalogInit } from "../../../lib/catalog-fetch";
+import { t } from "../../../lib/copy";
+import { formatCount, formatDayChip, formatMemberSince } from "../../../lib/format";
+import { getLocale } from "../../../lib/locale-server";
 import { publicMediaUrl } from "../../../lib/media-url";
-import { AREA_LABEL } from "../../../lib/venues";
+import { venueAreaLabel } from "../../../lib/venues";
 
 const API = resolveApiBase();
 
-const INTENT_FA: Record<string, string> = {
-  LUNCH: "ناهار",
-  DINNER: "شام",
-  COFFEE: "قهوه",
-  OTHER: "دورهم",
-};
-
 async function loadPerson(id: string): Promise<PublicUser | null> {
   try {
-    const res = await fetch(`${API}/v1/users/${id}`, { cache: "no-store" });
+    const res = await fetch(`${API}/v1/users/${id}`, catalogInit());
     if (!res.ok) return null;
     const json = (await res.json()) as { data: PublicUser };
     return json.data;
@@ -31,7 +29,7 @@ async function loadPerson(id: string): Promise<PublicUser | null> {
 
 async function loadHosted(id: string): Promise<EventDto[]> {
   try {
-    const res = await fetch(`${API}/v1/events?city=istanbul&hostId=${id}&limit=20`, { cache: "no-store" });
+    const res = await fetch(`${API}/v1/events?city=istanbul&hostId=${id}&limit=20`, catalogInit());
     if (!res.ok) return [];
     const json = (await res.json()) as { data: EventDto[] };
     return json.data ?? [];
@@ -40,13 +38,30 @@ async function loadHosted(id: string): Promise<EventDto[]> {
   }
 }
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const person = await loadPerson(id);
+  if (!person) return { title: "Dorham — دورهم" };
+  const origin = (process.env.NEXT_PUBLIC_APP_URL || "https://dorham.app").replace(/\/$/, "");
+  const description = (person.bio?.trim() || person.displayName).replace(/\s+/g, " ").slice(0, 160);
+  return {
+    title: `${person.displayName} — Dorham`,
+    description,
+    alternates: { canonical: `${origin}/people/${person.id}` },
+  };
+}
+
 export default async function PersonPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const locale = await getLocale();
+  const copy = t(locale);
+  const intent = copy.intent;
   const [person, hosted] = await Promise.all([loadPerson(id), loadHosted(id)]);
   if (!person) notFound();
 
-  const cityLabel = person.city === "istanbul" ? "استانبول" : person.city === "ankara" ? "آنکارا" : "ازمیر";
-  const memberSince = formatMemberSince(person.createdAt);
+  const cityLabel =
+    person.city === "istanbul" ? copy.person.istanbul : person.city === "ankara" ? copy.person.ankara : copy.person.izmir;
+  const memberSince = formatMemberSince(person.createdAt, locale);
   const photo = publicMediaUrl(person.photoUrl);
   const verified = person.verificationStatus === "VERIFIED";
   const stats = person.stats;
@@ -74,45 +89,42 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
           <div className="person-hero-copy">
             <div className="person-name-row">
               <h1 className="person-name">{person.displayName}</h1>
-              {verified ? <span className="verify-badge">{verifyFa.VERIFIED}</span> : null}
+              {verified ? <span className="verify-badge">{copy.person.verified}</span> : null}
             </div>
             <p className="person-sub">
-              {cityLabel} · عضو از {memberSince}
+              {cityLabel} · {copy.person.memberSince(memberSince)}
             </p>
-            <p className="person-bio">{person.bio?.trim() || "هنوز معرفی عمومی ننوشته — حضورش در شهر مهم‌تر است."}</p>
-            {!verified ? (
-              <p className="muted person-trust-note">تأیید دست‌نویس عمومی نیست؛ فقط اگر تأیید شده باشد نشان کوچک دیده می‌شود.</p>
-            ) : (
-              <p className="muted person-trust-note">تأیید دست‌نویس دورهم (نه کارت ملی) · بدون سوایپ.</p>
-            )}
+            <p className="person-bio">{person.bio?.trim() || copy.person.bioEmpty}</p>
+            <p className="muted person-trust-note">{verified ? copy.person.verifiedNote : copy.person.unverified}</p>
+            <PersonSafety personId={person.id} />
           </div>
         </div>
       </header>
 
       {hasStats ? (
-        <section className="person-stats" aria-label="حضور در شهر">
+        <section className="person-stats" aria-label={copy.person.statsAria}>
           <div className="person-stat">
-            <strong>{stats!.venuesVisited.toLocaleString("fa-IR")}</strong>
-            <span>مکان تأییدشده</span>
+            <strong>{formatCount(stats!.venuesVisited, locale)}</strong>
+            <span>{copy.person.venuesStat}</span>
           </div>
           <div className="person-stat">
-            <strong>{stats!.eventsAttended.toLocaleString("fa-IR")}</strong>
-            <span>حضور در رویداد</span>
+            <strong>{formatCount(stats!.eventsAttended, locale)}</strong>
+            <span>{copy.person.eventsStat}</span>
           </div>
           <div className="person-stat">
-            <strong>{stats!.eventsHosted.toLocaleString("fa-IR")}</strong>
-            <span>میزبانی</span>
+            <strong>{formatCount(stats!.eventsHosted, locale)}</strong>
+            <span>{copy.person.hostedStat}</span>
           </div>
         </section>
       ) : (
         <section className="person-empty-strip">
-          <p className="muted">هنوز حضور تأییدشده‌ای ثبت نشده. دورهم با آدم‌های واقعی در شهر ساخته می‌شود.</p>
+          <p className="muted">{copy.person.emptyStats}</p>
           <div className="row">
             <Link className="btn ghost" href="/events">
-              رویدادهای استانبول
+              {copy.person.cityEvents}
             </Link>
             <Link className="btn ghost" href="/venues">
-              مکان‌ها
+              {copy.person.places}
             </Link>
           </div>
         </section>
@@ -120,7 +132,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
       {hangPlans.length > 0 ? (
         <section className="person-panel">
-          <h2>برنامه‌های پیش رو</h2>
+          <h2>{copy.person.upcoming}</h2>
           <ul className="person-list">
             {hangPlans.map((plan) => (
               <li key={plan.id}>
@@ -128,7 +140,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                   {plan.venueName}
                   <span className="muted">
                     {" "}
-                    · {INTENT_FA[plan.intent] ?? plan.intent} · {formatDayChip(plan.startsAt)}
+                    · {intent[plan.intent as keyof typeof intent] ?? plan.intent} · {formatDayChip(plan.startsAt, locale)}
                   </span>
                 </Link>
               </li>
@@ -139,7 +151,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
       {venues.length > 0 ? (
         <section className="person-panel">
-          <h2>مکان‌های تأییدشده</h2>
+          <h2>{copy.person.confirmedPlaces}</h2>
           <ul className="person-chips">
             {venues.map((v) => (
               <li key={v.venueId}>
@@ -147,7 +159,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                   {v.venueName}
                   <span className="muted">
                     {" "}
-                    · {AREA_LABEL[v.venueArea] ?? v.venueArea} · {v.visitCount.toLocaleString("fa-IR")}×
+                    · {venueAreaLabel(v.venueArea, locale)} · {formatCount(v.visitCount, locale)}×
                   </span>
                 </Link>
               </li>
@@ -158,7 +170,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
       {attended.length > 0 ? (
         <section className="person-panel">
-          <h2>رویدادهایی که آمده</h2>
+          <h2>{copy.person.attended}</h2>
           <ul className="person-list">
             {attended.map((event) => (
               <li key={event.id}>
@@ -166,7 +178,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                   {event.title}
                   <span className="muted">
                     {" "}
-                    · {formatDayChip(event.startsAt)}
+                    · {formatDayChip(event.startsAt, locale)}
                     {event.venue ? ` · ${event.venue}` : ""}
                   </span>
                 </Link>
@@ -178,7 +190,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
       {hosted.length > 0 ? (
         <section className="person-panel">
-          <h2>رویدادهایی که میزبانی کرده</h2>
+          <h2>{copy.person.hosted}</h2>
           <div className="grid">
             {hosted.map((event) => (
               <EventCard
@@ -196,6 +208,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                   priceTry: event.priceTry,
                   kind: event.kind,
                 }}
+                locale={locale}
               />
             ))}
           </div>
@@ -204,9 +217,9 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
       {!hasStats && venues.length === 0 && attended.length === 0 && hosted.length === 0 && hangPlans.length === 0 ? (
         <section className="person-panel">
-          <h2>در شهر</h2>
+          <h2>{copy.person.inCity}</h2>
           <p className="muted">
-            این عضو هنوز ردپایی از حضور ثبت نکرده. <Link href="/events">رویداد بعدی استانبول</Link> را ببین.
+            {copy.person.noTrace} <Link href="/events">{copy.person.nextEvent}</Link>
           </p>
         </section>
       ) : null}

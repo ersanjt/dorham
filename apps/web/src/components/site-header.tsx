@@ -3,11 +3,15 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { NotificationsList } from "@dorham/shared";
+import { LocaleToggle } from "./locale-toggle";
+import { useCopy, useUiLocale } from "./locale-provider";
 import { api } from "../lib/api";
 import { useSession } from "../lib/use-session";
 
 export function SiteHeader() {
-  const { signedIn, ready } = useSession();
+  const copy = useCopy();
+  const locale = useUiLocale();
+  const { signedIn } = useSession();
   const [unread, setUnread] = useState(0);
 
   const refreshUnread = useCallback(() => {
@@ -48,23 +52,25 @@ export function SiteHeader() {
         </span>
       </Link>
       <div className="nav-links">
-        <Link href="/events">رویدادها</Link>
-        <Link href="/feed">فید شهر</Link>
-        <Link href="/venues">مکان‌ها</Link>
-        <Link href="/safety">امنیت</Link>
-        {!ready ? null : signedIn ? (
+        <Link href="/events">{copy.nav.events}</Link>
+        <Link href="/feed">{copy.nav.feed}</Link>
+        <Link href="/venues">{copy.nav.venues}</Link>
+        <Link href="/safety">{copy.nav.safety}</Link>
+        <LocaleToggle />
+        {!signedIn ? (
+          <Link className="btn ghost" href="/login">
+            {copy.nav.login}
+          </Link>
+        ) : (
           <>
             <Link className="btn ghost" href="/account?tab=inbox">
-              اعلان‌ها{unread > 0 ? ` (${unread.toLocaleString("fa-IR")})` : ""}
+              {copy.nav.inbox}
+              {unread > 0 ? ` (${unread.toLocaleString(locale === "en" ? "en-GB" : "fa-IR")})` : ""}
             </Link>
             <Link className="btn ghost" href="/account">
-              حساب من
+              {copy.nav.account}
             </Link>
           </>
-        ) : (
-          <Link className="btn ghost" href="/login">
-            ورود
-          </Link>
         )}
       </div>
     </nav>

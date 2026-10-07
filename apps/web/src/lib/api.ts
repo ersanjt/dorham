@@ -1,4 +1,4 @@
-import { ERROR_FA } from "@dorham/shared";
+import { ERROR_EN, ERROR_FA } from "@dorham/shared";
 import { resolveApiBase } from "./api-base";
 import { clearSession, getAccessToken, getRefreshToken, setSession } from "./session";
 
@@ -8,6 +8,12 @@ export function apiBase() {
 
 /** @deprecated use apiBase() — kept for rare static reads */
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
+
+function errorMessage(code: string, fallback?: string) {
+  const english = typeof document !== "undefined" && document.documentElement.lang === "en";
+  const table = english ? ERROR_EN : ERROR_FA;
+  return table[code] ?? fallback ?? ERROR_FA.INTERNAL;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -67,7 +73,7 @@ export async function api<T>(path: string, init: ApiInit = {}): Promise<T> {
   try {
     res = await fetch(`${base}/v1${path}`, { ...init, headers, signal: timeoutSignal(20000) });
   } catch {
-    throw new ApiError("NETWORK", ERROR_FA.NETWORK);
+    throw new ApiError("NETWORK", errorMessage("NETWORK"));
   }
 
   if (res.status === 401 && init.auth !== false && getRefreshToken()) {
@@ -81,7 +87,7 @@ export async function api<T>(path: string, init: ApiInit = {}): Promise<T> {
       try {
         res = await fetch(`${base}/v1${path}`, { ...init, headers: retry, signal: timeoutSignal(20000) });
       } catch {
-        throw new ApiError("NETWORK", ERROR_FA.NETWORK);
+        throw new ApiError("NETWORK", errorMessage("NETWORK"));
       }
     }
   }
@@ -92,7 +98,7 @@ export async function api<T>(path: string, init: ApiInit = {}): Promise<T> {
   };
   if (!res.ok) {
     const code = json.error?.code ?? "INTERNAL";
-    throw new ApiError(code, ERROR_FA[code] ?? json.error?.message ?? ERROR_FA.INTERNAL);
+    throw new ApiError(code, errorMessage(code, json.error?.message));
   }
   return (json.data ?? json) as T;
 }

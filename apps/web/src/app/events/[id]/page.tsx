@@ -1,11 +1,23 @@
 import type { EventDto, EventGuest } from "@dorham/shared";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageIntro } from "../../../components/page-intro";
 import { SiteFooter } from "../../../components/site-footer";
 import { SiteHeader } from "../../../components/site-header";
 import { ShareEvent } from "../../../components/share-event";
-import { capacityWidth, eventInviteText, eventPageUrl, eventStatusFa, formatDayChip, formatPriceTry } from "../../../lib/format";
+import { t } from "../../../lib/copy";
+import {
+  capacityWidth,
+  eventInviteText,
+  eventJsonLd,
+  eventPageUrl,
+  eventStatusLabel,
+  formatCount,
+  formatDayChip,
+  formatPriceTry,
+} from "../../../lib/format";
+import { getLocale } from "../../../lib/locale-server";
 import { resolveApiBase } from "../../../lib/api-base";
 import { EventActions } from "./event-actions";
 
@@ -33,69 +45,78 @@ async function loadGuests(id: string): Promise<EventGuest[]> {
   }
 }
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const event = await loadEvent(id);
+  if (!event) return { title: "Dorham — دورهم" };
+  const description = event.description.replace(/\s+/g, " ").trim().slice(0, 160);
+  const url = eventPageUrl(event.id);
+  return {
+    title: `${event.title} — Dorham`,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: event.title,
+      description,
+      url,
+      type: "article",
+    },
+  };
+}
+
 export default async function EventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const locale = await getLocale();
+  const copy = t(locale);
   const [event, guests] = await Promise.all([loadEvent(id), loadGuests(id)]);
   if (!event) notFound();
   const cityShow = event.kind === "CITY_SHOW";
   const filled = capacityWidth(event.goingCount, event.capacity);
+  const goingN = formatCount(event.goingCount, locale);
+  const capN = event.capacity ? formatCount(event.capacity, locale) : undefined;
 
   return (
     <main className="wrap">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd(event)) }} />
       <SiteHeader />
       <PageIntro
-        kicker={`${cityShow ? "تقویم شهر" : event.venue ?? "استانبول"} · ${formatDayChip(event.startsAt)}`}
+        kicker={`${cityShow ? copy.eventCard.cityCal : event.venue ?? copy.eventCard.istanbul} · ${formatDayChip(event.startsAt, locale)}`}
         title={event.title}
       >
         {!cityShow ? (
           <p className="muted">
-            میزبان: <Link href={`/people/${event.host.id}`}>{event.host.displayName}</Link>
+            {copy.event.host} <Link href={`/people/${event.host.id}`}>{event.host.displayName}</Link>
           </p>
         ) : (
-          <p className="muted">هماهنگی دوستان ایرانی — نه فروش بلیط</p>
+          <p className="muted">{copy.event.cityNote}</p>
         )}
       </PageIntro>
 
-      {cityShow ? (
-        <div className="banner">
-          این یک دورهمی میزبانی‌شده نیست — فقط تقویم شهر برای هماهنگی. بگو علاقه‌مندی تا دوستانت در دورهم ببینند.
-        </div>
-      ) : null}
+      {cityShow ? <div className="banner">{copy.event.cityBanner}</div> : null}
 
       {event.status !== "PUBLISHED" ? (
         <p>
-          <span className="date-chip">{eventStatusFa[event.status] ?? event.status}</span>
+          <span className="date-chip">{eventStatusLabel(event.status, locale)}</span>
         </p>
       ) : null}
       <p className="prose">{event.description}</p>
       {event.venueSlug ? (
         <p className="meta">
-          مکان: <Link href={`/venues/${event.venueSlug}`}>{event.venue ?? "صفحهٔ مکان"}</Link>
+          {copy.event.place} <Link href={`/venues/${event.venueSlug}`}>{event.venue ?? copy.event.placePage}</Link>
           {event.address ? ` · ${event.address}` : ""}
         </p>
       ) : event.venue || event.address ? (
-        <p className="meta">
-          {[event.venue, event.address].filter(Boolean).join(" · ")}
-        </p>
+        <p className="meta">{[event.venue, event.address].filter(Boolean).join(" · ")}</p>
       ) : null}
 
       {!cityShow ? (
         <article className="card">
-          <p className="strong">{formatPriceTry(event.priceTry)}</p>
+          <p className="strong">{formatPriceTry(event.priceTry, locale)}</p>
+          <p className="muted">{event.priceTry ? copy.event.cashNote : copy.event.freeNote}</p>
+          <p className="strong">{copy.event.going(goingN, capN)}</p>
           <p className="muted">
-            {event.priceTry
-              ? "نقد دم در، وقتی وارد می‌شوی. درگاه آنلاین بعد از جمعه‌های واقعی وصل می‌شود."
-              : "ورود رایگان است."}
-          </p>
-          <p className="strong">
-            {event.goingCount}
-            {event.capacity ? ` از ${event.capacity}` : ""} نفر می‌آیند
-          </p>
-          <p className="muted">
-            {event.capacity && event.goingCount >= event.capacity
-              ? "ظرفیت پر است. می‌توانی به لیست انتظار بروی."
-              : "هنوز جا هست."}
-            {event.waitlistCount ? ` · ${event.waitlistCount} در انتظار` : ""}
+            {event.capacity && event.goingCount >= event.capacity ? copy.event.full : copy.event.room}
+            {event.waitlistCount ? copy.event.waiting(formatCount(event.waitlistCount, locale)) : ""}
           </p>
           {filled != null ? (
             <div className="capacity" aria-hidden>
@@ -105,13 +126,13 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         </article>
       ) : (
         <article className="card">
-          <p className="strong">{event.goingCount.toLocaleString("fa-IR")} نفر علاقه‌مند به هماهنگی</p>
-          <p className="muted">این عدد فقط داخل دورهم است — چند نفر برای رفتن با دوستان علامت زده‌اند.</p>
+          <p className="strong">{copy.event.interestedN(goingN)}</p>
+          <p className="muted">{copy.event.interestedLead}</p>
         </article>
       )}
 
       <div className="row">
-        <ShareEvent title={event.title} text={eventInviteText(event)} url={eventPageUrl(event.id)} />
+        <ShareEvent title={event.title} text={eventInviteText(event, locale)} url={eventPageUrl(event.id)} />
       </div>
       <EventActions
         eventId={event.id}

@@ -5,8 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { EventDto, Me, MyVerification, NotificationsList, UserActivity } from "@dorham/shared";
 import { EventCard } from "../../components/event-card";
+import { BlockList } from "../../components/block-list";
 import { SiteHeader } from "../../components/site-header";
 import { SiteFooter } from "../../components/site-footer";
+import { useUiLocale } from "../../components/locale-provider";
+import { setLocaleAction } from "../../lib/locale-actions";
 import { api, ApiError } from "../../lib/api";
 import { verifyFa, formatMemberSince } from "../../lib/format";
 import { publicMediaUrl } from "../../lib/media-url";
@@ -39,6 +42,7 @@ function completeness(me: Me, verification: MyVerification | null) {
 }
 
 function AccountBody() {
+  const locale = useUiLocale();
   const router = useRouter();
   const search = useSearchParams();
   const photoInput = useRef<HTMLInputElement>(null);
@@ -118,18 +122,22 @@ function AccountBody() {
     setSaving(true);
     setError("");
     try {
+      const locale = String(form.get("locale") || me.locale) as Me["locale"];
       const next = await api<Me>("/users/me", {
         method: "PATCH",
         body: JSON.stringify({
           displayName: String(form.get("displayName") ?? me.displayName),
           bio: String(form.get("bio") ?? "") || null,
           city: String(form.get("city") || me.city) as Me["city"],
-          locale: String(form.get("locale") || me.locale) as Me["locale"],
+          locale,
         }),
       });
+      if (locale === "EN") await setLocaleAction("en");
+      if (locale === "FA") await setLocaleAction("fa");
       setMe(next);
       setNotice("پروفایل ذخیره شد.");
       setTab("overview");
+      router.refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "ذخیره نشد.");
     } finally {
@@ -427,6 +435,7 @@ function AccountBody() {
                       priceTry: event.priceTry,
                       kind: event.kind,
                     }}
+                    locale={locale}
                   />
                 ))}
               </div>
@@ -643,6 +652,7 @@ function AccountBody() {
               />
             </article>
           </div>
+          <BlockList />
           <div className="profile-danger">
             <h3>کنترل حساب</h3>
             <div className="row">

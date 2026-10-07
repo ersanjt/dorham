@@ -65,7 +65,13 @@ Refresh is a body token, not a JS-readable cookie on mobile. Web may later use h
 | POST | `/v1/auth/logout` | yes | revoke session |
 | POST | `/v1/auth/verify-email` | no | consume email token |
 | POST | `/v1/auth/resend-verification` | yes | new email token |
+| POST | `/v1/auth/forgot-password` | no | email reset link (always 200; token only in local/dev) |
+| POST | `/v1/auth/reset-password` | no | consume reset token |
 | GET | `/v1/users/me` | yes | self |
+| GET | `/v1/users/me/activity` | yes | visits, RSVPs, hang plans |
+| GET | `/v1/users/me/notifications` | yes | in-app inbox |
+| POST | `/v1/users/me/notifications/read` | yes | mark all read |
+| POST | `/v1/users/me/notifications/:id/read` | yes | mark one read |
 | PATCH | `/v1/users/me` | yes | profile |
 | POST | `/v1/users/me/photo` | yes | attach profile photo |
 | POST | `/v1/users/me/pause` | yes | pause (login stays open so user can resume) |
@@ -106,19 +112,28 @@ Refresh is a body token, not a JS-readable cookie on mobile. Web may later use h
 | POST | `/v1/feed/:id/report` | yes | report a post |
 | DELETE | `/v1/feed/:id` | author or mod | hide a post |
 | GET | `/v1/events` | no | public published list |
+| GET | `/v1/events/mine` | yes | host’s own events |
 | POST | `/v1/events` | host+ | create |
 | GET | `/v1/events/:id` | no | public detail |
+| PATCH | `/v1/events/:id` | host+ | edit unpublished/live fields |
+| POST | `/v1/events/:id/cancel` | host+ | cancel |
 | GET | `/v1/events/:id/guests` | optional | names + going; ticket fields only if signed in |
 | POST | `/v1/events/:id/rsvp` | yes | going or waitlist |
 | DELETE | `/v1/events/:id/rsvp` | yes | cancel; promotes waitlist |
 | GET | `/v1/events/:id/door` | host+ | check-in URL for QR |
 | POST | `/v1/events/:id/checkin` | yes | `{ secret }` self or `{ userId }` host |
+| GET | `/v1/venues/hang-plans` | no | city hang plans (14 days) |
+| POST | `/v1/venues/:id/visits` | yes | request owner-verified visit |
+| GET | `/v1/venues/:id/visits` | owner | pending/verified visits |
+| GET | `/v1/venues/:id/door` | owner | venue door URL |
+| POST | `/v1/venues/:id/checkin` | owner or guest+secret | verify a visit |
+| POST | `/v1/venues/:id/claim` | yes | claim unpublished/unclaimed place |
 
 ## Error codes (stable)
 
-`VALIDATION_FAILED` `AUTH_INVALID_CREDENTIALS` `AUTH_EMAIL_TAKEN` `AUTH_LOCKED` `AUTH_UNAUTHORIZED` `AUTH_FORBIDDEN` `AUTH_EMAIL_TOKEN_INVALID` `AUTH_ACCOUNT_PAUSED` `AUTH_ACCOUNT_SUSPENDED` `EVENT_NOT_FOUND` `EVENT_FULL` `EVENT_CHECKIN_INVALID` `EVENT_NOT_GOING` `VENUE_NOT_FOUND` `POST_NOT_FOUND` `FEED_FORBIDDEN` `MEDIA_NOT_FOUND` `MEDIA_INVALID` `MEDIA_FORBIDDEN` `VERIFICATION_INVALID` `VERIFICATION_NOT_FOUND` `USER_NOT_FOUND` `USER_SELF_ACTION` `ALREADY_BLOCKED` `REPORT_INVALID` `RATE_LIMITED` `INTERNAL`
+`VALIDATION_FAILED` `AUTH_INVALID_CREDENTIALS` `AUTH_EMAIL_TAKEN` `AUTH_LOCKED` `AUTH_UNAUTHORIZED` `AUTH_FORBIDDEN` `AUTH_EMAIL_TOKEN_INVALID` `AUTH_ACCOUNT_PAUSED` `AUTH_ACCOUNT_SUSPENDED` `EVENT_NOT_FOUND` `EVENT_FULL` `EVENT_CHECKIN_INVALID` `EVENT_NOT_GOING` `EVENT_CANCELLED` `VENUE_NOT_FOUND` `VENUE_MAPS_INVALID` `VENUE_PENDING` `VENUE_VISIT_FORBIDDEN` `VENUE_VISIT_NOT_FOUND` `VENUE_OWNER_REQUIRED` `POST_NOT_FOUND` `FEED_FORBIDDEN` `MEDIA_NOT_FOUND` `MEDIA_INVALID` `MEDIA_FORBIDDEN` `VERIFICATION_INVALID` `VERIFICATION_NOT_FOUND` `USER_NOT_FOUND` `USER_SELF_ACTION` `ALREADY_BLOCKED` `REPORT_INVALID` `RATE_LIMITED` `MAIL_UNAVAILABLE` `REVIEW_DUPLICATE` `REVIEW_PENDING` `PHOTO_PENDING` `HANG_PLAN_INVALID` `INTERNAL`
 
-Clients must switch on `error.code`, not on English `message`. Persian copy for UI lives in `@dorham/shared` as `ERROR_FA`.
+Clients must switch on `error.code`, not on English `message`. UI copy lives in `@dorham/shared` as `ERROR_FA` / `ERROR_EN`.
 
 Paused accounts may still sign in, read `/users/me`, cancel RSVP, and resume. Writes (profile, RSVP, feed, block/report, media, verification) return `AUTH_ACCOUNT_PAUSED`.
 

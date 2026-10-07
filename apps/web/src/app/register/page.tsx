@@ -6,10 +6,13 @@ import { FormEvent, useState } from "react";
 import { registerBodySchema } from "@dorham/shared";
 import { SiteHeader } from "../../components/site-header";
 import { PageIntro } from "../../components/page-intro";
+import { useCopy, useUiLocale } from "../../components/locale-provider";
 import { api, ApiError } from "../../lib/api";
 import { setSession } from "../../lib/session";
 
 export default function RegisterPage() {
+  const copy = useCopy();
+  const locale = useUiLocale();
   const router = useRouter();
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -22,10 +25,10 @@ export default function RegisterPage() {
       email: String(form.get("email") ?? ""),
       password: String(form.get("password") ?? ""),
       displayName: String(form.get("displayName") ?? ""),
-      locale: "FA",
+      locale: locale === "en" ? "EN" : "FA",
     });
     if (!parsed.success) {
-      setError("نام حداقل ۲ حرف، رمز حداقل ۱۰ کاراکتر با حرف و عدد.");
+      setError(copy.auth.registerBad);
       return;
     }
     setPending(true);
@@ -42,7 +45,7 @@ export default function RegisterPage() {
       }
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "ثبت‌نام نشد.");
+      setError(err instanceof ApiError ? err.message : copy.auth.registerFail);
     } finally {
       setPending(false);
     }
@@ -51,41 +54,44 @@ export default function RegisterPage() {
   return (
     <main className="wrap">
       <SiteHeader />
-      <PageIntro kicker="عضو شهر" title="ساخت حساب">
-        <p className="muted">برای ایرانی‌های ساکن ترکیه. ۱۸ سال به بالا. یک حساب برای هر نفر.</p>
+      <PageIntro kicker={copy.auth.registerKicker} title={copy.auth.registerTitle}>
+        <p className="muted">{copy.auth.registerLead}</p>
       </PageIntro>
       <div className="form-card">
-      <form className="form" onSubmit={onSubmit}>
-        {error ? <div className="banner err">{error}</div> : null}
-        <label>
-          نام نمایشی
-          <input name="displayName" minLength={2} maxLength={40} required />
-        </label>
-        <label>
-          ایمیل
-          <input name="email" type="email" autoComplete="email" required />
-        </label>
-        <label>
-          رمز
-          <input name="password" type="password" autoComplete="new-password" minLength={10} required />
-        </label>
-        <label className="check">
-          <input name="adult" type="checkbox" required />
-          ۱۸ سال یا بیشتر دارم.
-        </label>
-        <label className="check">
-          <input name="terms" type="checkbox" required />
-          <span>
-            <Link href="/safety">قواعد</Link> و <Link href="/privacy">حریم خصوصی</Link> را می‌پذیرم.
-          </span>
-        </label>
-        <button className="btn" type="submit" disabled={pending}>
-          {pending ? "..." : "ادامه"}
-        </button>
-        <p className="muted">
-          حساب داری؟ <Link href="/login">ورود</Link>
-        </p>
-      </form>
+        <form className="form" onSubmit={onSubmit}>
+          {error ? <div className="banner err">{error}</div> : null}
+          <label>
+            {copy.auth.displayName}
+            <input name="displayName" minLength={2} maxLength={40} required />
+          </label>
+          <label>
+            {copy.auth.email}
+            <input name="email" type="email" autoComplete="email" required />
+          </label>
+          <label>
+            {copy.auth.password}
+            <input name="password" type="password" autoComplete="new-password" minLength={10} required />
+          </label>
+          <label className="check">
+            <input name="adult" type="checkbox" required />
+            {copy.auth.adult}
+          </label>
+          <label className="check">
+            <input name="terms" type="checkbox" required />
+            <span>
+              {copy.auth.termsPrefix}
+              <Link href="/safety">{copy.auth.rules}</Link>
+              {copy.auth.and}
+              <Link href="/privacy">{copy.auth.privacy}</Link> {copy.auth.termsAccept}
+            </span>
+          </label>
+          <button className="btn" type="submit" disabled={pending}>
+            {pending ? "..." : copy.auth.submitRegister}
+          </button>
+          <p className="muted">
+            {copy.auth.haveAccount} <Link href="/login">{copy.auth.submitLogin}</Link>
+          </p>
+        </form>
       </div>
     </main>
   );

@@ -3,7 +3,7 @@ import { Linking, Share, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import QRCode from "react-native-qrcode-svg";
 import type { EventDoor, EventGuest } from "@dorham/shared";
-import { AppText, Banner, Button, Card, Loading, Screen } from "../../../../components/ui";
+import { AppText, Banner, Button, Card, ErrorState, Loading, Screen } from "../../../../components/ui";
 import { api, ApiError } from "../../../../lib/api";
 import { isSignedIn } from "../../../../lib/session";
 import { color, space } from "../../../../lib/theme";
@@ -36,6 +36,14 @@ export default function DoorScreen() {
     return (
       <Screen back title="در ورودی">
         <Loading />
+      </Screen>
+    );
+  }
+
+  if (!door && error) {
+    return (
+      <Screen back title="در ورودی">
+        <ErrorState text={error} onRetry={() => reload().catch((err: unknown) => setError(err instanceof ApiError ? err.message : "در خوانده نشد."))} />
       </Screen>
     );
   }

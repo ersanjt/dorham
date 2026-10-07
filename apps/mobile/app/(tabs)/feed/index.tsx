@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { Pressable, View } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import type { EventDto, FeedPost, Me } from "@dorham/shared";
-import { AppText, AuthorMeta, Banner, Button, Card, Chip, Empty, Field, Loading, Screen } from "../../../components/ui";
+import { AppText, AuthorMeta, Banner, Button, Card, Chip, Empty, ErrorState, Field, Loading, Screen } from "../../../components/ui";
 import { api, ApiError } from "../../../lib/api";
 import { canPost } from "../../../lib/can-post";
 import { formatWhen } from "../../../lib/format";
@@ -46,7 +46,7 @@ export default function FeedScreen() {
         setPosts(nextPosts);
         setEvents(nextEvents);
       })
-      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "API روشن است؟"))
+      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "فید خوانده نشد."))
       .finally(() => setLoading(false));
     if (isSignedIn()) {
       api<Me>("/users/me")
@@ -91,7 +91,7 @@ export default function FeedScreen() {
 
   return (
     <Screen kicker="خبر شهر" title="فید استانبول" subtitle="وسط هفته، پیشنهاد مکان. سوایپ نیست.">
-      <Banner text={error} />
+      {error && posts.length === 0 ? <ErrorState text={error} onRetry={load} /> : <Banner text={error} />}
       <Banner text={notice} tone="ok" />
       {!isSignedIn() ? (
         <Card>

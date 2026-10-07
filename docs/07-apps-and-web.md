@@ -26,7 +26,7 @@ The website is not a second Tinder. It is:
 2. Next Istanbul event (public, shareable)
 3. Download App Store / Play
 4. Safety, community rules, privacy, terms
-5. Language toggle FA / EN
+5. Language toggle FA / EN on the public chrome (header). Landing and auth follow the toggle. Inner product screens stay Persian-first for v1.
 
 People coming from Instagram should land on **an event URL**, not a login wall.
 
