@@ -276,8 +276,8 @@ export function VenueCommunity({ slug }: { slug: string }) {
       )}
 
       <div className="venue-photo-box">
-        <button className="linkish" type="button" onClick={() => setShowPhoto((v) => !v)}>
-          {showPhoto ? "بستن ارسال عکس" : "ارسال عکس از مکان (بعد از تأیید مدیر)"}
+        <button className="btn ghost" type="button" onClick={() => setShowPhoto((v) => !v)}>
+          {showPhoto ? "بستن ارسال عکس" : "ارسال عکس از مکان"}
         </button>
         {showPhoto && signedIn ? (
           <form className="form wide" onSubmit={onPhoto} style={{ marginTop: 12 }}>

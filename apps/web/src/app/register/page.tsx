@@ -1,19 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useState } from "react";
 import { registerBodySchema } from "@dorham/shared";
 import { SiteHeader } from "../../components/site-header";
 import { PageIntro } from "../../components/page-intro";
 import { useCopy, useUiLocale } from "../../components/locale-provider";
 import { api, ApiError } from "../../lib/api";
+import { safeNext } from "../../lib/paths";
 import { setSession } from "../../lib/session";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const copy = useCopy();
   const locale = useUiLocale();
   const router = useRouter();
+  const search = useSearchParams();
+  const next = safeNext(search.get("next"), "/start");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -39,9 +42,11 @@ export default function RegisterPage() {
       );
       setSession(data.accessToken, data.refreshToken);
       if (data.verifyEmailToken) {
-        router.push(`/verify-email?token=${encodeURIComponent(data.verifyEmailToken)}`);
+        router.push(
+          `/verify-email?token=${encodeURIComponent(data.verifyEmailToken)}&next=${encodeURIComponent(next)}`,
+        );
       } else {
-        router.push("/account?verify=1");
+        router.push(next);
       }
       router.refresh();
     } catch (err) {
@@ -62,7 +67,7 @@ export default function RegisterPage() {
           {error ? <div className="banner err">{error}</div> : null}
           <label>
             {copy.auth.displayName}
-            <input name="displayName" minLength={2} maxLength={40} required />
+            <input name="displayName" minLength={2} maxLength={40} required autoComplete="name" />
           </label>
           <label>
             {copy.auth.email}
@@ -89,10 +94,18 @@ export default function RegisterPage() {
             {pending ? "..." : copy.auth.submitRegister}
           </button>
           <p className="muted">
-            {copy.auth.haveAccount} <Link href="/login">{copy.auth.submitLogin}</Link>
+            {copy.auth.haveAccount} <Link href={`/login?next=${encodeURIComponent(next)}`}>{copy.auth.submitLogin}</Link>
           </p>
         </form>
       </div>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<main className="wrap">…</main>}>
+      <RegisterForm />
+    </Suspense>
   );
 }

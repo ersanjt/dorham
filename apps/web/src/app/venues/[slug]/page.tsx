@@ -109,7 +109,9 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
           {venue.hours ? (
             <div className="venue-fact">
               <dt>{copy.venues.hours}</dt>
-              <dd>{venue.hours}</dd>
+              <dd>
+                <span className="isolate-ltr">{venue.hours}</span>
+              </dd>
             </div>
           ) : null}
           {venue.priceRange ? (
@@ -139,7 +141,9 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
             <div className="venue-fact">
               <dt>{copy.venues.phone}</dt>
               <dd>
-                <a href={`tel:${venue.phone}`}>{venue.phone}</a>
+                <a className="isolate-ltr" href={`tel:${venue.phone.replace(/\s/g, "")}`}>
+                  {venue.phone}
+                </a>
               </dd>
             </div>
           ) : null}

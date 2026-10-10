@@ -36,8 +36,8 @@ export const metadata: Metadata = {
   title: "Dorham — دورهم",
   description: "Iranian community in Turkey. Your people, in this city.",
   icons: {
-    icon: [{ url: "/brand/empty-events.png", type: "image/png" }],
-    apple: [{ url: "/brand/empty-events.png" }],
+    icon: [{ url: "/brand/icon.png", type: "image/png" }],
+    apple: [{ url: "/brand/icon.png" }],
   },
   openGraph: {
     title: "Dorham — دورهم",
@@ -46,13 +46,13 @@ export const metadata: Metadata = {
     siteName: "Dorham",
     locale: "fa_IR",
     type: "website",
-    images: [{ url: "/brand/empty-events.png", width: 1024, height: 1024, alt: "Dorham" }],
+    images: [{ url: "/brand/icon.png", width: 1024, height: 1024, alt: "Dorham" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Dorham — دورهم",
     description: "جامعهٔ ایرانی استانبول. دور هم، نه سوایپ.",
-    images: ["/brand/empty-events.png"],
+    images: ["/brand/icon.png"],
   },
 };
 

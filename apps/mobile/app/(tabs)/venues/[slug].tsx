@@ -7,7 +7,7 @@ import { VenueHangPlans } from "../../../components/venue-hang-plans";
 import { AppText, Banner, Button, Card, ErrorState, Field, Loading, Screen } from "../../../components/ui";
 import { api, ApiError } from "../../../lib/api";
 import { publicMediaUrl } from "../../../lib/api-base";
-import { venueKindFa } from "../../../lib/format";
+import { venueAreaFa, venueKindFa } from "../../../lib/format";
 import { loginHref } from "../../../lib/paths";
 import { isSignedIn } from "../../../lib/session";
 import { color } from "../../../lib/theme";
@@ -76,7 +76,7 @@ export default function VenueDetailScreen() {
   return (
     <Screen
       back
-      kicker={venue ? `${venueKindFa[venue.kind] ?? venue.kind} · ${venue.area}` : undefined}
+      kicker={venue ? `${venueKindFa[venue.kind] ?? venue.kind} · ${venueAreaFa(venue.area)}` : undefined}
       title={venue?.name ?? "مکان"}
     >
       <Banner text={error} />

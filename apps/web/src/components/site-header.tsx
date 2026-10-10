@@ -42,7 +42,7 @@ export function SiteHeader() {
     <nav className="nav">
       <Link className="brand" href="/">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="brand-mark" src="/brand/empty-events.png" alt="" width={40} height={40} />
+        <img className="brand-mark" src="/brand/icon.png" alt="" width={40} height={40} />
         <span className="brand-wordmark">
           <span className="brand-latin">Dorham</span>
           <span className="brand-sep" aria-hidden>
@@ -58,9 +58,14 @@ export function SiteHeader() {
         <Link href="/safety">{copy.nav.safety}</Link>
         <LocaleToggle />
         {!signedIn ? (
-          <Link className="btn ghost" href="/login">
-            {copy.nav.login}
-          </Link>
+          <>
+            <Link className="btn ghost" href="/login">
+              {copy.nav.login}
+            </Link>
+            <Link className="btn" href="/register">
+              {copy.nav.join}
+            </Link>
+          </>
         ) : (
           <>
             <Link className="btn ghost" href="/account?tab=inbox">

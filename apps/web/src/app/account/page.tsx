@@ -174,7 +174,7 @@ function AccountBody() {
         return;
       }
       if (data.verifyEmailToken) {
-        router.push(`/verify-email?token=${encodeURIComponent(data.verifyEmailToken)}`);
+        router.push(`/verify-email?token=${encodeURIComponent(data.verifyEmailToken)}&next=/account`);
         return;
       }
       setNotice("لینک تأیید فرستاده شد. صندوق ورودی و پوشهٔ اسپم را چک کن.");

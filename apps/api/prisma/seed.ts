@@ -68,6 +68,7 @@ async function main() {
         priceRange: venue.priceRange ?? null,
         menuNotes: venue.menuNotes ?? null,
         description: venue.description,
+        photos: venue.photos ?? [],
         published: true,
       },
       create: {
@@ -86,7 +87,7 @@ async function main() {
         priceRange: venue.priceRange ?? null,
         menuNotes: venue.menuNotes ?? null,
         description: venue.description,
-        photos: [],
+        photos: venue.photos ?? [],
       },
     });
   }

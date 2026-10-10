@@ -2,7 +2,7 @@ import { Image, Linking, Pressable, View } from "react-native";
 import type { VenueDto } from "@dorham/shared";
 import { AppText, Card } from "./ui";
 import { publicMediaUrl } from "../lib/api-base";
-import { venueKindFa } from "../lib/format";
+import { venueAreaFa, venueKindFa } from "../lib/format";
 import { color, radius, space } from "../lib/theme";
 
 export function VenueCard({
@@ -52,7 +52,7 @@ export function VenueCard({
         )}
         <View style={{ padding: space.md, gap: space.xs }}>
           <AppText muted size="caption">
-            {venueKindFa[venue.kind] ?? venue.kind} · {venue.area}
+            {venueKindFa[venue.kind] ?? venue.kind} · {venueAreaFa(venue.area)}
           </AppText>
           <AppText bold size="title">
             {venue.name}
@@ -60,6 +60,12 @@ export function VenueCard({
           <AppText muted numberOfLines={2}>
             {venue.description}
           </AppText>
+          {venue.hours ? <AppText size="caption">{venue.hours}</AppText> : null}
+          {venue.menuNotes ? (
+            <AppText size="caption" numberOfLines={2}>
+              {venue.menuNotes}
+            </AppText>
+          ) : null}
           <AppText muted size="caption" numberOfLines={2}>
             {venue.address}
           </AppText>

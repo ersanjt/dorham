@@ -15,7 +15,7 @@ const GOOGLE_QUERY: Record<string, string> = {
   "aksaray-mahalle": "Aksaray Meydanı Fatih İstanbul",
   "safir-aksaray": "Safir İran Mutfağı Namık Kemal Caddesi 23 Aksaray Fatih",
   "safir-sisli": "Safir Iranian Restaurant Abide-i Hürriyet Caddesi 171 Şişli",
-  "asuman-aksaray": "Asuman İran Restaurant Atatürk Bulvarı 158 Fatih",
+  "asuman-aksaray": "Asuman İran Restaurant Haşim İşcan Geçidi 42 Fatih",
   "nayeb-findikzade": "Nayeb Restaurant Millet Caddesi 79 Fındıkzade",
   "reyhun-taksim": "Reyhun Iranian Restaurant Yeni Çarşı Caddesi 26 Beyoğlu",
   "termeh-beyoglu": "Termeh Restaurant Yeni Çarşı Caddesi 8 Beyoğlu",
@@ -49,6 +49,10 @@ const GOOGLE_QUERY: Record<string, string> = {
   "shah-kebab-basaksehir": "Şah Kebap Hill Park Başakşehir",
   "tehroon-kadikoy": "Tehroon Restaurant Özen Sokak Fikirtepe Kadıköy",
   "palmiye-esenyurt": "Palmiye İran Restaurant Nazım Hikmet Esenyurt",
+  "nane-beyazit": "Nane Iranian Restaurant Mercan Cami Çıkmazı Fatih",
+  "bahador-istiklal": "Bahador Wild Cafe Restaurant Akansu Sokak Beyoğlu",
+  "reyhan-beylikduzu": "Reyhan Iranian Restaurant Çalışlar Caddesi Beylikdüzü",
+  "alpinaz-bostanci": "Alpinaz Iranian Market Mehmet Şevki Paşa Bostancı Kadıköy",
 };
 
 const PIN_FIX: Record<string, { lat: number; lng: number; address?: string }> = {
@@ -62,9 +66,21 @@ const PIN_FIX: Record<string, { lat: number; lng: number; address?: string }> = 
     lng: 28.95425,
   },
   "arya-sariyer": {
-    // Keep near Ayazağa / Kemerburgaz corridor, not random Sarıyer coast
-    lat: 41.1184,
-    lng: 28.9992,
+    lat: 41.1136,
+    lng: 28.98569,
+  },
+  "termeh-beyoglu": {
+    lat: 41.03298,
+    lng: 28.97743,
+  },
+  "aydan-esenyurt": {
+    lat: 41.00804,
+    lng: 28.68138,
+  },
+  "asuman-aksaray": {
+    address: "Haşim İşcan Geçidi No:42/B, 34134 Fatih/İstanbul",
+    lat: 41.01231,
+    lng: 28.95362,
   },
 };
 
@@ -89,6 +105,10 @@ function emitVenue(v: (typeof ISTANBUL_VENUES)[number]) {
   if (v.hours) lines.push(`    hours: "${esc(v.hours)}",`);
   if (v.priceRange) lines.push(`    priceRange: "${esc(v.priceRange)}",`);
   if (v.menuNotes) lines.push(`    menuNotes: "${esc(v.menuNotes)}",`);
+  if (v.photos?.length) {
+    const list = v.photos.map((url) => `"${esc(url)}"`).join(", ");
+    lines.push(`    photos: [${list}],`);
+  }
   lines.push(`    description: "${esc(v.description)}",`);
   lines.push("  },");
   return lines.join("\n");

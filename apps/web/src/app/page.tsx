@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { EventDto, FeedPost, VenueHangPlanDto } from "@dorham/shared";
 import { EventCard } from "../components/event-card";
+import { HeroJoin } from "../components/hero-join";
 import { FeedPostCard } from "../components/feed-post";
 import { ShareEvent } from "../components/share-event";
 import { SiteFooter } from "../components/site-footer";
@@ -85,14 +86,11 @@ export default async function HomePage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/hero.png" alt="" />
         </div>
-        <div className="row">
-          <Link className="btn" href={next ? `/events/${next.id}` : showCityCalendar ? "/events#city-calendar" : "/events"}>
-            {next ? copy.home.nextEvent : showCityCalendar ? copy.home.cityCalendar : copy.home.cityEvents}
-          </Link>
-          <Link className="btn ghost" href="/venues">
-            {copy.home.venuesCta}
-          </Link>
-        </div>
+        <HeroJoin
+          primaryHref={next ? `/events/${next.id}` : showCityCalendar ? "/events#city-calendar" : "/events"}
+          primaryLabel={next ? copy.home.nextEvent : showCityCalendar ? copy.home.cityCalendar : copy.home.cityEvents}
+          venuesLabel={copy.home.venuesCta}
+        />
       </section>
 
       <section id="events">

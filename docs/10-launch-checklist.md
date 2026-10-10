@@ -67,7 +67,7 @@ Real Friday gathers stay founder-published via `/events/new`.
 
 ## Product surfaces ready
 
-- Web: landing, events, RSVP, door QR, feed, venues, account, legal, get-app
+- Web: landing, join (`/register` keeps `next`), first session (`/start`), events, RSVP, door QR, feed, venues, account, legal, get-app
 - API: auth + email verify + password reset, events CRUD cancel, venues pending, admin reports/roles
 - Mobile: points at `https://api.dorham.app` (EAS when ready)
 

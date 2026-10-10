@@ -39,13 +39,12 @@ const OVERRIDES: Record<
     lng: 28.987479,
   },
   "asuman-aksaray": {
-    address: "Kemalpaşa Mah., Atatürk Bulvarı No:158, 34134 Fatih/İstanbul",
+    address: "Haşim İşcan Geçidi No:42/B, 34134 Fatih/İstanbul",
     phone: "+90 212 511 27 37",
-    hours: "۱۲:۰۰–۲۱:۰۰",
+    hours: "۰۹:۳۰–۱۹:۳۰",
     website: "https://www.asumanrestaurant.com",
-    // Street-level near Oruçgazi school / Aksaray Atatürk Bulvarı — not Unkapanı stretch
-    lat: 41.01285,
-    lng: 28.9541,
+    lat: 41.01231,
+    lng: 28.95362,
   },
   "aksaray-mahalle": {
     address: "Aksaray Meydanı, Fatih/İstanbul",

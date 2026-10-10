@@ -5,6 +5,48 @@ export const VENUE_KINDS = ["RESTAURANT", "CAFE", "MARKET", "CULTURAL"] as const
 export const venueKindSchema = z.enum(VENUE_KINDS);
 export type VenueKind = (typeof VENUE_KINDS)[number];
 
+/** Istanbul regions in the order the venues page walks the city. */
+export const ISTANBUL_REGIONS = ["old-city", "center", "north", "asia", "west"] as const;
+export const istanbulRegionSchema = z.enum(ISTANBUL_REGIONS);
+export type IstanbulRegion = (typeof ISTANBUL_REGIONS)[number];
+
+export type IstanbulArea = { slug: string; region: IstanbulRegion; fa: string; en: string };
+
+/** Known Istanbul neighborhoods, ordered by region and then by Iranian density. */
+export const ISTANBUL_AREAS: readonly IstanbulArea[] = [
+  { slug: "aksaray", region: "old-city", fa: "آکسارای", en: "Aksaray" },
+  { slug: "findikzade", region: "old-city", fa: "فندق‌زاده", en: "Fındıkzade" },
+  { slug: "fatih", region: "old-city", fa: "فاتح / بایزید", en: "Fatih / Beyazıt" },
+  { slug: "taksim", region: "center", fa: "تکسیم / بیوغلو", en: "Taksim / Beyoğlu" },
+  { slug: "sisli", region: "center", fa: "شیشلی", en: "Şişli" },
+  { slug: "besiktas", region: "center", fa: "بشیکتاش / اورتاکوی", en: "Beşiktaş / Ortaköy" },
+  { slug: "kagithane", region: "center", fa: "کاغیتخانه", en: "Kağıthane" },
+  { slug: "maslak", region: "north", fa: "ماسلاک", en: "Maslak" },
+  { slug: "sariyer", region: "north", fa: "ساری‌یر", en: "Sarıyer" },
+  { slug: "kadikoy", region: "asia", fa: "کادیکوی", en: "Kadıköy" },
+  { slug: "atasehir", region: "asia", fa: "آتاشهر", en: "Ataşehir" },
+  { slug: "maltepe", region: "asia", fa: "مالتپه", en: "Maltepe" },
+  { slug: "atakoy", region: "west", fa: "آتاکوی", en: "Ataköy" },
+  { slug: "avcilar", region: "west", fa: "آوجیلار", en: "Avcılar" },
+  { slug: "esenyurt", region: "west", fa: "اسنیورت", en: "Esenyurt" },
+  { slug: "beylikduzu", region: "west", fa: "بیلیکدوزو", en: "Beylikdüzü" },
+  { slug: "basaksehir", region: "west", fa: "باشاک‌شهر", en: "Başakşehir" },
+];
+
+export function istanbulArea(slug: string): IstanbulArea | undefined {
+  return ISTANBUL_AREAS.find((a) => a.slug === slug);
+}
+
+export function areasInRegion(region: IstanbulRegion): string[] {
+  return ISTANBUL_AREAS.filter((a) => a.region === region).map((a) => a.slug);
+}
+
+/** Sort key for an area; unknown (member-submitted) areas go last. */
+export function areaRank(slug: string): number {
+  const i = ISTANBUL_AREAS.findIndex((a) => a.slug === slug);
+  return i === -1 ? ISTANBUL_AREAS.length : i;
+}
+
 export const MODERATION_STATUSES = ["PENDING", "PUBLISHED", "REJECTED"] as const;
 export const moderationStatusSchema = z.enum(MODERATION_STATUSES);
 export type ModerationStatus = (typeof MODERATION_STATUSES)[number];
@@ -55,6 +97,7 @@ export const listVenuesQuerySchema = z.object({
   city: z.enum(CITIES).default("istanbul"),
   kind: venueKindSchema.optional(),
   area: z.string().trim().min(2).max(40).optional(),
+  region: istanbulRegionSchema.optional(),
   q: z.string().trim().max(80).optional(),
   limit: z.coerce.number().int().min(1).max(80).default(80),
 });

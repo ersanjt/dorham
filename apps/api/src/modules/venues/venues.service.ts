@@ -6,6 +6,9 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import {
+  areaRank,
+  areasInRegion,
+  ISTANBUL_AREAS,
   CreateVenueHangPlanBody,
   CreateVenueReviewBody,
   ListVenuesQuery,
@@ -22,7 +25,6 @@ import { newOpaqueToken, secretsEqual } from "../../common/crypto";
 import { loadEnv } from "../../config/env";
 import { MediaService } from "../media/media.service";
 import { NotificationsService } from "../users/notifications.service";
-import { streetViewEmbedUrl } from "./map-preview";
 
 const publishedReviewCount = { reviews: { where: { status: "PUBLISHED" as const } } };
 
@@ -53,23 +55,34 @@ export class VenuesService {
     };
     if (query.kind) where.kind = query.kind;
     if (query.area) where.area = query.area;
+    else if (query.region) where.area = { in: areasInRegion(query.region) };
     if (query.q) {
       const q = query.q;
+      const needle = q.toLocaleLowerCase("tr");
+      const labelAreas = ISTANBUL_AREAS.filter(
+        (a) => a.fa.includes(q) || a.en.toLocaleLowerCase("tr").includes(needle),
+      ).map((a) => a.slug);
       where.OR = [
         { name: { contains: q, mode: "insensitive" } },
         { area: { contains: q, mode: "insensitive" } },
+        ...(labelAreas.length ? [{ area: { in: labelAreas } }] : []),
         { address: { contains: q, mode: "insensitive" } },
         { description: { contains: q, mode: "insensitive" } },
         { menuNotes: { contains: q, mode: "insensitive" } },
       ];
     }
 
-    const rows = await this.prisma.venue.findMany({
-      where,
-      orderBy: [{ area: "asc" }, { kind: "asc" }, { name: "asc" }],
-      take: query.limit,
-      include: venueDtoInclude,
-    });
+    // Small catalog: order by city walk (areaRank) in memory, then cap.
+    const rows = (
+      await this.prisma.venue.findMany({
+        where,
+        orderBy: [{ kind: "asc" }, { name: "asc" }],
+        take: 500,
+        include: venueDtoInclude,
+      })
+    )
+      .sort((a, b) => areaRank(a.area) - areaRank(b.area) || a.area.localeCompare(b.area))
+      .slice(0, query.limit);
     return {
       data: await Promise.all(rows.map((row) => this.toDto(row))),
       page: { nextCursor: null, limit: query.limit },
@@ -844,21 +857,14 @@ export class VenuesService {
     if (row.lat != null && row.lng != null) {
       const key = this.env.GOOGLE_MAPS_API_KEY?.trim();
       const label = encodeURIComponent(row.area || row.name);
+      mapImageUrl = `/v1/maps/static?lat=${row.lat}&lng=${row.lng}&label=${label}`;
+      // Street stills need a Maps key. The keyless Google embed cannot be a thumbnail
+      // and renders as an empty "خیابان" button, so it stays out of the gallery.
       if (key) {
-        mapImageUrl = `/v1/maps/static?lat=${row.lat}&lng=${row.lng}&label=${label}`;
         for (const heading of [20, 140, 260]) {
           gallery.push({
             kind: "street",
             src: `/v1/maps/streetview?lat=${row.lat}&lng=${row.lng}&heading=${heading}&label=${label}`,
-            label: `نمای خیابان · ${heading}°`,
-          });
-        }
-      } else {
-        mapImageUrl = `/v1/maps/static?lat=${row.lat}&lng=${row.lng}&label=${label}`;
-        for (const heading of [20, 140, 260]) {
-          gallery.push({
-            kind: "street",
-            src: streetViewEmbedUrl(row.lat, row.lng, heading),
             label: `نمای خیابان · ${heading}°`,
           });
         }

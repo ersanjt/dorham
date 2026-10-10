@@ -1,3 +1,4 @@
+import { istanbulArea } from "@dorham/shared";
 import { publicWebBase } from "./api-base";
 
 /** Persian copy, Gregorian calendar, Istanbul clock — never Jalali. */
@@ -57,6 +58,10 @@ export const venueKindFa: Record<string, string> = {
   MARKET: "مارکت",
   CULTURAL: "فرهنگی",
 };
+
+export function venueAreaFa(area: string) {
+  return istanbulArea(area)?.fa ?? area;
+}
 
 export const verifyFa: Record<string, string> = {
   NONE: "تأیید نشده",
