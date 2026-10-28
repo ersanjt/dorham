@@ -48,6 +48,7 @@ export default async function EventsPage() {
     loadEvents("upcoming", "CITY_SHOW"),
     loadEvents("past", "COMMUNITY"),
   ]);
+  const attendedPast = pastCommunity.filter((event) => event.goingCount > 0);
 
   return (
     <main className="wrap events-page">
@@ -106,14 +107,14 @@ export default async function EventsPage() {
         </section>
       ) : null}
 
-      {pastCommunity.length > 0 ? (
+      {attendedPast.length > 0 ? (
         <section className="events-block" aria-labelledby="past-heading">
           <div className="section-head events-block-head">
             <p className="kicker">{copy.events.archiveKicker}</p>
             <h2 id="past-heading">{copy.events.pastTitle}</h2>
           </div>
           <div className="events-grid events-grid-past">
-            {pastCommunity.map((event) => (
+            {attendedPast.map((event) => (
               <EventCard key={event.id} event={toCard(event)} locale={locale} />
             ))}
           </div>

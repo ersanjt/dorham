@@ -35,7 +35,18 @@ function timeoutSignal(ms: number) {
   return controller.signal;
 }
 
-async function refreshAccess() {
+let refreshInFlight: Promise<boolean> | null = null;
+
+function refreshAccess() {
+  if (!refreshInFlight) {
+    refreshInFlight = refreshAccessOnce().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+async function refreshAccessOnce() {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
   try {

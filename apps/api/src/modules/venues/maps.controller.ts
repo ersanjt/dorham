@@ -40,6 +40,7 @@ export class MapsController {
   @Get("static")
   @Header("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
   @Header("X-Content-Type-Options", "nosniff")
+  @Header("Content-Security-Policy", "default-src 'none'")
   async staticMap(
     @Query("lat") latRaw: string | undefined,
     @Query("lng") lngRaw: string | undefined,
@@ -68,6 +69,7 @@ export class MapsController {
   @Get("streetview")
   @Header("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
   @Header("X-Content-Type-Options", "nosniff")
+  @Header("Content-Security-Policy", "default-src 'none'")
   async streetView(
     @Query("lat") latRaw: string | undefined,
     @Query("lng") lngRaw: string | undefined,

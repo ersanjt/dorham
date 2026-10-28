@@ -19,7 +19,6 @@ function StartBody() {
   const search = useSearchParams();
   const [me, setMe] = useState<Me | null>(null);
   const [event, setEvent] = useState<EventDto | null>(null);
-  const [cityShow, setCityShow] = useState<EventDto | null>(null);
   const [notice, setNotice] = useState(search.get("verify") === "1" ? copy.start.verifyBanner : "");
   const [error, setError] = useState("");
   const [resending, setResending] = useState(false);
@@ -32,12 +31,10 @@ function StartBody() {
     Promise.all([
       api<Me>("/users/me"),
       api<EventDto[]>("/events?city=istanbul&kind=COMMUNITY&limit=1", { auth: false }).catch(() => []),
-      api<EventDto[]>("/events?city=istanbul&kind=CITY_SHOW&limit=1", { auth: false }).catch(() => []),
     ])
-      .then(([profile, events, shows]) => {
+      .then(([profile, events]) => {
         setMe(profile);
         setEvent(events[0] ?? null);
-        setCityShow(shows[0] ?? null);
         if (!profile.emailVerified && search.get("verify") !== "1") {
           setNotice(copy.start.verifyBanner);
         }
@@ -72,9 +69,8 @@ function StartBody() {
     }
   }
 
-  const featured = event ?? cityShow;
-  const eventHref = featured ? `/events/${featured.id}` : "/events";
-  const when = featured ? formatDayChip(featured.startsAt, locale) : "";
+  const eventHref = event ? `/events/${event.id}` : "/venues";
+  const when = event ? formatDayChip(event.startsAt, locale) : "";
 
   return (
     <main className="wrap">
@@ -98,15 +94,14 @@ function StartBody() {
           <p className="kicker">{copy.start.eventKicker}</p>
           <h2>{copy.start.eventTitle}</h2>
           {!event ? <p className="muted">{copy.start.eventEmpty}</p> : null}
-          {featured ? (
+          {event ? (
             <p className="muted">
-              {featured.title}
+              {event.title}
               {when ? ` · ${when}` : ""}
-              {featured.venue ? ` · ${featured.venue}` : ""}
+              {event.venue ? ` · ${event.venue}` : ""}
             </p>
           ) : null}
           {event ? <p className="muted">{copy.start.eventBody}</p> : null}
-          {!event && cityShow ? <p className="muted">{copy.start.eventCalendarBody}</p> : null}
           <Link className="btn" href={eventHref}>
             {event ? copy.start.eventCta : copy.start.eventEmptyCta}
           </Link>

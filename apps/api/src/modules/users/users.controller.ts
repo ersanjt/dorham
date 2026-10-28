@@ -50,6 +50,13 @@ export class UsersController {
     return { data: await this.notifications.markRead(user.id, id) };
   }
 
+  @Post("me/host-request")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  async requestHost(@CurrentUser() user: { id: string }) {
+    return { data: await this.users.requestHost(user.id) };
+  }
+
   @Patch("me")
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

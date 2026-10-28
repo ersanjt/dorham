@@ -8,3 +8,14 @@ export function loginHref(next?: string) {
   const target = safeNext(next);
   return target === "/" ? "/login" : `/login?next=${encodeURIComponent(target)}`;
 }
+
+export function safeOpenUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    if (url.protocol === "https:" || url.protocol === "http:") return url.toString();
+  } catch {
+    return null;
+  }
+  return null;
+}

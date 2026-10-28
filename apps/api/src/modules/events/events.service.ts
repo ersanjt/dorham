@@ -7,6 +7,7 @@ import { newOpaqueToken, secretsEqual } from "../../common/crypto";
 import { loadEnv } from "../../config/env";
 import { MediaService } from "../media/media.service";
 import { NotificationsService } from "../users/notifications.service";
+import { eventListWhere } from "./list-where";
 
 @Injectable()
 export class EventsService {
@@ -18,33 +19,10 @@ export class EventsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async list(query: ListEventsQuery) {
+  async list(query: ListEventsQuery, viewer?: { id: string; role: string }) {
     const limit = query.limit;
     const now = new Date(Date.now() - 6 * 3600_000);
-    const where: Prisma.EventWhereInput = {
-      city: query.city,
-    };
-    if (query.when === "past") {
-      where.OR = [
-        { status: "ENDED" },
-        { status: "PUBLISHED", startsAt: { lt: now } },
-      ];
-    } else {
-      where.status = "PUBLISHED";
-      where.startsAt = { gte: now };
-    }
-    if (query.hostId) {
-      where.hostId = query.hostId;
-    }
-    if (query.venueSlug) {
-      where.venueSlug = query.venueSlug;
-    }
-    if (query.kind) {
-      where.kind = query.kind;
-    }
-    if (query.cursor) {
-      where.id = { lt: query.cursor };
-    }
+    const where = eventListWhere(query, now, viewer);
 
     const rows = await this.prisma.event.findMany({
       where,
@@ -246,10 +224,7 @@ export class EventsService {
     const account = await this.prisma.user.findUnique({ where: { id: userId }, select: { status: true } });
     assertActive(account?.status ?? "DELETED");
 
-    const event = await this.prisma.event.findUnique({
-      where: { id: eventId },
-      include: { _count: { select: { rsvps: { where: { status: "GOING" } } } } },
-    });
+    const event = await this.prisma.event.findUnique({ where: { id: eventId } });
     if (!event || event.status !== "PUBLISHED") {
       throw new NotFoundException({ code: "EVENT_NOT_FOUND", message: "Event not found." });
     }
@@ -295,15 +270,21 @@ export class EventsService {
       };
     }
 
-    const full = Boolean(event.capacity && event._count.rsvps >= event.capacity);
-    const status = full ? "INTERESTED" : "GOING";
-    const ticketStatus = !full && event.priceTry > 0 ? "DUE" : "NONE";
     const wasNew = !existing;
-    await this.prisma.eventRsvp.upsert({
-      where: { eventId_userId: { eventId, userId } },
-      create: { eventId, userId, status, ticketStatus },
-      update: { status, ticketStatus },
+    const placed = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
+      const going = await tx.eventRsvp.count({ where: { eventId, status: "GOING" } });
+      const full = Boolean(event.capacity && going >= event.capacity);
+      const status = full ? "INTERESTED" : "GOING";
+      const ticketStatus = !full && event.priceTry > 0 ? "DUE" : "NONE";
+      await tx.eventRsvp.upsert({
+        where: { eventId_userId: { eventId, userId } },
+        create: { eventId, userId, status, ticketStatus },
+        update: { status, ticketStatus },
+      });
+      return { status, full, ticketStatus };
     });
+    const { status, full, ticketStatus } = placed;
     if (wasNew && event.hostId !== userId) {
       const guest = await this.prisma.profile.findUnique({ where: { userId }, select: { displayName: true } });
       await this.notifications.push({
@@ -325,57 +306,61 @@ export class EventsService {
     const current = await this.prisma.eventRsvp.findUnique({
       where: { eventId_userId: { eventId, userId } },
     });
-    await this.prisma.eventRsvp.updateMany({
-      where: { eventId, userId },
-      data: { status: "CANCELLED", checkedInAt: null, ticketStatus: "NONE" },
-    });
-    if (current?.status === "GOING") {
-      const event = await this.prisma.event.findUnique({ where: { id: eventId }, select: { priceTry: true } });
-      const next = await this.prisma.eventRsvp.findFirst({
+    const promoted = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
+      await tx.eventRsvp.updateMany({
+        where: { eventId, userId },
+        data: { status: "CANCELLED", checkedInAt: null, ticketStatus: "NONE" },
+      });
+      if (current?.status !== "GOING") return null;
+      const event = await tx.event.findUnique({ where: { id: eventId }, select: { priceTry: true, title: true } });
+      const next = await tx.eventRsvp.findFirst({
         where: { eventId, status: "INTERESTED" },
         orderBy: { createdAt: "asc" },
       });
-      if (next) {
-        await this.prisma.eventRsvp.update({
-          where: { id: next.id },
-          data: {
-            status: "GOING",
-            ticketStatus: (event?.priceTry ?? 0) > 0 ? "DUE" : "NONE",
-          },
-        });
-        const promotedEvent = await this.prisma.event.findUnique({
-          where: { id: eventId },
-          select: { title: true },
-        });
-        await this.notifications.push({
-          userId: next.userId,
-          kind: "event.promoted",
-          title: "جا باز شد",
-          body: `برای «${promotedEvent?.title ?? "دورهمی"}» از لیست انتظار به مهمان‌ها آمدی.`,
-          href: `/events/${eventId}`,
-        });
-      }
+      if (!next) return null;
+      await tx.eventRsvp.update({
+        where: { id: next.id },
+        data: {
+          status: "GOING",
+          ticketStatus: (event?.priceTry ?? 0) > 0 ? "DUE" : "NONE",
+        },
+      });
+      return { userId: next.userId, title: event?.title ?? "دورهمی" };
+    });
+    if (promoted) {
+      await this.notifications.push({
+        userId: promoted.userId,
+        kind: "event.promoted",
+        title: "جا باز شد",
+        body: `برای «${promoted.title}» از لیست انتظار به مهمان‌ها آمدی.`,
+        href: `/events/${eventId}`,
+      });
     }
     return { data: { ok: true as const } };
   }
 
-  async guests(eventId: string, viewerId?: string) {
+  async guests(eventId: string, viewer?: { id: string; role: string }) {
     const event = await this.prisma.event.findFirst({
       where: { id: eventId, status: { in: ["PUBLISHED", "CANCELLED", "ENDED"] } },
-      select: { id: true },
+      select: { id: true, hostId: true },
     });
     if (!event) {
       throw new NotFoundException({ code: "EVENT_NOT_FOUND", message: "Event not found." });
     }
+    const doorView = Boolean(
+      viewer &&
+        (viewer.id === event.hostId || viewer.role === "ADMIN" || viewer.role === "MODERATOR"),
+    );
 
-    const hidden = viewerId
+    const hidden = viewer
       ? await this.prisma.block.findMany({
-          where: { OR: [{ blockerId: viewerId }, { blockedId: viewerId }] },
+          where: { OR: [{ blockerId: viewer.id }, { blockedId: viewer.id }] },
           select: { blockerId: true, blockedId: true },
         })
       : [];
     const hide = new Set(
-      hidden.flatMap((row) => (row.blockerId === viewerId ? [row.blockedId] : [row.blockerId])),
+      hidden.flatMap((row) => (row.blockerId === viewer?.id ? [row.blockedId] : [row.blockerId])),
     );
 
     const rows = await this.prisma.eventRsvp.findMany({
@@ -396,8 +381,12 @@ export class EventsService {
             verificationStatus: row.user.verification?.status ?? "NONE",
             photoUrl: await this.media.photoUrl(row.user.profile?.photoId),
             status: row.status as "GOING" | "INTERESTED",
-            ticketStatus: viewerId ? (row.ticketStatus as "NONE" | "DUE" | "PAID_DOOR") : "NONE",
-            checkedInAt: viewerId ? (row.checkedInAt?.toISOString() ?? null) : null,
+            ticketStatus:
+              doorView || viewer?.id === row.userId
+                ? (row.ticketStatus as "NONE" | "DUE" | "PAID_DOOR")
+                : "NONE",
+            checkedInAt:
+              doorView || viewer?.id === row.userId ? (row.checkedInAt?.toISOString() ?? null) : null,
           })),
       ),
     };
@@ -422,7 +411,7 @@ export class EventsService {
       data: {
         eventId: event.id,
         title: event.title,
-        url: `${this.env.APP_URL}/events/${event.id}/checkin?s=${encodeURIComponent(secret)}`,
+        url: `${this.env.APP_URL.replace(/\/$/, "")}/events/${event.id}/checkin#s=${encodeURIComponent(secret)}`,
         goingCount,
         checkedInCount,
         dueCount,

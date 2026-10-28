@@ -82,6 +82,12 @@ export class AdminController {
     return this.admin.listUsers(query).then((data) => ({ data }));
   }
 
+  @Get("host-requests")
+  @Roles("ADMIN")
+  hostRequests() {
+    return this.admin.listHostRequests();
+  }
+
   @Post("users/:id/role")
   @Roles("ADMIN")
   setRole(

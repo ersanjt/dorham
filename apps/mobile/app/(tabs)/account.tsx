@@ -6,6 +6,7 @@ import { EventCard } from "../../components/event-card";
 import { AppText, Badge, Banner, Button, Card, ErrorState, Field, Loading, Screen } from "../../components/ui";
 import { api, ApiError } from "../../lib/api";
 import { verifyFa } from "../../lib/format";
+import { safeOpenUrl } from "../../lib/paths";
 import { clearSession, isSignedIn } from "../../lib/session";
 
 export default function AccountScreen() {
@@ -220,9 +221,10 @@ export default function AccountScreen() {
                 if (!n.readAt) {
                   void api(`/users/me/notifications/${n.id}/read`, { method: "POST", body: "{}" }).catch(() => undefined);
                 }
-                if (n.href?.startsWith("http")) {
-                  void Linking.openURL(n.href);
-                } else if (n.href) {
+                const external = safeOpenUrl(n.href);
+                if (n.href?.startsWith("http") && external) {
+                  void Linking.openURL(external);
+                } else if (n.href?.startsWith("/") && !n.href.startsWith("//")) {
                   router.push(n.href as never);
                 }
               }}

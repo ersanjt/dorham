@@ -74,10 +74,13 @@ export class MediaService {
     try {
       await pipeline(input.stream, createWriteStream(dest));
       const buf = await readFile(dest);
-      if (buf.length === 0 || buf.length > MAX_BYTES) {
+      if (buf.length === 0 || buf.length > MAX_BYTES || !looksLikeImage(input.mime, buf)) {
         await unlink(dest).catch(() => undefined);
         await this.prisma.mediaAsset.delete({ where: { id: asset.id } });
-        throw new BadRequestException({ code: "MEDIA_INVALID", message: "Photo is empty or larger than 5MB." });
+        throw new BadRequestException({
+          code: "MEDIA_INVALID",
+          message: "Photo is empty, larger than 5MB, or not a real JPEG, PNG, or WebP.",
+        });
       }
       const updated = await this.prisma.mediaAsset.update({
         where: { id: asset.id },
@@ -121,7 +124,10 @@ export class MediaService {
         throw new NotFoundException({ code: "MEDIA_NOT_FOUND", message: "Media not found." });
       }
     }
-    const filePath = path.join(this.rootDir(), asset.storageKey);
+    const filePath = containedPath(this.rootDir(), asset.storageKey);
+    if (!filePath) {
+      throw new NotFoundException({ code: "MEDIA_NOT_FOUND", message: "Media not found." });
+    }
     const data = await readFile(filePath).catch(() => null);
     if (!data) {
       throw new NotFoundException({ code: "MEDIA_NOT_FOUND", message: "Media not found." });
@@ -143,7 +149,27 @@ export class MediaService {
   async deleteOwned(userId: string, mediaId: string) {
     const asset = await this.prisma.mediaAsset.findFirst({ where: { id: mediaId, userId } });
     if (!asset) return;
-    await unlink(path.join(this.rootDir(), asset.storageKey)).catch(() => undefined);
+    const filePath = containedPath(this.rootDir(), asset.storageKey);
+    if (filePath) await unlink(filePath).catch(() => undefined);
     await this.prisma.mediaAsset.delete({ where: { id: asset.id } });
   }
+}
+
+function looksLikeImage(mime: string, buf: Buffer) {
+  if (mime === "image/jpeg") return buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+  if (mime === "image/png") {
+    return buf.length >= 8 && buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  }
+  if (mime === "image/webp") {
+    return buf.length >= 12 && buf.subarray(0, 4).toString("ascii") === "RIFF" && buf.subarray(8, 12).toString("ascii") === "WEBP";
+  }
+  return false;
+}
+
+function containedPath(rootDir: string, storageKey: string) {
+  const root = path.resolve(rootDir);
+  const filePath = path.resolve(root, storageKey);
+  const rel = path.relative(root, filePath);
+  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) return null;
+  return filePath;
 }

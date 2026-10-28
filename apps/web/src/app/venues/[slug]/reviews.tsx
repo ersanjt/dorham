@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import type { VenueReview } from "@dorham/shared";
+import { useCopy } from "../../../components/locale-provider";
 import { api, ApiError } from "../../../lib/api";
 import { useSession } from "../../../lib/use-session";
 
 export function VenueReviews({ slug, initial }: { slug: string; initial: VenueReview[] }) {
+  const copy = useCopy();
   const { signedIn, ready } = useSession();
   const [rows, setRows] = useState<VenueReview[]>(initial);
   const [error, setError] = useState("");
@@ -35,8 +37,8 @@ export function VenueReviews({ slug, initial }: { slug: string; initial: VenueRe
 
   return (
     <section style={{ marginTop: 32 }}>
-      <h2>تجربهٔ این مکان</h2>
-      <p className="muted">غذا، شلوغی، برخورد. نظرات بعد از تأیید مدیر عمومی می‌شوند.</p>
+      <h2>{copy.venues.reviewTitle}</h2>
+      <p className="muted">{copy.venues.reviewLead}</p>
       {notice ? <div className="banner ok">{notice}</div> : null}
       {error ? <div className="banner err">{error}</div> : null}
       {!ready ? (

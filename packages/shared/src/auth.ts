@@ -11,6 +11,8 @@ export const registerBodySchema = z.object({
     }),
   displayName: z.string().trim().min(2).max(40),
   locale: z.enum(["FA", "EN", "TR"]).default("FA"),
+  /** Server-side gate. The checkbox on the form is not enough by itself. */
+  adult: z.literal(true),
 });
 
 export type RegisterBody = z.infer<typeof registerBodySchema>;
@@ -62,3 +64,38 @@ export const resetPasswordBodySchema = z.object({
 });
 
 export type ResetPasswordBody = z.infer<typeof resetPasswordBodySchema>;
+
+export const oauthProviderSchema = z.enum(["google", "apple", "facebook"]);
+
+export const oauthStartBodySchema = z.object({
+  provider: oauthProviderSchema,
+  redirectUri: z.string().trim().url().max(300),
+  locale: z.enum(["FA", "EN", "TR"]).default("FA"),
+  adult: z.boolean().optional(),
+});
+
+export type OAuthStartBody = z.infer<typeof oauthStartBodySchema>;
+
+export const oauthBodySchema = z.union([
+  z.object({
+    code: z.string().trim().min(8).max(2048),
+    state: z.string().trim().min(20).max(4000),
+    redirectUri: z.string().trim().url().max(300),
+    displayName: z.string().trim().min(2).max(40).optional(),
+  }),
+  z
+    .object({
+      provider: oauthProviderSchema,
+      idToken: z.string().trim().min(20).max(8000).optional(),
+      accessToken: z.string().trim().min(20).max(4000).optional(),
+      nonce: z.string().trim().max(200).optional(),
+      displayName: z.string().trim().min(2).max(40).optional(),
+      locale: z.enum(["FA", "EN", "TR"]).default("FA"),
+      adult: z.boolean().optional(),
+    })
+    .refine((value) => Boolean(value.idToken || value.accessToken), {
+      message: "idToken or accessToken is required",
+    }),
+]);
+
+export type OAuthBody = z.infer<typeof oauthBodySchema>;

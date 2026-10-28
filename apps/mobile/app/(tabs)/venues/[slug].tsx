@@ -8,7 +8,7 @@ import { AppText, Banner, Button, Card, ErrorState, Field, Loading, Screen } fro
 import { api, ApiError } from "../../../lib/api";
 import { publicMediaUrl } from "../../../lib/api-base";
 import { venueAreaFa, venueKindFa } from "../../../lib/format";
-import { loginHref } from "../../../lib/paths";
+import { loginHref, safeOpenUrl } from "../../../lib/paths";
 import { isSignedIn } from "../../../lib/session";
 import { color } from "../../../lib/theme";
 
@@ -111,7 +111,9 @@ export default function VenueDetailScreen() {
           <AppText muted>{venue.reviewCount} نظر</AppText>
         </Card>
       ) : null}
-      {venue ? <Button label="باز کردن در گوگل‌مپ" onPress={() => Linking.openURL(venue.mapsUrl)} /> : null}
+      {venue && safeOpenUrl(venue.mapsUrl) ? (
+        <Button label="باز کردن در گوگل‌مپ" onPress={() => Linking.openURL(safeOpenUrl(venue.mapsUrl)!)} />
+      ) : null}
       {slug ? (
         isSignedIn() ? (
           <Button

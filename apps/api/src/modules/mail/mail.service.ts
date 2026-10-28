@@ -42,7 +42,7 @@ export class MailService {
   }
 
   async sendVerifyEmail(to: string, token: string) {
-    const url = `${this.env.APP_URL.replace(/\/$/, "")}/verify-email?token=${encodeURIComponent(token)}`;
+    const url = `${this.env.APP_URL.replace(/\/$/, "")}/verify-email#token=${encodeURIComponent(token)}`;
     return this.send(
       to,
       "تأیید ایمیل · دورهم",
@@ -52,7 +52,7 @@ export class MailService {
   }
 
   async sendPasswordReset(to: string, token: string) {
-    const url = `${this.env.APP_URL.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
+    const url = `${this.env.APP_URL.replace(/\/$/, "")}/reset-password#token=${encodeURIComponent(token)}`;
     return this.send(
       to,
       "بازیابی رمز · دورهم",

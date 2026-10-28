@@ -186,6 +186,7 @@ export class VenuesService {
     const account = await this.prisma.user.findUnique({ where: { id: userId }, select: { status: true } });
     assertActive(account?.status ?? "DELETED");
     const venue = await this.requirePublished(idOrSlug);
+    await this.assertVerifiedVisit(venue.id, userId);
     try {
       const row = await this.prisma.venueReview.create({
         data: { venueId: venue.id, authorId: userId, body: body.body, status: "PENDING" },
@@ -263,6 +264,7 @@ export class VenuesService {
     const account = await this.prisma.user.findUnique({ where: { id: userId }, select: { status: true } });
     assertActive(account?.status ?? "DELETED");
     const venue = await this.requirePublished(idOrSlug);
+    await this.assertVerifiedVisit(venue.id, userId);
     await this.media.requireOwned(userId, body.mediaId, "VENUE_PHOTO");
     const recent = await this.prisma.venuePhoto.count({
       where: {
@@ -583,13 +585,14 @@ export class VenuesService {
     if (venue.ownerId && venue.ownerId !== userId && account?.role !== "ADMIN") {
       throw new ForbiddenException({ code: "VENUE_VISIT_FORBIDDEN", message: "This venue already has an owner." });
     }
-    const canClaim =
-      account?.role === "ADMIN" ||
-      account?.role === "MODERATOR" ||
-      account?.role === "HOST" ||
-      venue.submitterId === userId;
-    if (!canClaim) {
-      throw new ForbiddenException({ code: "VENUE_OWNER_REQUIRED", message: "Hosts and submitters can claim a venue." });
+    const isStaff = account?.role === "ADMIN" || account?.role === "MODERATOR";
+    const isSubmitter = venue.submitterId === userId;
+    const isOwner = venue.ownerId === userId;
+    if (!isStaff && !isSubmitter && !isOwner) {
+      throw new ForbiddenException({
+        code: "VENUE_OWNER_REQUIRED",
+        message: "Only the person who submitted this place, or staff, can claim it.",
+      });
     }
     const updated = await this.prisma.venue.update({
       where: { id: venue.id },
@@ -598,6 +601,9 @@ export class VenuesService {
         checkInSecret: venue.checkInSecret ?? newOpaqueToken(),
       },
       include: venueDtoInclude,
+    });
+    await this.prisma.auditLog.create({
+      data: { userId, action: "venue.claim", entity: "Venue", entityId: venue.id },
     });
     return { data: await this.toDto(updated) };
   }
@@ -619,7 +625,7 @@ export class VenuesService {
         venueId: venue.id,
         slug: venue.slug,
         name: venue.name,
-        url: `${this.env.APP_URL.replace(/\/$/, "")}/venues/${venue.slug}/checkin?s=${encodeURIComponent(secret)}`,
+        url: `${this.env.APP_URL.replace(/\/$/, "")}/venues/${venue.slug}/checkin#s=${encodeURIComponent(secret)}`,
         verifiedCount,
         pendingCount,
       },
@@ -646,6 +652,19 @@ export class VenuesService {
         guestId: row.userId,
       })),
     };
+  }
+
+  private async assertVerifiedVisit(venueId: string, userId: string) {
+    const visit = await this.prisma.venueVisit.findFirst({
+      where: { venueId, userId, status: "VERIFIED" },
+      select: { id: true },
+    });
+    if (!visit) {
+      throw new ForbiddenException({
+        code: "VISIT_REQUIRED",
+        message: "A verified visit is required before posting about this place.",
+      });
+    }
   }
 
   private reviewDto(row: {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import type { VenueDoor, VenueVisitDto } from "@dorham/shared";
+import { QrImage } from "../../../components/qr-image";
 import { api, ApiError } from "../../../lib/api";
 import { useSession } from "../../../lib/use-session";
 
@@ -118,10 +119,8 @@ export function VenueVisitActions({
             تأییدشده: {door.verifiedCount.toLocaleString("fa-IR")} · در انتظار:{" "}
             {door.pendingCount.toLocaleString("fa-IR")}
           </p>
-          <p className="muted">لینک / QR دم در برای مهمان:</p>
-          <p className="strong" style={{ wordBreak: "break-all" }}>
-            <a href={door.url}>{door.url}</a>
-          </p>
+          <p className="muted">QR دم در را روی پیشخوان بگذار. اسکن، حضور مهمان را تأیید می‌کند.</p>
+          <QrImage url={door.url} alt={door.name} size={220} />
           <p className="muted">
             یا از <Link href={`/venues/${slug}/checkin`}>صفحهٔ چک‌این</Link> استفاده کن.
           </p>

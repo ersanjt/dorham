@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import type { EventDto, Me, MyVerification, NotificationsList, UserActivity } from "@dorham/shared";
+import type { EventDto, HostRequestResult, Me, MyVerification, NotificationsList, UserActivity } from "@dorham/shared";
 import { EventCard } from "../../components/event-card";
 import { BlockList } from "../../components/block-list";
 import { SiteHeader } from "../../components/site-header";
@@ -57,6 +57,7 @@ function AccountBody() {
   const [verification, setVerification] = useState<MyVerification | null>(null);
   const [mine, setMine] = useState<EventDto[]>([]);
   const [activity, setActivity] = useState<UserActivity | null>(null);
+  const [hostAsk, setHostAsk] = useState("");
   const [notes, setNotes] = useState<NotificationsList | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState(
@@ -379,6 +380,35 @@ function AccountBody() {
                 <strong>{activity.stats.eventsHosted.toLocaleString("fa-IR")}</strong>
                 <span>میزبانی</span>
               </div>
+            </div>
+          ) : null}
+          {me.role === "MEMBER" && (activity?.stats.eventsAttended ?? 0) >= 2 ? (
+            <div className="card" style={{ marginTop: 16 }}>
+              <h3>درخواست میزبانی</h3>
+              <p className="muted">
+                دو بار دم در چک‌این شده‌ای. درخواست را بفرست؛ مدیر بعد از تأیید دست‌نویس نقش میزبان را می‌دهد.
+              </p>
+              {hostAsk ? <p className="muted">{hostAsk}</p> : null}
+              <button
+                className="btn"
+                type="button"
+                onClick={() => {
+                  setHostAsk("");
+                  api<HostRequestResult>("/users/me/host-request", { method: "POST", body: "{}" })
+                    .then((data) =>
+                      setHostAsk(
+                        data.status === "ALREADY_HOST"
+                          ? "نقش میزبان را داری."
+                          : "درخواست ثبت شد. تا تأیید مدیر، نقش عوض نمی‌شود.",
+                      ),
+                    )
+                    .catch((err: unknown) =>
+                      setHostAsk(err instanceof ApiError ? err.message : "درخواست ثبت نشد."),
+                    );
+                }}
+              >
+                درخواست میزبانی
+              </button>
             </div>
           ) : null}
           <div className="profile-grid-two">
@@ -722,7 +752,7 @@ function AccountBody() {
                 <li key={n.id} style={{ opacity: n.readAt ? 0.65 : 1 }}>
                   <strong>{n.title}</strong>
                   <span className="muted"> — {n.body}</span>
-                  {n.href ? (
+                  {n.href && n.href.startsWith("/") && !n.href.startsWith("//") && !n.href.includes(":") ? (
                     <>
                       {" "}
                       <Link

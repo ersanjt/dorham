@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
 import { loginBodySchema } from "@dorham/shared";
 import { SiteHeader } from "../../components/site-header";
+import { SocialAuth } from "../../components/social-auth";
 import { PageIntro } from "../../components/page-intro";
 import { useCopy } from "../../components/locale-provider";
 import { api, ApiError } from "../../lib/api";
@@ -56,6 +57,7 @@ function LoginForm() {
       </PageIntro>
       <div className="form-card">
         <form className="form" onSubmit={onSubmit}>
+          <SocialAuth next={next} />
           {error ? <div className="banner err">{error}</div> : null}
           <label>
             {copy.auth.email}

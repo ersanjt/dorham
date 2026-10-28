@@ -15,6 +15,7 @@ import { resolveApiBase } from "../../../lib/api-base";
 import { catalogInit } from "../../../lib/catalog-fetch";
 import { t } from "../../../lib/copy";
 import { formatCount } from "../../../lib/format";
+import { safeHref, safeTel } from "../../../lib/safe-href";
 import { getLocale } from "../../../lib/locale-server";
 import { venueAreaLabel, venueKindLabel } from "../../../lib/venues";
 
@@ -126,33 +127,33 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
               <dd>{venue.menuNotes}</dd>
             </div>
           ) : null}
-          {venue.menuImageUrl ? (
+          {safeHref(venue.menuImageUrl) ? (
             <div className="venue-fact venue-fact-menu">
               <dt>{copy.venues.menu}</dt>
               <dd>
-                <a className="venue-menu-link" href={venue.menuImageUrl} target="_blank" rel="noreferrer">
+                <a className="venue-menu-link" href={safeHref(venue.menuImageUrl) ?? undefined} target="_blank" rel="noreferrer">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img className="venue-menu-image" src={venue.menuImageUrl} alt={copy.venues.menuAlt(venue.name)} />
+                  <img className="venue-menu-image" src={safeHref(venue.menuImageUrl) ?? undefined} alt={copy.venues.menuAlt(venue.name)} />
                 </a>
               </dd>
             </div>
           ) : null}
-          {venue.phone ? (
+          {venue.phone && safeTel(venue.phone) ? (
             <div className="venue-fact">
               <dt>{copy.venues.phone}</dt>
               <dd>
-                <a className="isolate-ltr" href={`tel:${venue.phone.replace(/\s/g, "")}`}>
+                <a className="isolate-ltr" href={safeTel(venue.phone) ?? undefined}>
                   {venue.phone}
                 </a>
               </dd>
             </div>
           ) : null}
-          {venue.website ? (
+          {safeHref(venue.website) ? (
             <div className="venue-fact">
               <dt>{copy.venues.website}</dt>
               <dd>
-                <a href={venue.website} target="_blank" rel="noreferrer">
-                  {venue.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                <a href={safeHref(venue.website) ?? undefined} target="_blank" rel="noreferrer">
+                  {(venue.website ?? "").replace(/^https?:\/\//, "").replace(/\/$/, "")}
                 </a>
               </dd>
             </div>
@@ -163,9 +164,11 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
           </div>
         </dl>
         <div className="row venue-panel-actions">
-          <a className="btn" href={venue.mapsUrl} target="_blank" rel="noreferrer">
-            {copy.venues.openMaps}
-          </a>
+          {safeHref(venue.mapsUrl) ? (
+            <a className="btn" href={safeHref(venue.mapsUrl) ?? undefined} target="_blank" rel="noreferrer">
+              {copy.venues.openMaps}
+            </a>
+          ) : null}
           <Link className="btn ghost" href={`/feed?venue=${venue.slug}`}>
             {copy.venues.writeFeed}
           </Link>

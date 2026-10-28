@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { Me, VenueDto, VenuePhotoDto, VenueReview } from "@dorham/shared";
+import type { HostRequestRow, Me, VenueDto, VenuePhotoDto, VenueReview } from "@dorham/shared";
 import { AuthImage } from "../../components/auth-image";
 import { PageIntro } from "../../components/page-intro";
 import { SiteHeader } from "../../components/site-header";
@@ -43,22 +43,25 @@ export default function AdminModerationPage() {
   const [pendingReviews, setPendingReviews] = useState<PendingReview[]>([]);
   const [pendingPhotos, setPendingPhotos] = useState<VenuePhotoDto[]>([]);
   const [reports, setReports] = useState<Reports | null>(null);
+  const [hostRequests, setHostRequests] = useState<HostRequestRow[]>([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
   async function load() {
-    const [profile, pending, reviews, photos, reps] = await Promise.all([
+    const [profile, pending, reviews, photos, reps, hosts] = await Promise.all([
       api<Me>("/users/me"),
       api<VenueDto[]>("/admin/venues/pending"),
       api<PendingReview[]>("/admin/venues/reviews/pending"),
       api<VenuePhotoDto[]>("/admin/venues/photos/pending"),
       api<Reports>("/admin/reports"),
+      api<HostRequestRow[]>("/admin/host-requests").catch(() => []),
     ]);
     setMe(profile);
     setVenues(pending);
     setPendingReviews(reviews);
     setPendingPhotos(photos);
     setReports(reps);
+    setHostRequests(hosts);
   }
 
   useEffect(() => {
@@ -108,11 +111,51 @@ export default function AdminModerationPage() {
               تأیید دست‌نویس
             </Link>
             {me.role === "ADMIN" ? (
+              <Link className="admin-summary-chip" href="#host-requests">
+                میزبانی {hostRequests.length.toLocaleString("fa-IR")}
+              </Link>
+            ) : null}
+            {me.role === "ADMIN" ? (
               <Link className="admin-summary-chip" href="/admin/users">
                 اعضا و نقش‌ها
               </Link>
             ) : null}
           </div>
+
+          <section className="stack" id="host-requests">
+            <h2>درخواست میزبانی</h2>
+            <p className="muted">بعد از دو چک‌این و تأیید دست‌نویس. تأیید اینجا نقش را میزبان می‌کند.</p>
+            {me.role !== "ADMIN" ? <p className="muted">فقط مدیر نقش می‌دهد.</p> : null}
+            {me.role === "ADMIN" && hostRequests.length === 0 ? <p className="muted">درخواستی نیست.</p> : null}
+            {me.role === "ADMIN"
+              ? hostRequests.map((row) => (
+                  <article className="card" key={row.id}>
+                    <strong>{row.displayName}</strong>
+                    <p className="muted">
+                      {row.email} · {row.attended.toLocaleString("fa-IR")} چک‌این · {row.verificationStatus}
+                    </p>
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await api(`/admin/users/${row.id}/role`, {
+                            method: "POST",
+                            body: JSON.stringify({ role: "HOST" }),
+                          });
+                          setMessage(`${row.displayName} میزبان شد.`);
+                          await load();
+                        } catch (err) {
+                          setError(err instanceof ApiError ? err.message : "نقش عوض نشد.");
+                        }
+                      }}
+                    >
+                      میزبان کن
+                    </button>
+                  </article>
+                ))
+              : null}
+          </section>
 
           <section className="stack" id="venues-pending">
             <h2>مکان‌های در انتظار</h2>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { EventGuest, Me, RsvpResult } from "@dorham/shared";
 import { useCopy, useUiLocale } from "../../../components/locale-provider";
+import { ShareEvent } from "../../../components/share-event";
 import { api, ApiError } from "../../../lib/api";
 import { formatCount } from "../../../lib/format";
 import { publicMediaUrl } from "../../../lib/media-url";
@@ -180,12 +181,18 @@ export function EventActions({
   priceTry = 0,
   initialGuests = [],
   kind = "COMMUNITY",
+  inviteTitle,
+  inviteText,
+  inviteUrl,
 }: {
   eventId: string;
   hostId: string;
   priceTry?: number;
   initialGuests?: EventGuest[];
   kind?: "COMMUNITY" | "CITY_SHOW";
+  inviteTitle?: string;
+  inviteText?: string;
+  inviteUrl?: string;
 }) {
   const copy = useCopy();
   const locale = useUiLocale();
@@ -260,6 +267,14 @@ export function EventActions({
         <div className="banner">{cityShow ? copy.rsvp.marked : copy.rsvp.waitlisted}</div>
       ) : null}
       {mine?.status === "GOING" && !cityShow ? <div className="banner ok">{copy.rsvp.confirmed}</div> : null}
+      {mine?.status === "GOING" && !cityShow ? <p className="muted">{copy.rsvp.scanDoor}</p> : null}
+      {mine?.status === "GOING" && !cityShow && inviteText && inviteUrl ? (
+        <div className="card" style={{ marginTop: 12 }}>
+          <p className="strong">{copy.rsvp.inviteTitle}</p>
+          <p className="muted">{copy.rsvp.inviteBody}</p>
+          <ShareEvent title={inviteTitle || copy.rsvp.inviteTitle} text={inviteText} url={inviteUrl} />
+        </div>
+      ) : null}
       {paused ? (
         <div className="banner err">
           {copy.rsvp.paused} <Link href="/account">{copy.rsvp.resume}</Link>

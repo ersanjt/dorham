@@ -27,13 +27,15 @@ export function HeroJoin({
   }
 
   if (signedIn) {
+    const secondaryHref = primaryHref === "/venues" ? "/events" : "/venues";
+    const secondaryLabel = primaryHref === "/venues" ? copy.nav.events : venuesLabel;
     return (
       <div className="row">
         <Link className="btn" href={primaryHref}>
           {primaryLabel}
         </Link>
-        <Link className="btn ghost" href="/venues">
-          {venuesLabel}
+        <Link className="btn ghost" href={secondaryHref}>
+          {secondaryLabel}
         </Link>
       </div>
     );

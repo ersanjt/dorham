@@ -133,6 +133,14 @@ export function eventJsonLd(event: {
   return payload;
 }
 
+/** JSON-LD must not be able to close the surrounding script tag. */
+export function safeJsonLd(data: unknown) {
+  return JSON.stringify(data)
+    .replace(/</g, "\\u003c")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
 export function eventInviteText(
   event: {
     id: string;

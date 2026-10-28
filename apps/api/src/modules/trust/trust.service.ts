@@ -59,6 +59,10 @@ export class TrustService {
     if (!target || target.status === "DELETED") {
       throw new NotFoundException({ code: "USER_NOT_FOUND", message: "User not found." });
     }
+    const open = await this.prisma.report.findFirst({
+      where: { reporterId, targetId: body.targetId, status: "open" },
+    });
+    if (open) return { ok: true as const, id: open.id };
     const report = await this.prisma.report.create({
       data: {
         reporterId,

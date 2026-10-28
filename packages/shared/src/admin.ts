@@ -17,6 +17,25 @@ export const listAdminUsersQuerySchema = z.object({
 
 export type ListAdminUsersQuery = z.infer<typeof listAdminUsersQuerySchema>;
 
+export const hostRequestRowSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  displayName: z.string(),
+  attended: z.number().int().nonnegative(),
+  verificationStatus: z.enum(["NONE", "PENDING", "VERIFIED", "REJECTED"]),
+  requestedAt: z.string().datetime(),
+});
+
+export type HostRequestRow = z.infer<typeof hostRequestRowSchema>;
+
+export const hostRequestResultSchema = z.object({
+  status: z.enum(["PENDING", "ALREADY_HOST"]),
+  attended: z.number().int().nonnegative(),
+  requiredAttendance: z.number().int().positive(),
+});
+
+export type HostRequestResult = z.infer<typeof hostRequestResultSchema>;
+
 export const adminUserRowSchema = z.object({
   id: z.string(),
   email: z.string().email(),

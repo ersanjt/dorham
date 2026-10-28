@@ -222,6 +222,9 @@ export default function EventDetailScreen() {
       {paused ? (
         <Button label="از سر گرفتن حساب" variant="ghost" onPress={() => router.push("/account")} />
       ) : null}
+      {alreadyGoing && !cityShow ? (
+        <AppText muted>این لینک را برای سه نفر بفرست. نصب اپ لازم نیست.</AppText>
+      ) : null}
       {event ? (
         <Button
           label="فرستادن دعوت"

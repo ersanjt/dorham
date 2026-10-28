@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { registerBodySchema } from "@dorham/shared";
+import { SocialAuth } from "../components/social-auth";
 import { Banner, Button, CheckRow, Field, Screen } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { safeNext } from "../lib/paths";
@@ -26,7 +27,7 @@ export default function RegisterScreen() {
       setError("قواعد جامعه و حریم خصوصی را بپذیر.");
       return;
     }
-    const parsed = registerBodySchema.safeParse({ displayName, email, password, locale: "FA" });
+    const parsed = registerBodySchema.safeParse({ displayName, email, password, locale: "FA", adult: true });
     if (!parsed.success) {
       setError("نام، ایمیل و رمز ۱۰ کاراکتری با حرف و عدد.");
       return;
@@ -65,6 +66,13 @@ export default function RegisterScreen() {
       subtitle="برای ساکنان ترکیه. یک حساب. استانبول قفل است. دیتینگ بعداً و فقط اگر بخواهی."
     >
       <Banner text={error} />
+      <CheckRow label="۱۸ سال یا بیشتر دارم." checked={adult} onToggle={() => setAdult((v) => !v)} />
+      <CheckRow
+        label="قواعد جامعه و حریم خصوصی را خواندم و می‌پذیرم."
+        checked={accepted}
+        onToggle={() => setAccepted((v) => !v)}
+      />
+      <SocialAuth next={next} adult={adult} requireAdult termsAccepted={accepted} />
       <Field
         label="نام نمایشی"
         value={displayName}
@@ -89,12 +97,6 @@ export default function RegisterScreen() {
         textContentType="newPassword"
         value={password}
         onChangeText={setPassword}
-      />
-      <CheckRow label="۱۸ سال یا بیشتر دارم." checked={adult} onToggle={() => setAdult((v) => !v)} />
-      <CheckRow
-        label="قواعد جامعه و حریم خصوصی را خواندم و می‌پذیرم."
-        checked={accepted}
-        onToggle={() => setAccepted((v) => !v)}
       />
       <Button label="خواندن امنیت" variant="ghost" onPress={() => router.push("/safety")} />
       <Button label="حریم خصوصی" variant="ghost" onPress={() => router.push("/privacy")} />

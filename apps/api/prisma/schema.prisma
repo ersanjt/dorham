@@ -97,6 +97,12 @@ enum PostStatus {
   HIDDEN
 }
 
+enum OAuthProvider {
+  GOOGLE
+  APPLE
+  FACEBOOK
+}
+
 enum FeedTarget {
   POST
   COMMENT
@@ -142,6 +148,19 @@ model User {
   venueVisits     VenueVisit[] @relation("VenueVisitor")
   venueVisitsVerified VenueVisit[] @relation("VenueVisitVerifier")
   notifications   Notification[]
+  oauthAccounts   OAuthAccount[]
+}
+
+model OAuthAccount {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider       OAuthProvider
+  providerUserId String
+  createdAt      DateTime      @default(now())
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
 }
 
 model Profile {

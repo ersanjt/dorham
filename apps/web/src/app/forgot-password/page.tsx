@@ -53,7 +53,7 @@ export default function ForgotPasswordPage() {
             {devToken ? (
               <p className="muted">
                 {copy.auth.forgotDev}{" "}
-                <Link href={`/reset-password?token=${encodeURIComponent(devToken)}`}>{copy.auth.openLink}</Link>
+                <Link href={`/reset-password#token=${encodeURIComponent(devToken)}`}>{copy.auth.openLink}</Link>
               </p>
             ) : null}
             <Link className="btn" href="/login">

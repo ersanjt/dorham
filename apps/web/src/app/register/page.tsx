@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
 import { registerBodySchema } from "@dorham/shared";
 import { SiteHeader } from "../../components/site-header";
+import { SocialAuth } from "../../components/social-auth";
 import { PageIntro } from "../../components/page-intro";
 import { useCopy, useUiLocale } from "../../components/locale-provider";
 import { api, ApiError } from "../../lib/api";
@@ -19,16 +20,23 @@ function RegisterForm() {
   const next = safeNext(search.get("next"), "/start");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [adult, setAdult] = useState(false);
+  const [terms, setTerms] = useState(false);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     const form = new FormData(e.currentTarget);
+    if (form.get("adult") !== "on") {
+      setError(copy.auth.adultRequired);
+      return;
+    }
     const parsed = registerBodySchema.safeParse({
       email: String(form.get("email") ?? ""),
       password: String(form.get("password") ?? ""),
       displayName: String(form.get("displayName") ?? ""),
       locale: locale === "en" ? "EN" : "FA",
+      adult: true,
     });
     if (!parsed.success) {
       setError(copy.auth.registerBad);
@@ -65,6 +73,26 @@ function RegisterForm() {
       <div className="form-card">
         <form className="form" onSubmit={onSubmit}>
           {error ? <div className="banner err">{error}</div> : null}
+          <label className="check">
+            <input
+              name="adult"
+              type="checkbox"
+              required
+              checked={adult}
+              onChange={(e) => setAdult(e.target.checked)}
+            />
+            {copy.auth.adult}
+          </label>
+          <label className="check">
+            <input name="terms" type="checkbox" required checked={terms} onChange={(e) => setTerms(e.target.checked)} />
+            <span>
+              {copy.auth.termsPrefix}
+              <Link href="/safety">{copy.auth.rules}</Link>
+              {copy.auth.and}
+              <Link href="/privacy">{copy.auth.privacy}</Link> {copy.auth.termsAccept}
+            </span>
+          </label>
+          <SocialAuth next={next} adult={adult} requireAdult termsAccepted={terms} />
           <label>
             {copy.auth.displayName}
             <input name="displayName" minLength={2} maxLength={40} required autoComplete="name" />
@@ -76,19 +104,6 @@ function RegisterForm() {
           <label>
             {copy.auth.password}
             <input name="password" type="password" autoComplete="new-password" minLength={10} required />
-          </label>
-          <label className="check">
-            <input name="adult" type="checkbox" required />
-            {copy.auth.adult}
-          </label>
-          <label className="check">
-            <input name="terms" type="checkbox" required />
-            <span>
-              {copy.auth.termsPrefix}
-              <Link href="/safety">{copy.auth.rules}</Link>
-              {copy.auth.and}
-              <Link href="/privacy">{copy.auth.privacy}</Link> {copy.auth.termsAccept}
-            </span>
           </label>
           <button className="btn" type="submit" disabled={pending}>
             {pending ? "..." : copy.auth.submitRegister}

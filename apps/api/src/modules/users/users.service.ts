@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { AttachMediaBody, PatchMeBody } from "@dorham/shared";
 import { PrismaService } from "../../prisma/prisma.service";
 import { assertActive } from "../../common/account-status";
@@ -36,6 +36,45 @@ export class UsersService {
       photoUrl: await this.media.photoUrl(user.profile.photoId),
       createdAt: user.createdAt.toISOString(),
     };
+  }
+
+  async requestHost(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { verification: true },
+    });
+    if (!user || user.status === "DELETED") {
+      throw new UnauthorizedException({ code: "AUTH_UNAUTHORIZED" });
+    }
+    assertActive(user.status);
+    const attended = await this.prisma.eventRsvp.count({
+      where: { userId, checkedInAt: { not: null } },
+    });
+    const requiredAttendance = 2;
+    if (user.role === "HOST" || user.role === "MODERATOR" || user.role === "ADMIN") {
+      return { status: "ALREADY_HOST" as const, attended, requiredAttendance };
+    }
+    if (attended < requiredAttendance || user.verification?.status !== "VERIFIED") {
+      throw new ForbiddenException({
+        code: "HOST_NOT_READY",
+        message: "Hosting needs two check-ins and handwritten verification.",
+      });
+    }
+    const existing = await this.prisma.auditLog.findFirst({
+      where: { userId, action: "host.request", entity: "User", entityId: userId },
+    });
+    if (!existing) {
+      await this.prisma.auditLog.create({
+        data: {
+          userId,
+          action: "host.request",
+          entity: "User",
+          entityId: userId,
+          meta: { attended },
+        },
+      });
+    }
+    return { status: "PENDING" as const, attended, requiredAttendance };
   }
 
   async activity(userId: string) {

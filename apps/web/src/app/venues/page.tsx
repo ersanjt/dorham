@@ -15,6 +15,7 @@ import { resolveApiBase } from "../../lib/api-base";
 import { catalogInit } from "../../lib/catalog-fetch";
 import { t } from "../../lib/copy";
 import { formatCount } from "../../lib/format";
+import { safeHref, safeTel } from "../../lib/safe-href";
 import type { UiLocale } from "../../lib/locale";
 import { getLocale } from "../../lib/locale-server";
 import { venueAreaLabel, venueKindLabel, venueRegionLabel } from "../../lib/venues";
@@ -98,9 +99,9 @@ function VenueCard({ venue, locale }: { venue: VenueDto; locale: UiLocale }) {
             </li>
           ) : null}
           {venue.menuNotes ? <li>{venue.menuNotes}</li> : null}
-          {venue.phone ? (
+          {venue.phone && safeTel(venue.phone) ? (
             <li>
-              <a className="isolate-ltr" href={`tel:${venue.phone.replace(/\s/g, "")}`}>
+              <a className="isolate-ltr" href={safeTel(venue.phone) ?? undefined}>
                 {venue.phone}
               </a>
             </li>
@@ -117,9 +118,11 @@ function VenueCard({ venue, locale }: { venue: VenueDto; locale: UiLocale }) {
             <Link className="card-cta" href={`/venues/${venue.slug}`}>
               {copy.venues.details}
             </Link>
-            <a className="card-cta" href={venue.mapsUrl} target="_blank" rel="noreferrer">
-              {copy.venues.maps}
-            </a>
+            {safeHref(venue.mapsUrl) ? (
+              <a className="card-cta" href={safeHref(venue.mapsUrl) ?? undefined} target="_blank" rel="noreferrer">
+                {copy.venues.maps}
+              </a>
+            ) : null}
           </div>
         </div>
       </div>

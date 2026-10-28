@@ -1,21 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
+import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
 import { resetPasswordBodySchema } from "@dorham/shared";
 import { PageIntro } from "../../components/page-intro";
 import { SiteHeader } from "../../components/site-header";
 import { useCopy } from "../../components/locale-provider";
 import { api, ApiError } from "../../lib/api";
+import { takeLinkToken } from "../../lib/door-secret";
 
 function ResetForm() {
   const copy = useCopy();
   const router = useRouter();
-  const search = useSearchParams();
-  const token = search.get("token") ?? "";
+  const [token, setToken] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    setToken(takeLinkToken("token"));
+  }, []);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -71,9 +75,5 @@ function ResetForm() {
 }
 
 export default function ResetPasswordPage() {
-  return (
-    <Suspense fallback={<main className="wrap">…</main>}>
-      <ResetForm />
-    </Suspense>
-  );
+  return <ResetForm />;
 }

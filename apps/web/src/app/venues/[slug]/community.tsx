@@ -276,6 +276,7 @@ export function VenueCommunity({ slug }: { slug: string }) {
       )}
 
       <div className="venue-photo-box">
+        <p className="muted">عکس بعد از حضوری که صاحب مکان تأیید کرده فرستاده می‌شود.</p>
         <button className="btn ghost" type="button" onClick={() => setShowPhoto((v) => !v)}>
           {showPhoto ? "بستن ارسال عکس" : "ارسال عکس از مکان"}
         </button>

@@ -72,7 +72,7 @@ export default async function HomePage() {
   const next = events[0];
   const more = events.slice(1);
   const cityNotes = posts.filter((post) => post.body.trim().length >= 40).slice(0, 3);
-  const showCityCalendar = events.length === 0 && cityShows.length > 0;
+  const livelyShows = cityShows.filter((event) => event.goingCount > 0);
 
   return (
     <main className="wrap">
@@ -87,8 +87,8 @@ export default async function HomePage() {
           <img src="/brand/hero.png" alt="" />
         </div>
         <HeroJoin
-          primaryHref={next ? `/events/${next.id}` : showCityCalendar ? "/events#city-calendar" : "/events"}
-          primaryLabel={next ? copy.home.nextEvent : showCityCalendar ? copy.home.cityCalendar : copy.home.cityEvents}
+          primaryHref={next ? `/events/${next.id}` : "/venues"}
+          primaryLabel={next ? copy.home.nextEvent : copy.home.iranianPlaces}
           venuesLabel={copy.home.venuesCta}
         />
       </section>
@@ -127,56 +127,19 @@ export default async function HomePage() {
           </article>
         ) : null}
         {events.length === 0 ? (
-          showCityCalendar ? (
-            <div>
-              <p className="muted" style={{ marginBottom: 16 }}>
-                {copy.home.noCommunity}
-              </p>
-              <div className="grid">
-                {cityShows.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={{
-                      id: event.id,
-                      title: event.title,
-                      description: event.description,
-                      venue: event.venue,
-                      startsAt: event.startsAt,
-                      goingCount: event.goingCount,
-                      capacity: event.capacity,
-                      waitlistCount: event.waitlistCount,
-                      hostName: event.host.displayName,
-                      priceTry: event.priceTry,
-                      kind: event.kind,
-                    }}
-                    locale={locale}
-                  />
-                ))}
-              </div>
-              <div className="row" style={{ marginTop: 16 }}>
-                <Link className="btn" href="/events#city-calendar">
-                  {copy.home.allCityCal}
-                </Link>
-                <Link className="btn ghost" href="/events/new">
-                  {copy.home.hostCommunity}
-                </Link>
-              </div>
+          <div className="empty-art card">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/empty-events.png" alt="" />
+            <p className="muted">{copy.home.emptyWeek}</p>
+            <div className="row" style={{ marginTop: 12 }}>
+              <Link className="btn" href="/venues">
+                {copy.home.iranianPlaces}
+              </Link>
+              <Link className="btn ghost" href="/events/new">
+                {copy.home.hostEvent}
+              </Link>
             </div>
-          ) : (
-            <div className="empty-art card">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/empty-events.png" alt="" />
-              <p className="muted">{copy.home.emptyWeek}</p>
-              <div className="row" style={{ marginTop: 12 }}>
-                <Link className="btn" href="/venues">
-                  {copy.home.iranianPlaces}
-                </Link>
-                <Link className="btn ghost" href="/events/new">
-                  {copy.home.hostEvent}
-                </Link>
-              </div>
-            </div>
-          )
+          </div>
         ) : more.length > 0 ? (
           <div className="grid">
             {more.map((event) => (
@@ -198,6 +161,32 @@ export default async function HomePage() {
                     locale={locale}
                   />
             ))}
+          </div>
+        ) : null}
+        {events.length === 0 && livelyShows.length > 0 ? (
+          <div style={{ marginTop: 20 }}>
+            <p className="muted">{copy.home.livelyCalendar}</p>
+            <div className="grid">
+              {livelyShows.map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={{
+                    id: event.id,
+                    title: event.title,
+                    description: event.description,
+                    venue: event.venue,
+                    startsAt: event.startsAt,
+                    goingCount: event.goingCount,
+                    capacity: event.capacity,
+                    waitlistCount: event.waitlistCount,
+                    hostName: event.host.displayName,
+                    priceTry: event.priceTry,
+                    kind: event.kind,
+                  }}
+                  locale={locale}
+                />
+              ))}
+            </div>
           </div>
         ) : null}
       </section>

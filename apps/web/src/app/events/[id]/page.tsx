@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageIntro } from "../../../components/page-intro";
+import { QrImage } from "../../../components/qr-image";
 import { SiteFooter } from "../../../components/site-footer";
 import { SiteHeader } from "../../../components/site-header";
 import { ShareEvent } from "../../../components/share-event";
@@ -16,6 +17,7 @@ import {
   formatCount,
   formatDayChip,
   formatPriceTry,
+  safeJsonLd,
 } from "../../../lib/format";
 import { getLocale } from "../../../lib/locale-server";
 import { resolveApiBase } from "../../../lib/api-base";
@@ -77,7 +79,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
 
   return (
     <main className="wrap">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd(event)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(eventJsonLd(event)) }} />
       <SiteHeader />
       <PageIntro
         kicker={`${cityShow ? copy.eventCard.cityCal : event.venue ?? copy.eventCard.istanbul} · ${formatDayChip(event.startsAt, locale)}`}
@@ -131,6 +133,14 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         </article>
       )}
 
+      {!cityShow ? (
+        <section className="card" style={{ maxWidth: 360 }}>
+          <p className="strong">{copy.share.qrTitle}</p>
+          <p className="muted">{copy.share.qrLead}</p>
+          <QrImage url={eventPageUrl(event.id)} alt={copy.share.qrTitle} size={220} />
+        </section>
+      ) : null}
+
       <div className="row">
         <ShareEvent title={event.title} text={eventInviteText(event, locale)} url={eventPageUrl(event.id)} />
       </div>
@@ -140,6 +150,9 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         priceTry={event.priceTry}
         initialGuests={guests}
         kind={event.kind}
+        inviteTitle={event.title}
+        inviteText={eventInviteText(event, locale)}
+        inviteUrl={eventPageUrl(event.id)}
       />
       <SiteFooter />
     </main>

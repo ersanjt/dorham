@@ -1,20 +1,32 @@
+import { randomBytes } from "node:crypto";
 import {
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   ServiceUnavailableException,
   UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { ForgotPasswordBody, LoginBody, RegisterBody, ResetPasswordBody } from "@dorham/shared";
+import { Prisma } from "@prisma/client";
+import { ForgotPasswordBody, LoginBody, OAuthBody, OAuthStartBody, RegisterBody, ResetPasswordBody } from "@dorham/shared";
 import { PrismaService } from "../../prisma/prisma.service";
 import { addDuration, accessTtlSeconds, hashPassword, hashToken, newOpaqueToken, newRefreshToken, verifyPassword } from "../../common/crypto";
 import { loadEnv } from "../../config/env";
 import { MailService } from "../mail/mail.service";
+import { oauthConfigFromEnv, OAuthError, resolveOAuth, startOAuth, type ResolvedOAuth } from "./oauth";
 
 const LOCK_AFTER = 8;
 const LOCK_MINUTES = 20;
 const EMAIL_TOKEN_HOURS = 24;
 const RESET_TOKEN_HOURS = 2;
+
+/** Keeps a missing account on the same Argon2 path as a real login. */
+let dummyHash: Promise<string> | undefined;
+function dummyPasswordHash() {
+  dummyHash ??= hashPassword("dorham-login-timing-pad");
+  return dummyHash;
+}
 
 @Injectable()
 export class AuthService {
@@ -27,6 +39,7 @@ export class AuthService {
   ) {}
 
   async register(body: RegisterBody, meta: { ip?: string; userAgent?: string }) {
+    const passwordHash = await hashPassword(body.password);
     const exists = await this.prisma.user.findUnique({ where: { email: body.email } });
     if (exists) {
       throw new ConflictException({
@@ -34,8 +47,6 @@ export class AuthService {
         message: "An account with this email already exists.",
       });
     }
-
-    const passwordHash = await hashPassword(body.password);
     const user = await this.prisma.user.create({
       data: {
         email: body.email,
@@ -65,12 +76,25 @@ export class AuthService {
 
   async login(body: LoginBody, meta: { ip?: string; userAgent?: string }) {
     const user = await this.prisma.user.findUnique({ where: { email: body.email } });
-    if (!user || user.status === "DELETED") {
+    const missing = !user || user.status === "DELETED";
+    const ok = await verifyPassword(missing ? await dummyPasswordHash() : user.passwordHash, body.password);
+    if (missing || !ok) {
+      if (!missing && user.status !== "SUSPENDED" && !(user.lockedUntil && user.lockedUntil > new Date())) {
+        const failed = user.failedLogins + 1;
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            failedLogins: failed,
+            lockedUntil: failed >= LOCK_AFTER ? new Date(Date.now() + LOCK_MINUTES * 60_000) : null,
+          },
+        });
+      }
       throw new UnauthorizedException({
         code: "AUTH_INVALID_CREDENTIALS",
         message: "Email or password is wrong.",
       });
     }
+
     if (user.status === "SUSPENDED") {
       throw new UnauthorizedException({
         code: "AUTH_ACCOUNT_SUSPENDED",
@@ -84,22 +108,6 @@ export class AuthService {
       });
     }
 
-    const ok = await verifyPassword(user.passwordHash, body.password);
-    if (!ok) {
-      const failed = user.failedLogins + 1;
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          failedLogins: failed,
-          lockedUntil: failed >= LOCK_AFTER ? new Date(Date.now() + LOCK_MINUTES * 60_000) : null,
-        },
-      });
-      throw new UnauthorizedException({
-        code: "AUTH_INVALID_CREDENTIALS",
-        message: "Email or password is wrong.",
-      });
-    }
-
     await this.prisma.user.update({
       where: { id: user.id },
       data: { failedLogins: 0, lockedUntil: null, lastLoginAt: new Date() },
@@ -108,10 +116,23 @@ export class AuthService {
     return this.issueTokens(user.id, user.role, meta);
   }
 
+  async oauthStart(body: OAuthStartBody) {
+    try {
+      return startOAuth(oauthConfigFromEnv(this.env), body);
+    } catch (err) {
+      this.rethrowOAuth(err);
+    }
+  }
+
+  async oauth(body: OAuthBody, meta: { ip?: string; userAgent?: string }) {
+    const resolved = await resolveOAuth(oauthConfigFromEnv(this.env), body).catch((err: unknown) => this.rethrowOAuth(err));
+    return this.completeOAuth(resolved, meta);
+  }
+
   async refresh(refreshToken: string, meta: { ip?: string; userAgent?: string }) {
     const refreshTokenHash = hashToken(refreshToken);
     const session = await this.prisma.session.findFirst({
-      where: { refreshTokenHash, revokedAt: null },
+      where: { refreshTokenHash },
       include: { user: true },
     });
     if (
@@ -122,11 +143,24 @@ export class AuthService {
     ) {
       throw new UnauthorizedException({ code: "AUTH_UNAUTHORIZED", message: "Session expired." });
     }
+    if (session.revokedAt) {
+      // A token reused well after rotation means it was copied. End every live session.
+      if (Date.now() - session.revokedAt.getTime() > 15_000) {
+        await this.prisma.session.updateMany({
+          where: { userId: session.userId, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      }
+      throw new UnauthorizedException({ code: "AUTH_UNAUTHORIZED", message: "Session expired." });
+    }
 
-    await this.prisma.session.update({
-      where: { id: session.id },
+    const consumed = await this.prisma.session.updateMany({
+      where: { id: session.id, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+    if (consumed.count !== 1) {
+      throw new UnauthorizedException({ code: "AUTH_UNAUTHORIZED", message: "Session expired." });
+    }
 
     return this.issueTokens(session.userId, session.user.role, meta);
   }
@@ -223,6 +257,131 @@ export class AuthService {
     return { ok: true as const };
   }
 
+  private rethrowOAuth(err: unknown): never {
+    if (err instanceof OAuthError) {
+      if (err.code === "AUTH_OAUTH_UNAVAILABLE") {
+        throw new ServiceUnavailableException({ code: err.code, message: err.message });
+      }
+      throw new BadRequestException({ code: err.code, message: err.message });
+    }
+    throw err;
+  }
+
+  private async completeOAuth(resolved: ResolvedOAuth, meta: { ip?: string; userAgent?: string }) {
+    const provider = { google: "GOOGLE", apple: "APPLE", facebook: "FACEBOOK" } as const;
+    const dbProvider = provider[resolved.profile.provider];
+    const identity = { provider: dbProvider, providerUserId: resolved.profile.providerUserId };
+    const linked = await this.prisma.oAuthAccount.findUnique({
+      where: { provider_providerUserId: identity },
+      include: { user: true },
+    });
+    if (linked) return this.issueForOAuthUser(linked.user, meta);
+
+    const email = resolved.profile.email;
+    if (!email || !resolved.profile.emailVerified) {
+      throw new BadRequestException({
+        code: email ? "AUTH_OAUTH_INVALID" : "AUTH_OAUTH_EMAIL",
+        message: email ? "That email is not verified by the provider." : "The provider did not share an email.",
+      });
+    }
+
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      if (existing.status === "DELETED") {
+        throw new UnauthorizedException({ code: "AUTH_UNAUTHORIZED", message: "This account was deleted." });
+      }
+      if (resolved.profile.provider === "facebook") {
+        throw new ConflictException({
+          code: "AUTH_EMAIL_TAKEN",
+          message: "An account with this email already exists.",
+        });
+      }
+      try {
+        await this.prisma.oAuthAccount.create({
+          data: { userId: existing.id, provider: dbProvider, providerUserId: resolved.profile.providerUserId },
+        });
+      } catch (err) {
+        if (!uniqueViolation(err)) throw err;
+        const raced = await this.prisma.oAuthAccount.findUnique({
+          where: { provider_providerUserId: identity },
+          include: { user: true },
+        });
+        if (raced) return this.issueForOAuthUser(raced.user, meta);
+        throw err;
+      }
+      if (!existing.emailVerifiedAt) {
+        await this.prisma.user.update({ where: { id: existing.id }, data: { emailVerifiedAt: new Date() } });
+      }
+      return this.issueForOAuthUser(existing, meta);
+    }
+
+    if (!resolved.adult) {
+      throw new ForbiddenException({
+        code: "AUTH_AGE_REQUIRED",
+        message: "A new account needs the 18+ confirmation.",
+      });
+    }
+
+    const displayName = resolved.displayName ?? resolved.profile.name ?? "عضو دورهم";
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          email,
+          passwordHash: await hashPassword(randomBytes(32).toString("hex")),
+          locale: resolved.locale,
+          emailVerifiedAt: new Date(),
+          profile: { create: { displayName, city: "istanbul", country: "TR" } },
+          verification: { create: { status: "NONE" } },
+          oauthAccounts: { create: { provider: dbProvider, providerUserId: resolved.profile.providerUserId } },
+        },
+      });
+      await this.prisma.auditLog.create({
+        data: { userId: user.id, action: "auth.oauth.register", entity: "User", entityId: user.id, ip: meta.ip },
+      });
+      return this.issueTokens(user.id, user.role, meta);
+    } catch (err) {
+      if (!uniqueViolation(err)) throw err;
+      const raced = await this.prisma.oAuthAccount.findUnique({
+        where: { provider_providerUserId: identity },
+        include: { user: true },
+      });
+      if (raced) return this.issueForOAuthUser(raced.user, meta);
+      throw new ConflictException({
+        code: "AUTH_EMAIL_TAKEN",
+        message: "An account with this email already exists.",
+      });
+    }
+  }
+
+  private async issueForOAuthUser(
+    user: { id: string; role: "MEMBER" | "HOST" | "MODERATOR" | "ADMIN"; status: string; lockedUntil: Date | null },
+    meta: { ip?: string; userAgent?: string },
+  ) {
+    if (user.status === "DELETED") {
+      throw new UnauthorizedException({ code: "AUTH_UNAUTHORIZED", message: "This account was deleted." });
+    }
+    if (user.status === "SUSPENDED") {
+      throw new UnauthorizedException({
+        code: "AUTH_ACCOUNT_SUSPENDED",
+        message: "This account is suspended.",
+      });
+    }
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      throw new UnauthorizedException({
+        code: "AUTH_LOCKED",
+        message: "This account is temporarily locked. Try later.",
+      });
+    }
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { failedLogins: 0, lockedUntil: null, lastLoginAt: new Date() },
+    });
+    await this.prisma.auditLog.create({
+      data: { userId: user.id, action: "auth.oauth", entity: "User", entityId: user.id, ip: meta.ip },
+    });
+    return this.issueTokens(user.id, user.role, meta);
+  }
+
   private async issueEmailToken(
     userId: string,
     purpose: "EMAIL_VERIFY" | "PASSWORD_RESET",
@@ -268,4 +427,8 @@ export class AuthService {
       tokenType: "Bearer" as const,
     };
   }
+}
+
+function uniqueViolation(err: unknown) {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
 }

@@ -26,7 +26,18 @@ function timeoutSignal(ms: number) {
   return controller.signal;
 }
 
-async function refreshAccess() {
+let refreshInFlight: Promise<boolean> | null = null;
+
+function refreshAccess() {
+  if (!refreshInFlight) {
+    refreshInFlight = refreshAccessOnce().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+async function refreshAccessOnce() {
   const token = getRefreshToken();
   if (!token) return false;
   const res = await fetch(`${apiBase()}/v1/auth/refresh`, {

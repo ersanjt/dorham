@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Linking, Share, View } from "react-native";
+import { Linking, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import QRCode from "react-native-qrcode-svg";
 import type { EventDoor, EventGuest } from "@dorham/shared";
 import { AppText, Banner, Button, Card, ErrorState, Loading, Screen } from "../../../../components/ui";
 import { api, ApiError } from "../../../../lib/api";
 import { isSignedIn } from "../../../../lib/session";
+import { publicWebBase } from "../../../../lib/api-base";
 import { color, space } from "../../../../lib/theme";
 
 export default function DoorScreen() {
@@ -91,17 +92,11 @@ export default function DoorScreen() {
             <QRCode value={door.url} size={220} backgroundColor={color.cream} color={color.ink} />
           </View>
           <AppText muted size="caption" align="center">
-            لینک ورود مهمان — دعوت عمومی نیست
+            کد ورود همین جمع است. در گروه عمومی نفرست.
           </AppText>
-          <Button label="باز کردن صفحهٔ وب در" onPress={() => Linking.openURL(door.url).catch(() => undefined)} />
           <Button
-            label="فرستادن لینک در به هم‌میزبان"
-            variant="ghost"
-            onPress={() =>
-              Share.share({
-                message: `لینک در رویداد (فقط میزبان):\n${door.url}`,
-              }).catch(() => undefined)
-            }
+            label="صفحهٔ میزبان روی وب"
+            onPress={() => Linking.openURL(`${publicWebBase()}/events/${id}/door`).catch(() => undefined)}
           />
         </Card>
       ) : null}

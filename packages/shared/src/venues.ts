@@ -104,13 +104,25 @@ export const listVenuesQuerySchema = z.object({
 
 export type ListVenuesQuery = z.infer<typeof listVenuesQuerySchema>;
 
-const googleMapsUrl = z
+const httpUrl = z
   .string()
   .trim()
+  .max(200)
   .url()
-  .refine((value) => /google\.[^/]+\/maps|maps\.google\.|maps\.app\.goo\.gl/i.test(value), {
-    message: "Google Maps URL required",
-  });
+  .refine((value) => {
+    const protocol = new URL(value).protocol;
+    return protocol === "https:" || protocol === "http:";
+  }, "http or https URL required");
+
+const googleMapsUrl = httpUrl.refine((value) => {
+  const url = new URL(value);
+  const host = url.hostname.toLowerCase();
+  const path = url.pathname.toLowerCase();
+  if (host === "maps.app.goo.gl" || host === "goo.gl" || host === "maps.google.com") return true;
+  const google =
+    host === "google.com" || host.endsWith(".google.com") || host.endsWith(".google.com.tr");
+  return google && path.includes("/maps");
+}, "Google Maps URL required");
 
 export const submitVenueBodySchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -121,7 +133,7 @@ export const submitVenueBodySchema = z.object({
   description: z.string().trim().min(10).max(800),
   hours: z.string().trim().max(80).optional(),
   phone: z.string().trim().max(40).optional(),
-  website: z.string().trim().url().max(200).optional(),
+  website: httpUrl.optional(),
   priceRange: z.string().trim().max(40).optional(),
   menuNotes: z.string().trim().max(500).optional(),
   menuMediaId: z.string().min(8).max(64).optional(),

@@ -96,6 +96,38 @@ export class AdminService {
     return { ok: true as const, role: body.role };
   }
 
+  async listHostRequests() {
+    const logs = await this.prisma.auditLog.findMany({
+      where: { action: "host.request" },
+      orderBy: { createdAt: "desc" },
+      take: 40,
+      include: { user: { include: { profile: true, verification: true } } },
+    });
+    const seen = new Set<string>();
+    const open = logs.filter((row) => {
+      if (!row.user || row.user.role !== "MEMBER" || row.user.status !== "ACTIVE") return false;
+      if (seen.has(row.user.id)) return false;
+      seen.add(row.user.id);
+      return true;
+    });
+    const data = await Promise.all(
+      open.map(async (row) => {
+        const attended = await this.prisma.eventRsvp.count({
+          where: { userId: row.user!.id, checkedInAt: { not: null } },
+        });
+        return {
+          id: row.user!.id,
+          email: row.user!.email,
+          displayName: row.user!.profile?.displayName ?? "عضو",
+          attended,
+          verificationStatus: row.user!.verification?.status ?? "NONE",
+          requestedAt: row.createdAt.toISOString(),
+        };
+      }),
+    );
+    return { data };
+  }
+
   async listReports() {
     const [person, feed] = await Promise.all([
       this.prisma.report.findMany({

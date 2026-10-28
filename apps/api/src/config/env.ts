@@ -21,6 +21,21 @@ const envSchema = z.object({
   API_HOST: z.string().default("0.0.0.0"),
   /** Optional Google Maps Static API key for venue map previews. */
   GOOGLE_MAPS_API_KEY: z.string().optional(),
+  /** Google OAuth web client. Extra comma-separated IDs cover iOS and Android audiences. */
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_CLIENT_IDS: z.string().optional(),
+  /** Facebook Login app. */
+  FACEBOOK_APP_ID: z.string().optional(),
+  FACEBOOK_APP_SECRET: z.string().optional(),
+  /** Sign in with Apple. APPLE_CLIENT_ID is the Services ID. APPLE_CLIENT_IDS adds the iOS bundle id. */
+  APPLE_CLIENT_ID: z.string().optional(),
+  APPLE_CLIENT_IDS: z.string().optional(),
+  APPLE_TEAM_ID: z.string().optional(),
+  APPLE_KEY_ID: z.string().optional(),
+  APPLE_PRIVATE_KEY: z.string().optional(),
+  /** Extra browser origins allowed to receive the OAuth redirect, besides APP_URL and its www pair. */
+  OAUTH_REDIRECT_ORIGINS: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

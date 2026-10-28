@@ -34,6 +34,10 @@ async function bootstrap() {
     reply.header("permissions-policy", "geolocation=(), camera=(), microphone=()");
     attachRequestId(req, reply, done);
   });
+  fastify.addHook("onSend", (_req, reply, payload, done) => {
+    reply.removeHeader("x-powered-by");
+    done(null, payload);
+  });
 
   fastify.get("/", async (_req, reply) => {
     reply.send({

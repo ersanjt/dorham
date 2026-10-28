@@ -4,10 +4,14 @@ import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import {
   forgotPasswordBodySchema,
   loginBodySchema,
+  oauthBodySchema,
+  oauthStartBodySchema,
   refreshBodySchema,
   registerBodySchema,
   resetPasswordBodySchema,
   verifyEmailBodySchema,
+  type OAuthBody,
+  type OAuthStartBody,
 } from "@dorham/shared";
 import { ZodPipe } from "../../common/zod-pipe";
 import { JwtAuthGuard } from "../../common/jwt-auth.guard";
@@ -39,6 +43,16 @@ export class AuthController {
   ) {
     const data = await this.auth.login(body, this.meta(req));
     return { data };
+  }
+
+  @Post("oauth/start")
+  async oauthStart(@Body(new ZodPipe(oauthStartBodySchema)) body: OAuthStartBody) {
+    return { data: await this.auth.oauthStart(body) };
+  }
+
+  @Post("oauth")
+  async oauth(@Body(new ZodPipe(oauthBodySchema)) body: OAuthBody, @Req() req: ReqMeta) {
+    return { data: await this.auth.oauth(body, this.meta(req)) };
   }
 
   @Post("refresh")

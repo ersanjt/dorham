@@ -13,8 +13,12 @@ export class EventsController {
   constructor(private readonly events: EventsService) {}
 
   @Get()
-  list(@Query(new ZodPipe(listEventsQuerySchema)) query: ReturnType<typeof listEventsQuerySchema.parse>) {
-    return this.events.list(query);
+  @UseGuards(OptionalJwtAuthGuard)
+  list(
+    @Query(new ZodPipe(listEventsQuerySchema)) query: ReturnType<typeof listEventsQuerySchema.parse>,
+    @OptionalUser() user?: { id: string; role: string },
+  ) {
+    return this.events.list(query, user);
   }
 
   @Get("mine")
@@ -75,8 +79,8 @@ export class EventsController {
 
   @Get(":id/guests")
   @UseGuards(OptionalJwtAuthGuard)
-  guests(@Param("id") id: string, @OptionalUser() user?: { id: string }) {
-    return this.events.guests(id, user?.id);
+  guests(@Param("id") id: string, @OptionalUser() user?: { id: string; role: string }) {
+    return this.events.guests(id, user);
   }
 
   @Get(":id/door")

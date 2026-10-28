@@ -2,6 +2,7 @@ import { Image, Linking, Pressable, View } from "react-native";
 import type { VenueDto } from "@dorham/shared";
 import { AppText, Card } from "./ui";
 import { publicMediaUrl } from "../lib/api-base";
+import { safeOpenUrl } from "../lib/paths";
 import { venueAreaFa, venueKindFa } from "../lib/format";
 import { color, radius, space } from "../lib/theme";
 
@@ -88,7 +89,10 @@ export function VenueCard({
               </AppText>
             </Pressable>
             <Pressable
-              onPress={() => Linking.openURL(venue.mapsUrl)}
+              onPress={() => {
+                const url = safeOpenUrl(venue.mapsUrl);
+                if (url) void Linking.openURL(url);
+              }}
               accessibilityRole="link"
               accessibilityLabel="باز کردن در گوگل‌مپ"
               style={{

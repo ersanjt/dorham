@@ -4,92 +4,136 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { EventDoor, EventGuest } from "@dorham/shared";
+import { QrImage } from "../../../../components/qr-image";
 import { SiteHeader } from "../../../../components/site-header";
+import { useCopy } from "../../../../components/locale-provider";
 import { api, ApiError } from "../../../../lib/api";
 import { isSignedIn } from "../../../../lib/session";
-import { DoorQr } from "./door-qr";
 
 export default function DoorPage() {
   const params = useParams<{ id: string }>();
+  const copy = useCopy();
   const [door, setDoor] = useState<EventDoor | null>(null);
   const [guests, setGuests] = useState<EventGuest[]>([]);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  async function reload() {
-    const [nextDoor, nextGuests] = await Promise.all([
-      api<EventDoor>(`/events/${params.id}/door`),
-      api<EventGuest[]>(`/events/${params.id}/guests`),
-    ]);
-    setDoor(nextDoor);
-    setGuests(nextGuests.filter((guest) => guest.status === "GOING"));
-  }
-
   useEffect(() => {
     if (!isSignedIn()) {
-      setError("برای QR در باید وارد شوی.");
+      setError(copy.door.signIn);
       return;
     }
-    reload().catch((err: unknown) => setError(err instanceof ApiError ? err.message : "QR خوانده نشد."));
-  }, [params.id]);
+    let stop = false;
+    async function tick() {
+      try {
+        const [nextDoor, nextGuests] = await Promise.all([
+          api<EventDoor>(`/events/${params.id}/door`),
+          api<EventGuest[]>(`/events/${params.id}/guests`),
+        ]);
+        if (stop) return;
+        setDoor(nextDoor);
+        setGuests(nextGuests.filter((guest) => guest.status === "GOING"));
+        setError("");
+      } catch (err: unknown) {
+        if (!stop) setError(err instanceof ApiError ? err.message : copy.door.loadFail);
+      }
+    }
+    void tick();
+    const timer = window.setInterval(() => void tick(), 8000);
+    return () => {
+      stop = true;
+      window.clearInterval(timer);
+    };
+  }, [params.id, copy.door.signIn, copy.door.loadFail]);
 
-  const due = guests.filter((guest) => guest.ticketStatus === "DUE" && !guest.checkedInAt);
+  const waiting = guests.filter((guest) => !guest.checkedInAt);
+  const arrived = guests.filter((guest) => guest.checkedInAt);
+
+  async function checkIn(guest: EventGuest) {
+    try {
+      await api(`/events/${params.id}/checkin`, {
+        method: "POST",
+        body: JSON.stringify({ userId: guest.id }),
+      });
+      setNotice(guest.ticketStatus === "DUE" ? copy.door.paidIn(guest.displayName) : copy.door.checkedIn(guest.displayName));
+      const [nextDoor, nextGuests] = await Promise.all([
+        api<EventDoor>(`/events/${params.id}/door`),
+        api<EventGuest[]>(`/events/${params.id}/guests`),
+      ]);
+      setDoor(nextDoor);
+      setGuests(nextGuests.filter((row) => row.status === "GOING"));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : copy.door.checkinFail);
+    }
+  }
 
   return (
     <main className="wrap">
       <SiteHeader />
-      <h1>QR ورودی</h1>
-      <p className="lead">این صفحه را روی میز بگذار. مهمان کد را اسکن می‌کند؛ نقد را همان‌جا بگیر.</p>
+      <h1>{copy.door.title}</h1>
+      <p className="lead">{copy.door.lead}</p>
       {notice ? <div className="banner ok">{notice}</div> : null}
       {error ? <div className="banner err">{error}</div> : null}
       {door ? (
-        <section className="card" style={{ maxWidth: 420, textAlign: "center" }}>
-          <h2>{door.title}</h2>
-          <DoorQr url={door.url} />
-          <p className="meta">
-            {door.checkedInCount} از {door.goingCount} نفر وارد شده‌اند
-            {door.dueCount ? ` · ${door.dueCount} بلیت دم در` : ""}
-            {door.paidCount ? ` · ${door.paidCount} بلیت گرفته شد` : ""}
-          </p>
-          <Link className="btn ghost" href={`/events/${door.eventId}`}>
-            برگشت به رویداد
-          </Link>
-        </section>
-      ) : null}
-      {due.length > 0 ? (
-        <section style={{ marginTop: 32 }}>
-          <h2>هنوز نقد نداده‌اند</h2>
-          <div className="stack">
-            {due.map((guest) => (
-              <article className="card guest" key={guest.id}>
-                <div>
-                  <strong>
-                    <Link href={`/people/${guest.id}`}>{guest.displayName}</Link>
-                  </strong>
-                  <p className="meta">بلیت دم در</p>
-                  <button
-                    className="btn ghost"
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await api(`/events/${params.id}/checkin`, {
-                          method: "POST",
-                          body: JSON.stringify({ userId: guest.id }),
-                        });
-                        setNotice(`${guest.displayName} وارد شد. بلیت گرفته شد.`);
-                        await reload();
-                      } catch (err) {
-                        setError(err instanceof ApiError ? err.message : "چک‌این نشد.");
-                      }
-                    }}
-                  >
-                    ورود + نقد گرفت
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
+        <>
+          <section className="card" style={{ maxWidth: 420, textAlign: "center" }}>
+            <h2>{door.title}</h2>
+            <QrImage url={door.url} alt={copy.door.title} />
+            <p className="meta">
+              {copy.door.counts(door.checkedInCount, door.goingCount)}
+              {door.dueCount ? copy.door.due(door.dueCount) : ""}
+              {door.paidCount ? copy.door.paid(door.paidCount) : ""}
+            </p>
+            <p className="muted">{copy.door.secretNote}</p>
+            <Link className="btn ghost" href={`/events/${door.eventId}`}>
+              {copy.door.back}
+            </Link>
+          </section>
+
+          <section style={{ marginTop: 32 }}>
+            <h2>{copy.door.waiting}</h2>
+            {waiting.length === 0 ? <p className="muted">{copy.door.waitingEmpty}</p> : null}
+            <div className="stack">
+              {waiting.map((guest) => (
+                <article className="card guest" key={guest.id}>
+                  <div>
+                    <strong>
+                      <Link href={`/people/${guest.id}`}>{guest.displayName}</Link>
+                    </strong>
+                    <p className="meta">
+                      {guest.ticketStatus === "DUE"
+                        ? copy.door.ticketDue
+                        : guest.ticketStatus === "PAID_DOOR"
+                          ? copy.door.ticketPaid
+                          : copy.door.ticketFree}
+                    </p>
+                    <button className="btn ghost" type="button" onClick={() => void checkIn(guest)}>
+                      {guest.ticketStatus === "DUE" ? copy.door.manualPaid : copy.door.manual}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          {arrived.length > 0 ? (
+            <section style={{ marginTop: 32 }}>
+              <h2>{copy.door.arrived}</h2>
+              <div className="stack">
+                {arrived.map((guest) => (
+                  <article className="card guest" key={guest.id}>
+                    <strong>
+                      <Link href={`/people/${guest.id}`}>{guest.displayName}</Link>
+                    </strong>
+                    <p className="meta">
+                      {guest.ticketStatus === "PAID_DOOR" ? copy.door.arrivedPaid : copy.door.arrivedFree}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+        </>
       ) : null}
     </main>
   );

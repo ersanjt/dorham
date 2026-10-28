@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { loginBodySchema } from "@dorham/shared";
+import { SocialAuth } from "../components/social-auth";
 import { Banner, Button, Field, Screen } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { safeNext } from "../lib/paths";
@@ -39,6 +40,7 @@ export default function LoginScreen() {
 
   return (
     <Screen back kicker="یک حساب" title="ورود" subtitle="وب و اپ همان حساب را دارند. نشست روی دستگاه رمزنگاری می‌شود.">
+      <SocialAuth next={next} />
       <Banner text={error} />
       <Field
         label="ایمیل"
