@@ -1,0 +1,28 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update the VPS from main
+        env:
+          DEPLOY_KEY: ${{ secrets.DORHAM_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DEPLOY_KEY" ]; then
+            echo "DORHAM_DEPLOY_KEY secret is missing"
+            exit 1
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/dorham_deploy
+          chmod 600 ~/.ssh/dorham_deploy
+          ssh-keyscan -H 92.205.182.99 >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/dorham_deploy -o IdentitiesOnly=yes -o BatchMode=yes virapanel@92.205.182.99 'bash -s' < scripts/deploy-update.sh
