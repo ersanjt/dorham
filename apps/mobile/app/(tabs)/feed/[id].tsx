@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import type { FeedComment, FeedPost, Me } from "@dorham/shared";
-import { AppText, AuthorMeta, Banner, Button, Card, ErrorState, Field, Loading, Screen } from "../../../components/ui";
+import { AppText, AuthorMeta, Banner, Button, Card, ConfirmDialog, ErrorState, Field, Loading, Screen } from "../../../components/ui";
 import { api, ApiError } from "../../../lib/api";
 import { formatWhen } from "../../../lib/format";
 import { loginHref } from "../../../lib/paths";
@@ -16,6 +15,9 @@ export default function FeedPostScreen() {
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [confirm, setConfirm] = useState<{ title: string; body: string; confirmLabel: string; run: () => void } | null>(
+    null,
+  );
 
   function load() {
     if (!id) return;
@@ -63,33 +65,29 @@ export default function FeedPostScreen() {
       router.push(loginHref(`/feed/${id}`));
       return;
     }
-    Alert.alert("گزارش پست", "این پست گزارش شود؟", [
-      { text: "نه", style: "cancel" },
-      {
-        text: "گزارش",
-        style: "destructive",
-        onPress: () => {
-          api(`/feed/${id}/report`, { method: "POST", body: JSON.stringify({ reason: "other" }) })
-            .then(() => setNotice("گزارش ثبت شد."))
-            .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "گزارش نشد."));
-        },
+    setConfirm({
+      title: "گزارش پست",
+      body: "این پست گزارش شود؟",
+      confirmLabel: "گزارش",
+      run: () => {
+        api(`/feed/${id}/report`, { method: "POST", body: JSON.stringify({ reason: "other" }) })
+          .then(() => setNotice("گزارش ثبت شد."))
+          .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "گزارش نشد."));
       },
-    ]);
+    });
   }
 
   function hidePost() {
-    Alert.alert("برداشتن پست", "این پست از فید برداشته شود؟", [
-      { text: "نه", style: "cancel" },
-      {
-        text: "بردار",
-        style: "destructive",
-        onPress: () => {
-          api(`/feed/${id}`, { method: "DELETE" })
-            .then(() => router.replace("/feed"))
-            .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "حذف نشد."));
-        },
+    setConfirm({
+      title: "برداشتن پست",
+      body: "این پست از فید برداشته شود؟",
+      confirmLabel: "بردار",
+      run: () => {
+        api(`/feed/${id}`, { method: "DELETE" })
+          .then(() => router.replace("/feed"))
+          .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "حذف نشد."));
       },
-    ]);
+    });
   }
 
   if (!post && !error) {
@@ -113,6 +111,18 @@ export default function FeedPostScreen() {
 
   return (
     <Screen back kicker="خبر شهر" title="فید استانبول">
+      <ConfirmDialog
+        visible={Boolean(confirm)}
+        title={confirm?.title ?? ""}
+        body={confirm?.body ?? ""}
+        confirmLabel={confirm?.confirmLabel ?? ""}
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => {
+          const run = confirm?.run;
+          setConfirm(null);
+          run?.();
+        }}
+      />
       <Banner text={error} />
       <Banner text={notice} tone="ok" />
       {post ? (

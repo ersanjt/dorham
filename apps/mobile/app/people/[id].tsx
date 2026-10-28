@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Alert, Image } from "react-native";
+import { Image } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import type { EventDto, Me, PublicUser } from "@dorham/shared";
 import { EventCard } from "../../components/event-card";
-import { AppText, Banner, Button, Card, ErrorState, Loading, Screen } from "../../components/ui";
+import { AppText, Banner, Button, Card, ConfirmDialog, ErrorState, Loading, Screen } from "../../components/ui";
 import { api, ApiError } from "../../lib/api";
 import { publicMediaUrl } from "../../lib/api-base";
 import { verifyFa } from "../../lib/format";
@@ -17,6 +17,9 @@ export default function PersonScreen() {
   const [me, setMe] = useState<Me | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [confirm, setConfirm] = useState<{ title: string; body: string; confirmLabel: string; run: () => void } | null>(
+    null,
+  );
 
   function load() {
     if (!id) return;
@@ -43,18 +46,16 @@ export default function PersonScreen() {
       router.push(loginHref(`/people/${id}`));
       return;
     }
-    Alert.alert("بلاک", "این عضو بلاک شود؟", [
-      { text: "نه", style: "cancel" },
-      {
-        text: "بلاک",
-        style: "destructive",
-        onPress: () => {
-          api(`/users/${id}/block`, { method: "POST" })
-            .then(() => setNotice("بلاک شد."))
-            .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "بلاک نشد."));
-        },
+    setConfirm({
+      title: "بلاک",
+      body: "این عضو بلاک شود؟",
+      confirmLabel: "بلاک",
+      run: () => {
+        api(`/users/${id}/block`, { method: "POST" })
+          .then(() => setNotice("بلاک شد."))
+          .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "بلاک نشد."));
       },
-    ]);
+    });
   }
 
   function reportUser() {
@@ -62,21 +63,19 @@ export default function PersonScreen() {
       router.push(loginHref(`/people/${id}`));
       return;
     }
-    Alert.alert("گزارش", "این عضو گزارش شود؟", [
-      { text: "نه", style: "cancel" },
-      {
-        text: "گزارش",
-        style: "destructive",
-        onPress: () => {
-          api("/reports", {
-            method: "POST",
-            body: JSON.stringify({ targetId: id, reason: "other", details: "public profile" }),
-          })
-            .then(() => setNotice("گزارش ثبت شد."))
-            .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "گزارش نشد."));
-        },
+    setConfirm({
+      title: "گزارش",
+      body: "این عضو گزارش شود؟",
+      confirmLabel: "گزارش",
+      run: () => {
+        api("/reports", {
+          method: "POST",
+          body: JSON.stringify({ targetId: id, reason: "other", details: "public profile" }),
+        })
+          .then(() => setNotice("گزارش ثبت شد."))
+          .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "گزارش نشد."));
       },
-    ]);
+    });
   }
 
   if (!person && !error) {
@@ -99,6 +98,18 @@ export default function PersonScreen() {
 
   return (
     <Screen back kicker="عضو شهر" title={person?.displayName ?? "عضو"}>
+      <ConfirmDialog
+        visible={Boolean(confirm)}
+        title={confirm?.title ?? ""}
+        body={confirm?.body ?? ""}
+        confirmLabel={confirm?.confirmLabel ?? ""}
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => {
+          const run = confirm?.run;
+          setConfirm(null);
+          run?.();
+        }}
+      />
       <Banner text={error} />
       <Banner text={notice} tone="ok" />
       {person ? (

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Alert, Pressable, Share, View } from "react-native";
+import { Pressable, Share, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import type { EventDto, EventGuest, Me, RsvpResult } from "@dorham/shared";
-import { AppText, Banner, Button, Card, Empty, ErrorState, Loading, Screen } from "../../../../components/ui";
+import { AppText, Banner, Button, Card, ConfirmDialog, Empty, ErrorState, Loading, Screen } from "../../../../components/ui";
 import { api, ApiError } from "../../../../lib/api";
 import { capacityWidth, eventInviteText, formatDayChip, formatPriceTry } from "../../../../lib/format";
 import { loginHref } from "../../../../lib/paths";
@@ -16,6 +16,9 @@ export default function EventDetailScreen() {
   const [guests, setGuests] = useState<EventGuest[]>([]);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [confirm, setConfirm] = useState<{ title: string; body: string; confirmLabel: string; run: () => void } | null>(
+    null,
+  );
 
   async function load() {
     if (!id) return;
@@ -113,6 +116,18 @@ export default function EventDetailScreen() {
       title={event?.title ?? "رویداد"}
       subtitle={cityShow ? "هماهنگی دوستان ایرانی — نه فروش بلیط" : event ? `میزبان: ${event.host.displayName}` : undefined}
     >
+      <ConfirmDialog
+        visible={Boolean(confirm)}
+        title={confirm?.title ?? ""}
+        body={confirm?.body ?? ""}
+        confirmLabel={confirm?.confirmLabel ?? ""}
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => {
+          const run = confirm?.run;
+          setConfirm(null);
+          run?.();
+        }}
+      />
       <Banner text={error} />
       <Banner text={notice} tone="ok" />
       {cityShow ? (
@@ -246,39 +261,35 @@ export default function EventDetailScreen() {
             label="بلاک میزبان"
             variant="ghost"
             onPress={() => {
-              Alert.alert("بلاک", "میزبان بلاک شود؟", [
-                { text: "نه", style: "cancel" },
-                {
-                  text: "بلاک",
-                  style: "destructive",
-                  onPress: () => {
-                    api(`/users/${event.host.id}/block`, { method: "POST" })
-                      .then(() => setNotice("میزبان بلاک شد."))
-                      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "بلاک نشد."));
-                  },
+              setConfirm({
+                title: "بلاک",
+                body: "میزبان بلاک شود؟",
+                confirmLabel: "بلاک",
+                run: () => {
+                  api(`/users/${event.host.id}/block`, { method: "POST" })
+                    .then(() => setNotice("میزبان بلاک شد."))
+                    .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "بلاک نشد."));
                 },
-              ]);
+              });
             }}
           />
           <Button
             label="گزارش"
             variant="ghost"
             onPress={() => {
-              Alert.alert("گزارش", "این رویداد / میزبان گزارش شود؟", [
-                { text: "نه", style: "cancel" },
-                {
-                  text: "گزارش",
-                  style: "destructive",
-                  onPress: () => {
-                    api("/reports", {
-                      method: "POST",
-                      body: JSON.stringify({ targetId: event.host.id, reason: "other", details: "event host" }),
-                    })
-                      .then(() => setNotice("گزارش ثبت شد."))
-                      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "گزارش نشد."));
-                  },
+              setConfirm({
+                title: "گزارش",
+                body: "این رویداد / میزبان گزارش شود؟",
+                confirmLabel: "گزارش",
+                run: () => {
+                  api("/reports", {
+                    method: "POST",
+                    body: JSON.stringify({ targetId: event.host.id, reason: "other", details: "event host" }),
+                  })
+                    .then(() => setNotice("گزارش ثبت شد."))
+                    .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "گزارش نشد."));
                 },
-              ]);
+              });
             }}
           />
         </>

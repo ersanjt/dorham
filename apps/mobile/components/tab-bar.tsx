@@ -41,8 +41,7 @@ export function TabBar({ state, navigation }: TabBarProps) {
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
             accessibilityLabel={tab.label}
-            android_ripple={{ color: "rgba(177,46,40,0.08)", borderless: true }}
-            style={styles.item}
+            style={({ pressed }) => [styles.item, pressed && { opacity: 0.72 }]}
           >
             <View style={[styles.iconWrap, active && styles.iconActive]}>
               <Ionicons

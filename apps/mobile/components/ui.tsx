@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   I18nManager,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -254,7 +255,6 @@ export function Button({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: Boolean(disabled) }}
-      android_ripple={{ color: "rgba(18,12,9,0.08)" }}
       style={({ pressed }) => [
         styles.btn,
         variant === "primary" && { backgroundColor: pressed ? color.clayPressed : color.clay },
@@ -275,6 +275,37 @@ export function Button({
         {label}
       </AppText>
     </Pressable>
+  );
+}
+
+export function ConfirmDialog({
+  visible,
+  title,
+  body,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+}: {
+  visible: boolean;
+  title: string;
+  body: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
+      <View style={styles.confirmBackdrop}>
+        <View style={styles.confirmCard}>
+          <AppText bold size="title">
+            {title}
+          </AppText>
+          <AppText>{body}</AppText>
+          <Button label={confirmLabel} variant="danger" onPress={onConfirm} />
+          <Button label="نه" variant="ghost" onPress={onCancel} />
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -555,4 +586,18 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   seat: { backgroundColor: color.cream, borderRadius: 999 },
+  confirmBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(18,12,9,0.45)",
+    justifyContent: "center",
+    padding: space.screen,
+  },
+  confirmCard: {
+    backgroundColor: color.cream,
+    borderWidth: 1.5,
+    borderColor: color.lineStrong,
+    borderRadius: radius.md,
+    padding: space.lg,
+    gap: space.md,
+  },
 });

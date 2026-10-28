@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
-import { Alert, Linking } from "react-native";
+import { Linking } from "react-native";
 import { useFocusEffect, router } from "expo-router";
 import type { BlockDto, EventDto, Me, NotificationsList } from "@dorham/shared";
 import { EventCard } from "../../components/event-card";
-import { AppText, Badge, Banner, Button, Card, ErrorState, Field, Loading, Screen } from "../../components/ui";
+import { AppText, Badge, Banner, Button, Card, ConfirmDialog, ErrorState, Field, Loading, Screen } from "../../components/ui";
 import { api, ApiError } from "../../lib/api";
 import { verifyFa } from "../../lib/format";
 import { safeOpenUrl } from "../../lib/paths";
@@ -20,6 +20,7 @@ export default function AccountScreen() {
   const [notice, setNotice] = useState("");
   const [signedIn, setSignedIn] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const load = useCallback(() => {
     const ok = isSignedIn();
@@ -83,23 +84,7 @@ export default function AccountScreen() {
   }
 
   function confirmDelete() {
-    Alert.alert("حذف حساب", "حساب برای همیشه حذف شود؟", [
-      { text: "نه", style: "cancel" },
-      {
-        text: "حذف",
-        style: "destructive",
-        onPress: () => {
-          api("/users/me", { method: "DELETE" })
-            .catch(() => undefined)
-            .finally(async () => {
-              await clearSession();
-              setMe(null);
-              setMine([]);
-              setSignedIn(false);
-            });
-        },
-      },
-    ]);
+    setConfirmDeleteOpen(true);
   }
 
   if (!signedIn) {
@@ -138,6 +123,24 @@ export default function AccountScreen() {
 
   return (
     <Screen kicker="پروفایل" title="حساب من">
+      <ConfirmDialog
+        visible={confirmDeleteOpen}
+        title="حذف حساب"
+        body="حساب برای همیشه حذف شود؟"
+        confirmLabel="حذف"
+        onCancel={() => setConfirmDeleteOpen(false)}
+        onConfirm={() => {
+          setConfirmDeleteOpen(false);
+          api("/users/me", { method: "DELETE" })
+            .catch(() => undefined)
+            .finally(async () => {
+              await clearSession();
+              setMe(null);
+              setMine([]);
+              setSignedIn(false);
+            });
+        }}
+      />
       <Banner text={error} />
       <Banner text={notice} tone="ok" />
       <Card accent>
