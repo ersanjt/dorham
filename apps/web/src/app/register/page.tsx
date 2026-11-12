@@ -71,7 +71,7 @@ function RegisterForm() {
         <p className="muted">{copy.auth.registerLead}</p>
       </PageIntro>
       <div className="form-card">
-        <form className="form" onSubmit={onSubmit}>
+        <form className="form" noValidate onSubmit={onSubmit}>
           {error ? <div className="banner err">{error}</div> : null}
           <label className="check">
             <input
@@ -87,7 +87,7 @@ function RegisterForm() {
             <input name="terms" type="checkbox" required checked={terms} onChange={(e) => setTerms(e.target.checked)} />
             <span>
               {copy.auth.termsPrefix}
-              <Link href="/safety">{copy.auth.rules}</Link>
+              <Link href="/terms">{copy.auth.rules}</Link>
               {copy.auth.and}
               <Link href="/privacy">{copy.auth.privacy}</Link> {copy.auth.termsAccept}
             </span>
@@ -104,6 +104,7 @@ function RegisterForm() {
           <label>
             {copy.auth.password}
             <input name="password" type="password" autoComplete="new-password" minLength={10} required />
+            <span className="muted">{copy.auth.passwordHint}</span>
           </label>
           <button className="btn" type="submit" disabled={pending}>
             {pending ? "..." : copy.auth.submitRegister}

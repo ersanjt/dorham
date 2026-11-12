@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { t } from "../lib/copy";
-import { capacityWidth, formatDayChip } from "../lib/format";
+import { capacityWidth, formatDayChip, formatPlace, isPast } from "../lib/format";
 import type { UiLocale } from "../lib/locale";
 
 export type EventCardData = {
@@ -33,9 +33,13 @@ export function EventCard({
   const filled = capacityWidth(event.goingCount, event.capacity);
   const link = href ?? `/events/${event.id}`;
   const cityShow = event.kind === "CITY_SHOW";
-  const action = cta ?? (cityShow ? copy.eventCard.interested : copy.eventCard.details);
+  const past = !cityShow && isPast(event.startsAt);
+  const action = cta ?? (past ? copy.eventCard.detailsPast : cityShow ? copy.eventCard.interested : copy.eventCard.details);
+  const place = formatPlace(event.venue, locale) ?? copy.eventCard.istanbul;
 
-  const status = cityShow
+  const status = past
+    ? copy.eventCard.happened
+    : cityShow
     ? event.goingCount === 0
       ? copy.eventCard.noMarks
       : copy.eventCard.coordinating(event.goingCount.toLocaleString(digits))
@@ -62,7 +66,7 @@ export function EventCard({
         <h3 className="event-title">
           <Link href={link}>{event.title}</Link>
         </h3>
-        <p className="event-venue">{event.venue ?? copy.eventCard.istanbul}</p>
+        <p className="event-venue">{place}</p>
         {!cityShow && event.hostName ? (
           <p className="event-host">
             {copy.eventCard.host} · {event.hostName}
@@ -103,7 +107,7 @@ export function CityCalendarList({ events, locale = "fa" }: { events: EventCardD
             <time dateTime={event.startsAt}>{formatDayChip(event.startsAt, locale)}</time>
             <span className="city-calendar-main">
               <strong>{event.title}</strong>
-              <span className="muted">{event.venue ?? copy.eventCard.istanbul}</span>
+              <span className="muted">{formatPlace(event.venue, locale) ?? copy.eventCard.istanbul}</span>
             </span>
             <span className="city-calendar-meta">
               {event.goingCount > 0

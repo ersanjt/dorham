@@ -27,6 +27,21 @@ export function formatDayChip(iso: string, locale: UiLocale = "fa") {
   return `${weekday} ${dayMonth} · ${time}`;
 }
 
+export function isPast(iso: string, now = Date.now()) {
+  const time = new Date(iso).getTime();
+  return Number.isFinite(time) && time < now;
+}
+
+/** Seeded city shows sometimes still say the hall is TBC. Say that in the UI language. */
+export function formatPlace(venue: string | null | undefined, locale: UiLocale = "fa") {
+  const raw = venue?.trim();
+  if (!raw) return null;
+  if (/(\(venue tbc\)|\btbc\b)/i.test(raw)) {
+    return locale === "en" ? "Istanbul, venue not set yet" : "استانبول، سالن هنوز مشخص نیست";
+  }
+  return raw;
+}
+
 export function formatWhen(iso: string, locale: UiLocale = "fa") {
   return new Date(iso).toLocaleString(dateTag(locale), {
     day: "numeric",
@@ -65,6 +80,18 @@ export const verifyFa: Record<string, string> = {
   VERIFIED: "تأیید دست‌نویس",
   REJECTED: "رد شده",
 };
+
+const verifyEn: Record<string, string> = {
+  NONE: "Not verified",
+  PENDING: "In review",
+  VERIFIED: "Verified by hand",
+  REJECTED: "Rejected",
+};
+
+export function verifyLabel(status: string, locale: UiLocale = "fa") {
+  const map = locale === "en" ? verifyEn : verifyFa;
+  return map[status] ?? status;
+}
 
 export function formatCount(n: number, locale: UiLocale = "fa") {
   return n.toLocaleString(numberTag(locale));

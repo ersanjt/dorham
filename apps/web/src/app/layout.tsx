@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Markazi_Text, Vazirmatn } from "next/font/google";
 import { LocaleProvider } from "../components/locale-provider";
+import { t } from "../lib/copy";
 import { getLocale } from "../lib/locale-server";
 import "./globals.css";
 
@@ -31,30 +32,34 @@ const fraunces = Fraunces({
 
 const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://dorham.app").replace(/\/$/, "");
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: "Dorham — دورهم",
-  description: "Iranian community in Turkey. Your people, in this city.",
-  icons: {
-    icon: [{ url: "/brand/icon.png", type: "image/png" }],
-    apple: [{ url: "/brand/icon.png" }],
-  },
-  openGraph: {
-    title: "Dorham — دورهم",
-    description: "جامعهٔ ایرانی استانبول. دور هم، نه سوایپ.",
-    url: siteUrl,
-    siteName: "Dorham",
-    locale: "fa_IR",
-    type: "website",
-    images: [{ url: "/brand/icon.png", width: 1024, height: 1024, alt: "Dorham" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Dorham — دورهم",
-    description: "جامعهٔ ایرانی استانبول. دور هم، نه سوایپ.",
-    images: ["/brand/icon.png"],
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const seo = t(locale).seo;
+  return {
+    metadataBase: new URL(siteUrl),
+    title: seo.homeTitle,
+    description: seo.homeDescription,
+    icons: {
+      icon: [{ url: "/brand/icon.png", type: "image/png" }],
+      apple: [{ url: "/brand/icon.png" }],
+    },
+    openGraph: {
+      title: seo.homeTitle,
+      description: seo.homeDescription,
+      url: siteUrl,
+      siteName: "Dorham",
+      locale: locale === "en" ? "en_GB" : "fa_IR",
+      type: "website",
+      images: [{ url: "/brand/icon.png", width: 1024, height: 1024, alt: "Dorham" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: seo.homeTitle,
+      description: seo.homeDescription,
+      images: ["/brand/icon.png"],
+    },
+  };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();

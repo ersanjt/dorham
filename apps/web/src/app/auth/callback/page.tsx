@@ -43,6 +43,7 @@ export default function OAuthCallbackPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [ageRequired, setAgeRequired] = useState(false);
+  const [registerHref, setRegisterHref] = useState("/register");
 
   useEffect(() => {
     const payload = readCallback();
@@ -77,7 +78,11 @@ export default function OAuthCallbackPage() {
       .catch((err: unknown) => {
         exchangeInFlight = null;
         if (!active) return;
-        if (err instanceof ApiError && err.code === "AUTH_AGE_REQUIRED") setAgeRequired(true);
+        if (err instanceof ApiError && err.code === "AUTH_AGE_REQUIRED") {
+          setAgeRequired(true);
+          const next = payload.next;
+          setRegisterHref(next && next !== "/register" ? `/register?next=${encodeURIComponent(next)}` : "/register");
+        }
         setError(err instanceof ApiError ? err.message : copy.auth.oauthFail);
       });
     return () => {
@@ -92,7 +97,7 @@ export default function OAuthCallbackPage() {
         {error ? <div className="banner err">{error}</div> : <p>{copy.auth.oauthReturn}</p>}
         {ageRequired ? (
           <p>
-            <Link href="/register">{copy.auth.register}</Link>
+            <Link href={registerHref}>{copy.auth.register}</Link>
           </p>
         ) : null}
       </div>

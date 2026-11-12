@@ -16,7 +16,9 @@ import {
   eventStatusLabel,
   formatCount,
   formatDayChip,
+  formatPlace,
   formatPriceTry,
+  isPast,
   safeJsonLd,
 } from "../../../lib/format";
 import { getLocale } from "../../../lib/locale-server";
@@ -49,16 +51,21 @@ async function loadGuests(id: string): Promise<EventGuest[]> {
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
+  const locale = await getLocale();
+  const seo = t(locale).seo;
   const event = await loadEvent(id);
-  if (!event) return { title: "Dorham — دورهم" };
+  if (!event) return { title: seo.homeTitle };
+  const place = formatPlace(event.venue, locale) ?? seo.inCity;
+  const when = formatDayChip(event.startsAt, locale);
+  const title = `${event.title} · ${place} · ${when}`;
   const description = event.description.replace(/\s+/g, " ").trim().slice(0, 160);
   const url = eventPageUrl(event.id);
   return {
-    title: `${event.title} — Dorham`,
+    title,
     description,
     alternates: { canonical: url },
     openGraph: {
-      title: event.title,
+      title,
       description,
       url,
       type: "article",
@@ -73,6 +80,8 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const [event, guests] = await Promise.all([loadEvent(id), loadGuests(id)]);
   if (!event) notFound();
   const cityShow = event.kind === "CITY_SHOW";
+  const ended = isPast(event.startsAt);
+  const place = formatPlace(event.venue, locale);
   const filled = capacityWidth(event.goingCount, event.capacity);
   const goingN = formatCount(event.goingCount, locale);
   const capN = event.capacity ? formatCount(event.capacity, locale) : undefined;
@@ -82,7 +91,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(eventJsonLd(event)) }} />
       <SiteHeader />
       <PageIntro
-        kicker={`${cityShow ? copy.eventCard.cityCal : event.venue ?? copy.eventCard.istanbul} · ${formatDayChip(event.startsAt, locale)}`}
+        kicker={`${cityShow ? copy.eventCard.cityCal : place ?? copy.eventCard.istanbul} · ${formatDayChip(event.startsAt, locale)}`}
         title={event.title}
       >
         {!cityShow ? (
@@ -104,27 +113,33 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
       <p className="prose">{event.description}</p>
       {event.venueSlug ? (
         <p className="meta">
-          {copy.event.place} <Link href={`/venues/${event.venueSlug}`}>{event.venue ?? copy.event.placePage}</Link>
+          {copy.event.place} <Link href={`/venues/${event.venueSlug}`}>{place ?? copy.event.placePage}</Link>
           {event.address ? ` · ${event.address}` : ""}
         </p>
       ) : event.venue || event.address ? (
-        <p className="meta">{[event.venue, event.address].filter(Boolean).join(" · ")}</p>
+        <p className="meta">{[place, event.address].filter(Boolean).join(" · ")}</p>
       ) : null}
 
       {!cityShow ? (
         <article className="card">
           <p className="strong">{formatPriceTry(event.priceTry, locale)}</p>
           <p className="muted">{event.priceTry ? copy.event.cashNote : copy.event.freeNote}</p>
-          <p className="strong">{copy.event.going(goingN, capN)}</p>
-          <p className="muted">
-            {event.capacity && event.goingCount >= event.capacity ? copy.event.full : copy.event.room}
-            {event.waitlistCount ? copy.event.waiting(formatCount(event.waitlistCount, locale)) : ""}
-          </p>
-          {filled != null ? (
-            <div className="capacity" aria-hidden>
-              <i style={{ width: `${filled}%` }} />
-            </div>
-          ) : null}
+          {ended ? (
+            <p className="strong">{copy.event.happened}</p>
+          ) : (
+            <>
+              <p className="strong">{copy.event.going(goingN, capN)}</p>
+              <p className="muted">
+                {event.capacity && event.goingCount >= event.capacity ? copy.event.full : copy.event.room}
+                {event.waitlistCount ? copy.event.waiting(formatCount(event.waitlistCount, locale)) : ""}
+              </p>
+              {filled != null ? (
+                <div className="capacity" aria-hidden>
+                  <i style={{ width: `${filled}%` }} />
+                </div>
+              ) : null}
+            </>
+          )}
         </article>
       ) : (
         <article className="card">
@@ -133,7 +148,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         </article>
       )}
 
-      {!cityShow ? (
+      {!cityShow && !ended ? (
         <section className="card" style={{ maxWidth: 360 }}>
           <p className="strong">{copy.share.qrTitle}</p>
           <p className="muted">{copy.share.qrLead}</p>
@@ -141,15 +156,25 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         </section>
       ) : null}
 
-      <div className="row">
-        <ShareEvent title={event.title} text={eventInviteText(event, locale)} url={eventPageUrl(event.id)} />
-      </div>
+      {ended && event.venueSlug ? (
+        <div className="row">
+          <p className="muted">{copy.event.after}</p>
+          <Link className="btn" href={`/venues/${event.venueSlug}`}>
+            {copy.event.placePage}
+          </Link>
+        </div>
+      ) : (
+        <div className="row">
+          <ShareEvent title={event.title} text={eventInviteText(event, locale)} url={eventPageUrl(event.id)} />
+        </div>
+      )}
       <EventActions
         eventId={event.id}
         hostId={event.host.id}
         priceTry={event.priceTry}
         initialGuests={guests}
         kind={event.kind}
+        ended={ended}
         inviteTitle={event.title}
         inviteText={eventInviteText(event, locale)}
         inviteUrl={eventPageUrl(event.id)}

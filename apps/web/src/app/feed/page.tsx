@@ -56,7 +56,7 @@ export default async function FeedPage() {
       ) : (
         <div className="stack">
           {posts.map((post) => (
-            <FeedPostCard key={post.id} post={post} />
+            <FeedPostCard key={post.id} post={post} locale={locale} />
           ))}
         </div>
       )}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import type { EventDto } from "@dorham/shared";
 import { CityCalendarList, EventCard } from "../../components/event-card";
 import { PageIntro } from "../../components/page-intro";
@@ -10,6 +11,16 @@ import { getLocale } from "../../lib/locale-server";
 import { resolveApiBase } from "../../lib/api-base";
 
 const API = resolveApiBase();
+
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = t(await getLocale()).seo;
+  return {
+    title: seo.eventsTitle,
+    description: seo.eventsDescription,
+    alternates: { canonical: "/events" },
+    openGraph: { title: seo.eventsTitle, description: seo.eventsDescription, url: "/events" },
+  };
+}
 
 async function loadEvents(when: "upcoming" | "past", kind?: "COMMUNITY" | "CITY_SHOW"): Promise<EventDto[]> {
   try {

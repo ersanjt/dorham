@@ -99,6 +99,11 @@ android {
         abortOnError false
         checkReleaseBuilds false
     }
+    def dorhamKeyPropsFile = new File(System.getProperty("user.home"), ".dorham/upload-keystore.properties")
+    def dorhamKeyProps = new Properties()
+    if (dorhamKeyPropsFile.exists()) {
+        dorhamKeyPropsFile.withInputStream { dorhamKeyProps.load(it) }
+    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -106,15 +111,21 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            if (dorhamKeyPropsFile.exists()) {
+                storeFile file(dorhamKeyProps.getProperty("storeFile"))
+                storePassword dorhamKeyProps.getProperty("storePassword")
+                keyAlias dorhamKeyProps.getProperty("keyAlias")
+                keyPassword dorhamKeyProps.getProperty("keyPassword")
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig dorhamKeyPropsFile.exists() ? signingConfigs.release : signingConfigs.debug
             shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"

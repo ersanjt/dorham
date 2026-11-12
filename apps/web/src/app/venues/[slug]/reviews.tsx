@@ -28,10 +28,10 @@ export function VenueReviews({ slug, initial }: { slug: string; initial: VenueRe
         method: "POST",
         body: JSON.stringify({ body }),
       });
-      setNotice("نظرت ثبت شد و بعد از بررسی مدیر منتشر می‌شود.");
+      setNotice(copy.venues.reviewSaved);
       e.currentTarget.reset();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "نظر ثبت نشد.");
+      setError(err instanceof ApiError ? err.message : copy.venues.reviewFail);
     }
   }
 
@@ -46,20 +46,22 @@ export function VenueReviews({ slug, initial }: { slug: string; initial: VenueRe
       ) : signedIn ? (
         <form className="form wide" onSubmit={onSubmit}>
           <label>
-            تجربه‌ات
+            {copy.venues.reviewExperience}
             <textarea name="body" minLength={10} maxLength={800} rows={3} required />
           </label>
           <button className="btn" type="submit">
-            ارسال برای بررسی
+            {copy.venues.reviewSend}
           </button>
         </form>
       ) : (
         <p className="muted">
-          برای نوشتن تجربه <Link href={`/login?next=/venues/${slug}`}>وارد شو</Link>.
+          <Link className="btn" href={`/login?next=/venues/${slug}`}>
+            {copy.venues.reviewLogin}
+          </Link>
         </p>
       )}
       <div className="stack">
-        {rows.length === 0 ? <p className="muted">هنوز نظر تأییدشده‌ای نیست.</p> : null}
+        {rows.length === 0 ? <p className="muted">{copy.venues.reviewEmpty}</p> : null}
         {rows.map((row) => (
           <article className="card" key={row.id}>
             <p className="muted">
@@ -67,7 +69,7 @@ export function VenueReviews({ slug, initial }: { slug: string; initial: VenueRe
               {row.author.verificationStatus === "VERIFIED" ? (
                 <>
                   {" "}
-                  <span className="verify-badge">تأییدشده</span>
+                  <span className="verify-badge">{copy.rsvp.verified}</span>
                 </>
               ) : null}
             </p>

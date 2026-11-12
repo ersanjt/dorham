@@ -48,7 +48,7 @@ export function FeedCompose() {
   if (me?.status === "PAUSED") {
     return (
       <p className="muted">
-        حساب متوقف است. برای نوشتن در فید، از <a className="card-cta" href="/account">حساب</a> از سر بگیر.
+        {feed.paused} <a className="card-cta" href="/account">{feed.account}</a>
       </p>
     );
   }
@@ -56,7 +56,7 @@ export function FeedCompose() {
   if (me && !canPost(me)) {
     return (
       <p className="muted">
-        نوشتن پست برای میزبان و اعضای تأییدشده است. از حساب، عکس دست‌نویس بفرست. نظر گذاشتن برای همهٔ اعضا آزاد است.
+        {feed.hostsOnly}
       </p>
     );
   }
@@ -81,7 +81,7 @@ export function FeedCompose() {
       router.push(`/feed/${post.id}`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "پست ذخیره نشد.");
+      setError(err instanceof ApiError ? err.message : feed.saveFail);
     } finally {
       setPending(false);
     }
@@ -91,21 +91,21 @@ export function FeedCompose() {
     <form className="form wide" onSubmit={onSubmit}>
       {error ? <div className="banner err">{error}</div> : null}
       <label>
-        برای استانبول بنویس
+        {feed.write}
         <textarea
           name="body"
           minLength={20}
           maxLength={2000}
           rows={4}
           required
-          placeholder="مثلاً: سه‌شنبه ساعت ۱۹ سفیر آکسارای خلوت بود؛ جوجه خوب، میز برای ۴ نفر راحت جا شد."
+          placeholder={feed.placeholder}
         />
       </label>
       {events.length > 0 ? (
         <label>
-          وصل به رویداد
+          {feed.linkEvent}
           <select value={eventId} onChange={(e) => setEventId(e.target.value)}>
-            <option value="">بدون رویداد</option>
+            <option value="">{feed.noEvent}</option>
             {events.map((event) => (
               <option key={event.id} value={event.id}>
                 {event.title}
@@ -114,9 +114,9 @@ export function FeedCompose() {
           </select>
         </label>
       ) : null}
-      {venueSlug ? <p className="muted">وصل به مکان: {venueSlug}</p> : null}
+      {venueSlug ? <p className="muted">{feed.linkVenue}: {venueSlug}</p> : null}
       <button className="btn" type="submit" disabled={pending}>
-        انتشار
+        {feed.publish}
       </button>
     </form>
   );

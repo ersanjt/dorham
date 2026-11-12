@@ -28,14 +28,24 @@ async function loadPerson(id: string): Promise<PublicUser | null> {
 }
 
 async function loadHosted(id: string): Promise<EventDto[]> {
-  try {
-    const res = await fetch(`${API}/v1/events?city=istanbul&hostId=${id}&limit=20`, catalogInit());
-    if (!res.ok) return [];
-    const json = (await res.json()) as { data: EventDto[] };
-    return json.data ?? [];
-  } catch {
-    return [];
+  async function load(when: "upcoming" | "past"): Promise<EventDto[]> {
+    try {
+      const res = await fetch(
+        `${API}/v1/events?city=istanbul&kind=COMMUNITY&hostId=${encodeURIComponent(id)}&when=${when}&limit=20`,
+        catalogInit(),
+      );
+      if (!res.ok) return [];
+      const json = (await res.json()) as { data: EventDto[] };
+      return json.data ?? [];
+    } catch {
+      return [];
+    }
   }
+  const [upcoming, past] = await Promise.all([load("upcoming"), load("past")]);
+  const seen = new Set<string>();
+  return [...upcoming, ...past]
+    .filter((event) => (seen.has(event.id) ? false : (seen.add(event.id), true)))
+    .sort((a, b) => b.startsAt.localeCompare(a.startsAt));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {

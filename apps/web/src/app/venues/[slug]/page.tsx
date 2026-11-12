@@ -56,17 +56,21 @@ async function loadEvents(slug: string): Promise<EventDto[]> {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
+  const locale = await getLocale();
+  const seo = t(locale).seo;
   const venue = await loadVenue(slug);
-  if (!venue) return { title: "Dorham — دورهم" };
-  const description = venue.description.replace(/\s+/g, " ").trim().slice(0, 160);
+  if (!venue) return { title: seo.homeTitle };
+  const title = `${venue.name} · ${seo.inCity}`;
+  const own = venue.description.replace(/\s+/g, " ").trim();
+  const description = `${title}. ${own}`.slice(0, 160);
   const origin = (process.env.NEXT_PUBLIC_APP_URL || "https://dorham.app").replace(/\/$/, "");
   const url = `${origin}/venues/${venue.slug}`;
   return {
-    title: `${venue.name} — Dorham`,
+    title,
     description,
     alternates: { canonical: url },
     openGraph: {
-      title: venue.name,
+      title,
       description,
       url,
       type: "article",
@@ -95,7 +99,10 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
         kicker={`${venueKindLabel(venue.kind, locale)} · ${venueAreaLabel(venue.area, locale)}`}
         title={venue.name}
       >
-        <p className="lead">{venue.description}</p>
+        {locale === "en" ? <p className="muted">{copy.venues.ownNote}</p> : null}
+        <p className="lead" lang={locale === "en" ? "fa" : undefined}>
+          {venue.description}
+        </p>
       </PageIntro>
 
       <VenueGallery items={gallery} name={venue.name} />
@@ -111,7 +118,9 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
             <div className="venue-fact">
               <dt>{copy.venues.hours}</dt>
               <dd>
-                <span className="isolate-ltr">{venue.hours}</span>
+                <span className="isolate-ltr" dir="ltr">
+                  {venue.hours}
+                </span>
               </dd>
             </div>
           ) : null}

@@ -181,6 +181,7 @@ export function EventActions({
   priceTry = 0,
   initialGuests = [],
   kind = "COMMUNITY",
+  ended = false,
   inviteTitle,
   inviteText,
   inviteUrl,
@@ -190,6 +191,7 @@ export function EventActions({
   priceTry?: number;
   initialGuests?: EventGuest[];
   kind?: "COMMUNITY" | "CITY_SHOW";
+  ended?: boolean;
   inviteTitle?: string;
   inviteText?: string;
   inviteUrl?: string;
@@ -236,9 +238,13 @@ export function EventActions({
     return (
       <section className="event-actions" style={{ marginTop: 28 }}>
         <div className="row">
-          <Link className="btn" href={`/login?next=/events/${eventId}`}>
-            {cityShow ? copy.rsvp.loginInterest : copy.rsvp.loginGoing}
-          </Link>
+          {ended ? (
+            <p className="muted">{copy.rsvp.ended}</p>
+          ) : (
+            <Link className="btn" href={`/login?next=/events/${eventId}`}>
+              {cityShow ? copy.rsvp.loginInterest : copy.rsvp.loginGoing}
+            </Link>
+          )}
           <Link className="btn ghost" href={`/feed?event=${eventId}`}>
             {copy.rsvp.writeFeed}
           </Link>
@@ -267,8 +273,8 @@ export function EventActions({
         <div className="banner">{cityShow ? copy.rsvp.marked : copy.rsvp.waitlisted}</div>
       ) : null}
       {mine?.status === "GOING" && !cityShow ? <div className="banner ok">{copy.rsvp.confirmed}</div> : null}
-      {mine?.status === "GOING" && !cityShow ? <p className="muted">{copy.rsvp.scanDoor}</p> : null}
-      {mine?.status === "GOING" && !cityShow && inviteText && inviteUrl ? (
+      {mine?.status === "GOING" && !cityShow && !ended ? <p className="muted">{copy.rsvp.scanDoor}</p> : null}
+      {mine?.status === "GOING" && !cityShow && !ended && inviteText && inviteUrl ? (
         <div className="card" style={{ marginTop: 12 }}>
           <p className="strong">{copy.rsvp.inviteTitle}</p>
           <p className="muted">{copy.rsvp.inviteBody}</p>
@@ -283,7 +289,9 @@ export function EventActions({
       {message ? <div className="banner ok">{message}</div> : null}
       {error ? <div className="banner err">{error}</div> : null}
       <div className="row">
-        {!mine ? (
+        {ended && !mine ? (
+          <p className="muted">{copy.rsvp.ended}</p>
+        ) : !mine ? (
           <button
             className="btn"
             type="button"

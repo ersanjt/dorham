@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import type { VenueDoor, VenueVisitDto } from "@dorham/shared";
+import { useCopy, useUiLocale } from "../../../components/locale-provider";
 import { QrImage } from "../../../components/qr-image";
 import { api, ApiError } from "../../../lib/api";
 import { useSession } from "../../../lib/use-session";
@@ -14,6 +15,9 @@ export function VenueVisitActions({
   venueId?: string;
 }) {
   const { signedIn, ready } = useSession();
+  const copy = useCopy();
+  const locale = useUiLocale();
+  const digits = locale === "en" ? "en-GB" : "fa-IR";
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [door, setDoor] = useState<VenueDoor | null>(null);
@@ -38,10 +42,10 @@ export function VenueVisitActions({
   if (!signedIn) {
     return (
       <section className="venue-visit-box">
-        <h3>آیا اینجا بوده‌ای؟</h3>
-        <p className="muted">بعد از حضور واقعی، صاحب مکان تأیید می‌کند و در پروفایلت دیده می‌شود.</p>
+        <h3>{copy.venues.visitTitle}</h3>
+        <p className="muted">{copy.venues.visitLead}</p>
         <Link className="btn" href={`/login?next=/venues/${slug}`}>
-          ورود برای ثبت حضور
+          {copy.venues.visitLogin}
         </Link>
       </section>
     );
@@ -49,10 +53,8 @@ export function VenueVisitActions({
 
   return (
     <section className="venue-visit-box">
-      <h3>آیا اینجا بوده‌ای؟</h3>
-      <p className="muted">
-        حضور تأییدشده روی پروفایل می‌آید. این لایو «الان کی اینجاست» نیست — فقط سابقهٔ واقعی.
-      </p>
+      <h3>{copy.venues.visitTitle}</h3>
+      <p className="muted">{copy.venues.visitBody}</p>
       {message ? <div className="banner ok">{message}</div> : null}
       {error ? <div className="banner err">{error}</div> : null}
 
@@ -66,19 +68,17 @@ export function VenueVisitActions({
               try {
                 const visit = await api<VenueVisitDto>(`/venues/${slug}/visits`, { method: "POST", body: "{}" });
                 setMessage(
-                  visit.status === "VERIFIED"
-                    ? "حضورت قبلاً تأیید شده."
-                    : "درخواست ثبت شد. از صاحب مکان بخواه با QR یا لینک دم‌در تأیید کند.",
+                  visit.status === "VERIFIED" ? copy.venues.visitAlready : copy.venues.visitAsked,
                 );
               } catch (err) {
-                setError(err instanceof ApiError ? err.message : "درخواست نشد.");
+                setError(err instanceof ApiError ? err.message : copy.venues.visitAskFail);
               }
             }}
           >
-            درخواست تأیید حضور
+            {copy.venues.visitAsk}
           </button>
           <Link className="btn ghost" href={`/venues/${slug}/checkin`}>
-            صفحهٔ دم‌در
+            {copy.venues.visitDoor}
           </Link>
         </div>
       ) : null}
@@ -86,7 +86,7 @@ export function VenueVisitActions({
       {!door ? (
         <div className="venue-claim-soft">
           <button className="linkish" type="button" onClick={() => setShowClaim((v) => !v)}>
-            صاحب این مکان هستی؟
+            {copy.venues.visitOwnerQ}
           </button>
           {showClaim ? (
             <div className="row" style={{ marginTop: 8 }}>
@@ -99,13 +99,13 @@ export function VenueVisitActions({
                     await api(`/venues/${slug}/claim`, { method: "POST", body: "{}" });
                     const d = await api<VenueDoor>(`/venues/${slug}/door`);
                     setDoor(d);
-                    setMessage("مالکیت مکان برای تو ثبت شد. لینک دم‌در آماده‌ست.");
+                    setMessage(copy.venues.visitClaimed);
                   } catch (err) {
-                    setError(err instanceof ApiError ? err.message : "مالکیت گرفته نشد.");
+                    setError(err instanceof ApiError ? err.message : copy.venues.visitClaimFail);
                   }
                 }}
               >
-                ثبت مالکیت
+                {copy.venues.visitClaim}
               </button>
             </div>
           ) : null}
@@ -114,19 +114,22 @@ export function VenueVisitActions({
 
       {door ? (
         <div className="venue-door-panel">
-          <h4>ابزار صاحب مکان</h4>
+          <h4>{copy.venues.visitTools}</h4>
           <p className="meta">
-            تأییدشده: {door.verifiedCount.toLocaleString("fa-IR")} · در انتظار:{" "}
-            {door.pendingCount.toLocaleString("fa-IR")}
+            {copy.venues.visitCounts(
+              door.verifiedCount.toLocaleString(digits),
+              door.pendingCount.toLocaleString(digits),
+            )}
           </p>
-          <p className="muted">QR دم در را روی پیشخوان بگذار. اسکن، حضور مهمان را تأیید می‌کند.</p>
+          <p className="muted">{copy.venues.visitQrLead}</p>
           <QrImage url={door.url} alt={door.name} size={220} />
           <p className="muted">
-            یا از <Link href={`/venues/${slug}/checkin`}>صفحهٔ چک‌این</Link> استفاده کن.
+            {copy.venues.visitOr} <Link href={`/venues/${slug}/checkin`}>{copy.venues.visitCheckinLink}</Link>{" "}
+            {copy.venues.visitUse}
           </p>
           {pending.length > 0 ? (
             <div className="stack" style={{ marginTop: 12 }}>
-              <h4>در انتظار تأیید</h4>
+              <h4>{copy.venues.visitPending}</h4>
               {pending.map((v) => (
                 <div className="row" key={v.id}>
                   <span>{v.guestName ?? v.guestId}</span>
@@ -140,10 +143,10 @@ export function VenueVisitActions({
                         body: JSON.stringify({ userId: v.guestId }),
                       });
                       setPending((prev) => prev.filter((p) => p.id !== v.id));
-                      setMessage(`${v.guestName ?? "مهمان"} تأیید شد.`);
+                      setMessage(copy.venues.visitGuestOk(v.guestName ?? copy.venues.visitOk));
                     }}
                   >
-                    تأیید
+                    {copy.venues.visitOk}
                   </button>
                 </div>
               ))}
@@ -160,25 +163,25 @@ export function VenueVisitActions({
                   method: "POST",
                   body: JSON.stringify({ userId }),
                 });
-                setMessage("حضور مهمان تأیید شد.");
+                setMessage(copy.venues.visitManualOk);
                 const list = await api<Array<VenueVisitDto & { guestName?: string; guestId?: string }>>(
                   `/venues/${slug}/visits`,
                 );
                 setPending(list.filter((v) => v.status === "PENDING"));
                 (e.target as HTMLFormElement).reset();
               } catch (err) {
-                setError(err instanceof ApiError ? err.message : "تأیید نشد.");
+                setError(err instanceof ApiError ? err.message : copy.venues.visitManualFail);
               }
             }}
           >
             <details>
-              <summary>تأیید دستی با شناسه (پشتیبان)</summary>
+              <summary>{copy.venues.visitManual}</summary>
               <label>
-                شناسه کاربر
+                {copy.venues.visitUserId}
                 <input name="userId" placeholder="cuid" required />
               </label>
               <button className="btn" type="submit">
-                تأیید حضور
+                {copy.venues.visitOk}
               </button>
             </details>
           </form>

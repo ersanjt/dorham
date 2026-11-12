@@ -6,12 +6,14 @@ import type { NotificationsList } from "@dorham/shared";
 import { LocaleToggle } from "./locale-toggle";
 import { useCopy, useUiLocale } from "./locale-provider";
 import { api } from "../lib/api";
+import { useAuthHrefs } from "../lib/use-auth-href";
 import { useSession } from "../lib/use-session";
 
 export function SiteHeader() {
   const copy = useCopy();
   const locale = useUiLocale();
   const { signedIn } = useSession();
+  const authHrefs = useAuthHrefs();
   const [unread, setUnread] = useState(0);
 
   const refreshUnread = useCallback(() => {
@@ -59,10 +61,10 @@ export function SiteHeader() {
         <LocaleToggle />
         {!signedIn ? (
           <>
-            <Link className="btn ghost" href="/login">
+            <Link className="btn ghost" href={authHrefs.login}>
               {copy.nav.login}
             </Link>
-            <Link className="btn" href="/register">
+            <Link className="btn" href={authHrefs.register}>
               {copy.nav.join}
             </Link>
           </>

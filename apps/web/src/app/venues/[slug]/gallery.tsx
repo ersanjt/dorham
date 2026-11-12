@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useCopy } from "../../../components/locale-provider";
 import { safeHref } from "../../../lib/safe-href";
 
 export type GalleryItem = {
@@ -28,10 +29,11 @@ function embedSrc(src: string) {
 
 export function VenueGallery({ items, name }: { items: GalleryItem[]; name: string }) {
   const [active, setActive] = useState(0);
+  const copy = useCopy();
   if (!items.length) {
     return (
       <section className="venue-gallery">
-        <div className="venue-gallery-empty">هنوز تصویری برای این مکان ثبت نشده.</div>
+        <div className="venue-gallery-empty">{copy.venues.galleryEmpty}</div>
       </section>
     );
   }
@@ -42,7 +44,7 @@ export function VenueGallery({ items, name }: { items: GalleryItem[]; name: stri
   const isIframe = current.kind === "map" || current.src.includes("svembed") || current.src.includes("output=embed");
 
   return (
-    <section className="venue-gallery" aria-label={`گالری ${name}`}>
+    <section className="venue-gallery" aria-label={copy.venues.galleryAria(name)}>
       <div className="venue-gallery-main">
         {isIframe && frameSrc ? (
           <iframe
@@ -58,12 +60,12 @@ export function VenueGallery({ items, name }: { items: GalleryItem[]; name: stri
           // eslint-disable-next-line @next/next/no-img-element
           <img className="venue-gallery-frame" src={imageSrc} alt={current.label} />
         ) : (
-          <div className="venue-gallery-empty">این تصویر قابل نمایش نیست.</div>
+          <div className="venue-gallery-empty">{copy.venues.galleryBroken}</div>
         )}
         <p className="venue-gallery-caption">{current.label}</p>
       </div>
       {items.length > 1 ? (
-        <div className="venue-gallery-thumbs" role="tablist" aria-label="انتخاب تصویر">
+        <div className="venue-gallery-thumbs" role="tablist" aria-label={copy.venues.galleryPick}>
           {items.map((item, index) => {
             const thumbIframe = item.kind === "map" || item.src.includes("svembed");
             return (
@@ -77,7 +79,7 @@ export function VenueGallery({ items, name }: { items: GalleryItem[]; name: stri
               >
                 {thumbIframe ? (
                   <span className="venue-gallery-thumb-label">
-                    {item.kind === "map" ? "نقشه" : "خیابان"}
+                    {item.kind === "map" ? copy.venues.map : copy.venues.galleryStreet}
                   </span>
                 ) : safeHref(item.src) ? (
                   // eslint-disable-next-line @next/next/no-img-element

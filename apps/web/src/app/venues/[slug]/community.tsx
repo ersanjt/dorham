@@ -3,17 +3,11 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { Me, VenueHangPlanDto, VenuePhotoDto } from "@dorham/shared";
+import { useCopy, useUiLocale } from "../../../components/locale-provider";
 import { api, ApiError } from "../../../lib/api";
 import { formatDayChip } from "../../../lib/format";
 import { publicMediaUrl } from "../../../lib/media-url";
 import { useSession } from "../../../lib/use-session";
-
-const INTENT_FA: Record<string, string> = {
-  LUNCH: "ناهار",
-  DINNER: "شام",
-  COFFEE: "قهوه",
-  OTHER: "دورهم",
-};
 
 function toLocalInputValue(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -34,6 +28,9 @@ type Slot = {
 
 export function VenueCommunity({ slug }: { slug: string }) {
   const { signedIn, ready } = useSession();
+  const copy = useCopy();
+  const locale = useUiLocale();
+  const digits = locale === "en" ? "en-GB" : "fa-IR";
   const [meId, setMeId] = useState<string | null>(null);
   const [plans, setPlans] = useState<VenueHangPlanDto[]>([]);
   const [error, setError] = useState("");
@@ -87,7 +84,7 @@ export function VenueCommunity({ slug }: { slug: string }) {
     const file = (form.elements.namedItem("file") as HTMLInputElement)?.files?.[0];
     const caption = String(new FormData(form).get("caption") ?? "").trim();
     if (!file) {
-      setError("یک عکس انتخاب کن.");
+      setError(copy.venues.hangPickPhoto);
       return;
     }
     try {
@@ -98,10 +95,10 @@ export function VenueCommunity({ slug }: { slug: string }) {
         method: "POST",
         body: JSON.stringify({ mediaId: media.id, caption: caption || undefined }),
       });
-      setNotice("عکس ثبت شد و بعد از بررسی مدیر در گالری می‌آید.");
+      setNotice(copy.venues.hangPhotoSaved);
       form.reset();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "آپلود نشد.");
+      setError(err instanceof ApiError ? err.message : copy.venues.hangPhotoFail);
     }
   }
 
@@ -115,7 +112,7 @@ export function VenueCommunity({ slug }: { slug: string }) {
     const intent = String(form.get("intent") ?? "OTHER");
     const note = String(form.get("note") ?? "").trim();
     if (!local) {
-      setError("زمان را انتخاب کن.");
+      setError(copy.venues.hangNeedTime);
       setPendingPlan(false);
       return;
     }
@@ -128,11 +125,11 @@ export function VenueCommunity({ slug }: { slug: string }) {
           note: note || undefined,
         }),
       });
-      setNotice("برنامه‌ات ثبت شد. دیگران می‌توانند ببینند و بپیوندند.");
+      setNotice(copy.venues.hangSaved);
       e.currentTarget.reset();
       await loadPlans();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "برنامه ثبت نشد.");
+      setError(err instanceof ApiError ? err.message : copy.venues.hangSaveFail);
     } finally {
       setPendingPlan(false);
     }
@@ -150,10 +147,10 @@ export function VenueCommunity({ slug }: { slug: string }) {
           intent: slot.intent,
         }),
       });
-      setNotice("به این زمان پیوستی.");
+      setNotice(copy.venues.hangJoined);
       await loadPlans();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "پیوستن ممکن نشد.");
+      setError(err instanceof ApiError ? err.message : copy.venues.hangJoinFail);
     } finally {
       setJoining(null);
     }
@@ -167,20 +164,25 @@ export function VenueCommunity({ slug }: { slug: string }) {
   })();
 
   return (
-    <section className="venue-community" aria-label="هماهنگی حضور">
+    <section className="venue-community" aria-label={copy.venues.hangAria}>
       <div className="section-head">
-        <p className="kicker">دلیل برگشتن به دورهم</p>
-        <h2>کی می‌آید اینجا؟</h2>
+        <p className="kicker">{copy.venues.hangKicker}</p>
+        <h2>{copy.venues.hangTitle}</h2>
       </div>
-      <p className="muted venue-community-lead">
-        برنامهٔ حضور برای هماهنگی است — نه نقشهٔ زنده. اگر کسی زمان گذاشته، بپیوند؛ اگر نه، خودت اعلام کن.
-      </p>
+      <p className="muted venue-community-lead">{copy.venues.hangLead}</p>
       {notice ? <div className="banner ok">{notice}</div> : null}
       {error ? <div className="banner err">{error}</div> : null}
 
       <div className="hang-slots">
         {slots.length === 0 ? (
-          <p className="muted">هنوز کسی برای دو هفتهٔ آینده اعلام نکرده. اولین نفر باش.</p>
+          <div className="guest-empty">
+            <p className="muted">{copy.venues.hangEmpty}</p>
+            {!ready ? null : signedIn ? null : (
+              <Link className="btn" href={`/login?next=/venues/${slug}`}>
+                {copy.venues.hangBeFirst}
+              </Link>
+            )}
+          </div>
         ) : (
           slots.map((slot) => {
             const iAmIn = meId ? slot.plans.some((p) => p.user.id === meId) : false;
@@ -188,10 +190,10 @@ export function VenueCommunity({ slug }: { slug: string }) {
               <article className="hang-slot" key={slot.key}>
                 <header className="hang-slot-head">
                   <div>
-                    <strong>{INTENT_FA[slot.intent] ?? slot.intent}</strong>
-                    <span className="muted"> · {formatDayChip(slot.startsAt)}</span>
+                    <strong>{copy.intent[slot.intent as keyof typeof copy.intent] ?? slot.intent}</strong>
+                    <span className="muted"> · {formatDayChip(slot.startsAt, locale)}</span>
                   </div>
-                  <span className="hang-slot-count">{slot.plans.length.toLocaleString("fa-IR")} نفر</span>
+                  <span className="hang-slot-count">{copy.venues.hangCount(slot.plans.length.toLocaleString(digits))}</span>
                 </header>
                 <ul className="hang-people">
                   {slot.plans.map((plan) => {
@@ -210,7 +212,7 @@ export function VenueCommunity({ slug }: { slug: string }) {
                           <span className="hang-person-meta">
                             <span className="hang-person-name">{plan.user.displayName}</span>
                             {plan.user.verificationStatus === "VERIFIED" ? (
-                              <span className="verify-badge">تأییدشده</span>
+                              <span className="verify-badge">{copy.rsvp.verified}</span>
                             ) : null}
                             {plan.note ? <span className="muted hang-person-note">{plan.note}</span> : null}
                           </span>
@@ -221,7 +223,7 @@ export function VenueCommunity({ slug }: { slug: string }) {
                 </ul>
                 {!ready ? null : signedIn ? (
                   iAmIn ? (
-                    <p className="meta">تو هم در این زمان هستی.</p>
+                    <p className="meta">{copy.venues.hangYouToo}</p>
                   ) : (
                     <button
                       className="btn"
@@ -229,12 +231,12 @@ export function VenueCommunity({ slug }: { slug: string }) {
                       disabled={joining === slot.key}
                       onClick={() => joinSlot(slot)}
                     >
-                      {joining === slot.key ? "…" : "من هم می‌آیم"}
+                      {joining === slot.key ? "…" : copy.venues.hangJoin}
                     </button>
                   )
                 ) : (
                   <p className="muted">
-                    برای پیوستن <Link href={`/login?next=/venues/${slug}`}>وارد شو</Link>.
+                    <Link href={`/login?next=/venues/${slug}`}>{copy.venues.hangLoginJoin}</Link>
                   </p>
                 )}
               </article>
@@ -245,53 +247,55 @@ export function VenueCommunity({ slug }: { slug: string }) {
 
       {!ready ? null : signedIn ? (
         <form className="form wide hang-plan-form" onSubmit={onPlan}>
-          <h3>اعلام حضور تازه</h3>
+          <h3>{copy.venues.hangNew}</h3>
           <div className="hang-plan-fields">
             <label>
-              کی می‌آیی؟
+              {copy.venues.hangWhen}
               <input name="startsAt" type="datetime-local" defaultValue={defaultTime} required />
             </label>
             <label>
-              برای چه
+              {copy.venues.hangWhy}
               <select name="intent" defaultValue="COFFEE">
-                <option value="COFFEE">قهوه</option>
-                <option value="LUNCH">ناهار</option>
-                <option value="DINNER">شام</option>
-                <option value="OTHER">دورهم</option>
+                <option value="COFFEE">{copy.intent.COFFEE}</option>
+                <option value="LUNCH">{copy.intent.LUNCH}</option>
+                <option value="DINNER">{copy.intent.DINNER}</option>
+                <option value="OTHER">{copy.intent.OTHER}</option>
               </select>
             </label>
           </div>
           <label>
-            یادداشت (اختیاری)
-            <input name="note" maxLength={120} placeholder="مثلاً میز برای ۴ نفر" />
+            {copy.venues.hangNote}
+            <input name="note" maxLength={120} placeholder={copy.venues.hangNotePh} />
           </label>
           <button className="btn" type="submit" disabled={pendingPlan}>
-            {pendingPlan ? "در حال ثبت…" : "ثبت برنامه"}
+            {pendingPlan ? copy.venues.hangSaving : copy.venues.hangSave}
           </button>
         </form>
       ) : (
         <p className="muted">
-          برای اعلام حضور <Link href={`/login?next=/venues/${slug}`}>وارد شو</Link>.
+          <Link className="btn" href={`/login?next=/venues/${slug}`}>
+            {copy.venues.hangLoginPlan}
+          </Link>
         </p>
       )}
 
       <div className="venue-photo-box">
-        <p className="muted">عکس بعد از حضوری که صاحب مکان تأیید کرده فرستاده می‌شود.</p>
+        <p className="muted">{copy.venues.hangPhotoLead}</p>
         <button className="btn ghost" type="button" onClick={() => setShowPhoto((v) => !v)}>
-          {showPhoto ? "بستن ارسال عکس" : "ارسال عکس از مکان"}
+          {showPhoto ? copy.venues.hangPhotoClose : copy.venues.hangPhotoOpen}
         </button>
         {showPhoto && signedIn ? (
           <form className="form wide" onSubmit={onPhoto} style={{ marginTop: 12 }}>
             <label>
-              عکس
+              {copy.venues.hangPhoto}
               <input name="file" type="file" accept="image/jpeg,image/png,image/webp" required />
             </label>
             <label>
-              توضیح کوتاه (اختیاری)
-              <input name="caption" maxLength={120} placeholder="مثلاً میز کنار پنجره" />
+              {copy.venues.hangCaption}
+              <input name="caption" maxLength={120} placeholder={copy.venues.hangCaptionPh} />
             </label>
             <button className="btn ghost" type="submit">
-              ارسال برای بررسی
+              {copy.venues.hangSubmitPhoto}
             </button>
           </form>
         ) : null}

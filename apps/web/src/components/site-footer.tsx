@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useAuthHrefs } from "../lib/use-auth-href";
 import { useCopy } from "./locale-provider";
 
 export function SiteFooter() {
   const copy = useCopy();
+  const authHrefs = useAuthHrefs();
   return (
     <footer>
       <p className="footer-line">{copy.footer.line}</p>
       <p>
-        <Link href="/register">{copy.footer.join}</Link>
+        <Link href={authHrefs.register}>{copy.footer.join}</Link>
         {" · "}
         <Link href="/feed">{copy.footer.feed}</Link>
         {" · "}

@@ -94,7 +94,9 @@ a { color: inherit; text-underline-offset: 0.18em; }
   font: inherit;
   background: none;
   border: 0;
-  padding: 0;
+  min-width: 2.5rem;
+  min-height: 44px;
+  padding: 0 6px;
   cursor: pointer;
   color: var(--muted);
 }
@@ -233,7 +235,30 @@ a { color: inherit; text-underline-offset: 0.18em; }
 .btn.danger:hover:not(:disabled) { background: #7a1a1e; }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .social-auth { display: grid; gap: 8px; margin-bottom: 8px; }
-.social-auth .btn { width: 100%; text-align: center; }
+.social-auth .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  text-align: center;
+}
+.provider-mark {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  display: block;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+.btn.brand-google { background: #fff; color: #1f1f1f; border: 1.5px solid #747775; }
+.btn.brand-google:hover:not(:disabled) { background: #f2f2f2; color: #1f1f1f; }
+.btn.brand-apple { background: #000; color: #fff; border: 1.5px solid #000; }
+.btn.brand-apple:hover:not(:disabled) { background: #1c1c1c; color: #fff; }
+.btn.brand-facebook { background: #1877f2; color: #fff; border: 1.5px solid #1877f2; }
+.btn.brand-facebook:hover:not(:disabled) { background: #0d65d9; color: #fff; }
 .social-or { text-align: center; margin: 4px 0 8px; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 18px; margin-top: 24px; }

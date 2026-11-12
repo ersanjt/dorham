@@ -7,7 +7,7 @@ import { ShareEvent } from "../components/share-event";
 import { SiteFooter } from "../components/site-footer";
 import { SiteHeader } from "../components/site-header";
 import { t } from "../lib/copy";
-import { eventInviteText, eventPageUrl, formatDayChip, formatPriceTry } from "../lib/format";
+import { eventInviteText, eventPageUrl, formatDayChip, formatPlace, formatPriceTry } from "../lib/format";
 import { resolveApiBase } from "../lib/api-base";
 import { catalogInit } from "../lib/catalog-fetch";
 import { getLocale } from "../lib/locale-server";
@@ -72,6 +72,7 @@ export default async function HomePage() {
   const next = events[0];
   const more = events.slice(1);
   const cityNotes = posts.filter((post) => post.body.trim().length >= 40).slice(0, 3);
+  const notesFresh = cityNotes.some((post) => Date.now() - new Date(post.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000);
   const livelyShows = cityShows.filter((event) => event.goingCount > 0);
 
   return (
@@ -104,7 +105,7 @@ export default async function HomePage() {
             <h3 style={{ marginTop: 0 }}>{next.title}</h3>
             <p className="muted">
               {formatDayChip(next.startsAt, locale)}
-              {next.venue ? ` · ${next.venue}` : ""}
+              {formatPlace(next.venue, locale) ? ` · ${formatPlace(next.venue, locale)}` : ""}
               {" · "}
               {formatPriceTry(next.priceTry, locale)}
             </p>
@@ -238,11 +239,11 @@ export default async function HomePage() {
         <section>
           <div className="section-head">
             <p className="kicker">{copy.home.notesKicker}</p>
-            <h2>{copy.home.notesTitle}</h2>
+            <h2>{notesFresh ? copy.home.notesTitle : copy.home.notesTitleCity}</h2>
           </div>
           <div className="stack">
             {cityNotes.map((post) => (
-              <FeedPostCard key={post.id} post={post} />
+              <FeedPostCard key={post.id} post={post} locale={locale} />
             ))}
           </div>
           <p style={{ marginTop: 16 }}>

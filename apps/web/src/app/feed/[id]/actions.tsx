@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import type { FeedComment, Me } from "@dorham/shared";
+import { useCopy, useUiLocale } from "../../../components/locale-provider";
 import { api, ApiError } from "../../../lib/api";
 import { formatWhen } from "../../../lib/format";
 import { isSignedIn } from "../../../lib/session";
@@ -17,6 +18,8 @@ export function PostActions({
   comments: FeedComment[];
 }) {
   const router = useRouter();
+  const copy = useCopy().feed;
+  const locale = useUiLocale();
   const [me, setMe] = useState<Me | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [comments, setComments] = useState(initial);
@@ -45,31 +48,31 @@ export function PostActions({
       form.reset();
       setComments((rows) => [...rows, comment]);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "نظر ثبت نشد. وارد شو.");
+      setError(err instanceof ApiError ? err.message : copy.commentFail);
     }
   }
 
   async function onReport() {
-    if (!confirm("این پست گزارش شود؟")) return;
+    if (!confirm(copy.reportAsk)) return;
     try {
       await api(`/feed/${postId}/report`, {
         method: "POST",
         body: JSON.stringify({ reason: "other" }),
       });
-      setNotice("گزارش ثبت شد.");
+      setNotice(copy.reported);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "گزارش نشد.");
+      setError(err instanceof ApiError ? err.message : copy.reportFail);
     }
   }
 
   async function onHide() {
-    if (!confirm("این پست از فید برداشته شود؟")) return;
+    if (!confirm(copy.hideAsk)) return;
     try {
       await api(`/feed/${postId}`, { method: "DELETE" });
       router.push("/feed");
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "حذف نشد.");
+      setError(err instanceof ApiError ? err.message : copy.hideFail);
     }
   }
 
@@ -79,15 +82,15 @@ export function PostActions({
     <section style={{ marginTop: 32 }}>
       {notice ? <div className="banner ok">{notice}</div> : null}
       {error ? <div className="banner err">{error}</div> : null}
-      <h2>نظرها</h2>
-      {comments.length === 0 ? <p className="muted">هنوز نظری نیست.</p> : null}
+      <h2>{copy.commentsTitle}</h2>
+      {comments.length === 0 ? <p className="muted">{copy.noComments}</p> : null}
       <div className="stack">
         {comments.map((comment) => (
           <article className="card" key={comment.id}>
             <p className="muted">
               {comment.author.displayName}
               {" · "}
-              {formatWhen(comment.createdAt)}
+              {formatWhen(comment.createdAt, locale)}
             </p>
             <p className="post-body">{comment.body}</p>
           </article>
@@ -96,27 +99,29 @@ export function PostActions({
       {signedIn ? (
         <form className="form wide" onSubmit={onComment}>
           <label>
-            نظر
+            {copy.commentLabel}
             <textarea name="body" minLength={1} maxLength={500} rows={3} required />
           </label>
           <button className="btn" type="submit">
-            ارسال نظر
+            {copy.sendComment}
           </button>
         </form>
       ) : (
         <p className="muted">
-          برای نظر <a href={`/login?next=/feed/${postId}`}>وارد شو</a>.
+          {copy.loginToComment}
+          <a href={`/login?next=/feed/${postId}`}>{copy.loginToCommentAfter}</a>
+          {copy.loginToCommentEnd}
         </p>
       )}
       <div className="row">
         {signedIn && me?.id !== authorId ? (
           <button className="btn ghost" type="button" onClick={onReport}>
-            گزارش
+            {copy.report}
           </button>
         ) : null}
         {canHide ? (
           <button className="btn danger" type="button" onClick={onHide}>
-            برداشتن پست
+            {copy.hide}
           </button>
         ) : null}
       </div>

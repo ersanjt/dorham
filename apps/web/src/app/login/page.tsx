@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
 import { loginBodySchema } from "@dorham/shared";
+import { SiteFooter } from "../../components/site-footer";
 import { SiteHeader } from "../../components/site-header";
 import { SocialAuth } from "../../components/social-auth";
 import { PageIntro } from "../../components/page-intro";
@@ -17,6 +18,14 @@ function LoginForm() {
   const router = useRouter();
   const search = useSearchParams();
   const next = safeNext(search.get("next"));
+  const intro =
+    next.startsWith("/events/new")
+      ? { kicker: copy.auth.hostKicker, title: copy.auth.hostTitle, lead: copy.auth.hostLead }
+      : next.startsWith("/venues/new")
+        ? { kicker: copy.auth.venueKicker, title: copy.auth.venueTitle, lead: copy.auth.venueLead }
+        : next === "/account" || next.startsWith("/account?")
+          ? { kicker: copy.auth.accountKicker, title: copy.auth.loginTitle, lead: copy.auth.accountLead }
+          : { kicker: copy.auth.loginKicker, title: copy.auth.loginTitle, lead: copy.auth.loginLead };
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -52,11 +61,11 @@ function LoginForm() {
   return (
     <main className="wrap">
       <SiteHeader />
-      <PageIntro kicker={copy.auth.loginKicker} title={copy.auth.loginTitle}>
-        <p className="muted">{copy.auth.loginLead}</p>
+      <PageIntro kicker={intro.kicker} title={intro.title}>
+        <p className="muted">{intro.lead}</p>
       </PageIntro>
       <div className="form-card">
-        <form className="form" onSubmit={onSubmit}>
+        <form className="form" noValidate onSubmit={onSubmit}>
           <SocialAuth next={next} />
           {error ? <div className="banner err">{error}</div> : null}
           <label>
@@ -77,6 +86,7 @@ function LoginForm() {
           </p>
         </form>
       </div>
+      <SiteFooter />
     </main>
   );
 }

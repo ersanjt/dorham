@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import {
   ISTANBUL_AREAS,
   ISTANBUL_REGIONS,
@@ -21,6 +22,16 @@ import { getLocale } from "../../lib/locale-server";
 import { venueAreaLabel, venueKindLabel, venueRegionLabel } from "../../lib/venues";
 
 const API = resolveApiBase();
+
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = t(await getLocale()).seo;
+  return {
+    title: seo.venuesTitle,
+    description: seo.venuesDescription,
+    alternates: { canonical: "/venues" },
+    openGraph: { title: seo.venuesTitle, description: seo.venuesDescription, url: "/venues" },
+  };
+}
 
 type Filters = { kind?: VenueKind; region?: IstanbulRegion; area?: string; q?: string };
 
@@ -95,7 +106,9 @@ function VenueCard({ venue, locale }: { venue: VenueDto; locale: UiLocale }) {
         <ul className="venue-choice">
           {venue.hours ? (
             <li>
-              <span className="isolate-ltr">{venue.hours}</span>
+              <span className="isolate-ltr" dir="ltr">
+                {venue.hours}
+              </span>
             </li>
           ) : null}
           {venue.menuNotes ? <li>{venue.menuNotes}</li> : null}
