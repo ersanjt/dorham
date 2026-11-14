@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { EventDto, FeedPost, VenueHangPlanDto } from "@dorham/shared";
+import type { EventDto, FeedPost, VenueDto, VenueHangPlanDto } from "@dorham/shared";
 import { EventCard } from "../components/event-card";
 import { HeroJoin } from "../components/hero-join";
 import { FeedPostCard } from "../components/feed-post";
@@ -14,6 +14,8 @@ import { getLocale } from "../lib/locale-server";
 import { publicMediaUrl } from "../lib/media-url";
 
 const API = resolveApiBase();
+/** The table the city starts from until a host publishes this week's gathering. */
+const STARTER_VENUE_SLUG = "safir-aksaray";
 
 async function loadFeed(): Promise<FeedPost[]> {
   try {
@@ -48,6 +50,19 @@ async function loadCityShows(): Promise<EventDto[]> {
   }
 }
 
+async function loadStarter(): Promise<Pick<VenueDto, "slug" | "name" | "address" | "hours"> | null> {
+  try {
+    const res = await fetch(`${API}/v1/venues/${STARTER_VENUE_SLUG}`, catalogInit());
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data: VenueDto };
+    const venue = json.data;
+    if (!venue?.slug) return null;
+    return { slug: venue.slug, name: venue.name, address: venue.address, hours: venue.hours };
+  } catch {
+    return null;
+  }
+}
+
 async function loadHangPlans(): Promise<VenueHangPlanDto[]> {
   try {
     const res = await fetch(`${API}/v1/venues/hang-plans?city=istanbul&limit=8`, catalogInit());
@@ -63,11 +78,12 @@ export default async function HomePage() {
   const locale = await getLocale();
   const copy = t(locale);
   const digits = locale === "en" ? "en-GB" : "fa-IR";
-  const [events, cityShows, posts, hangPlans] = await Promise.all([
+  const [events, cityShows, posts, hangPlans, starter] = await Promise.all([
     loadEvents(),
     loadCityShows(),
     loadFeed(),
     loadHangPlans(),
+    loadStarter(),
   ]);
   const next = events[0];
   const more = events.slice(1);
@@ -88,8 +104,8 @@ export default async function HomePage() {
           <img src="/brand/hero.png" alt="" />
         </div>
         <HeroJoin
-          primaryHref={next ? `/events/${next.id}` : "/venues"}
-          primaryLabel={next ? copy.home.nextEvent : copy.home.iranianPlaces}
+          primaryHref={next ? `/events/${next.id}` : starter ? `/venues/${starter.slug}` : "/venues"}
+          primaryLabel={next ? copy.home.nextEvent : starter ? copy.venues.hangBeFirst : copy.home.iranianPlaces}
           venuesLabel={copy.home.venuesCta}
         />
       </section>
@@ -132,9 +148,22 @@ export default async function HomePage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/empty-events.png" alt="" />
             <p className="muted">{copy.home.emptyWeek}</p>
+            {starter ? (
+              <div style={{ marginTop: 12 }}>
+                <h3 style={{ marginBottom: 4 }}>{starter.name}</h3>
+                <p className="meta">{starter.address}</p>
+                {starter.hours ? (
+                  <p className="meta">
+                    <span className="isolate-ltr" dir="ltr">
+                      {starter.hours}
+                    </span>
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <div className="row" style={{ marginTop: 12 }}>
-              <Link className="btn" href="/venues">
-                {copy.home.iranianPlaces}
+              <Link className="btn" href={starter ? `/venues/${starter.slug}` : "/venues"}>
+                {starter ? copy.venues.hangBeFirst : copy.home.iranianPlaces}
               </Link>
               <Link className="btn ghost" href="/events/new">
                 {copy.home.hostEvent}

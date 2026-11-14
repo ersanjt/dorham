@@ -19,8 +19,9 @@ async function list<T>(path: string): Promise<T[]> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [events, venues] = await Promise.all([
+  const [events, pastEvents, venues] = await Promise.all([
     list<{ id: string; startsAt: string }>(`/v1/events?city=istanbul&when=upcoming&limit=40`),
+    list<{ id: string }>(`/v1/events?city=istanbul&kind=COMMUNITY&when=past&limit=12`),
     list<{ slug: string }>(`/v1/venues?city=istanbul&limit=80`),
   ]);
 
@@ -47,11 +48,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.9,
   }));
 
+  const pastPages: MetadataRoute.Sitemap = pastEvents.map((event) => ({
+    url: `${siteUrl}/events/${event.id}`,
+    changeFrequency: "monthly",
+    priority: 0.4,
+  }));
+
   const venuePages: MetadataRoute.Sitemap = venues.map((venue) => ({
     url: `${siteUrl}/venues/${venue.slug}`,
     changeFrequency: "weekly",
     priority: 0.7,
   }));
 
-  return [...staticPages, ...eventPages, ...venuePages];
+  return [...staticPages, ...eventPages, ...pastPages, ...venuePages];
 }
